@@ -1537,6 +1537,18 @@ spec:
             {{- $code := $xr.spec.code }}
             {{- $access := dig "access" dict $xr.spec }}
             {{- $project := dig "management" "projectId" "" $xr.spec }}
+            {{- /* platformViewer appears twice. Its folder-scoped roles
+                   are predefined; the project-scoped one is a custom
+                   role carrying container.pods.getLogs, which
+                   container.viewer lacks and only container.developer
+                   otherwise provides -- along with exec and every
+                   write. A project custom role may be granted only on
+                   its own project, so it cannot join the folder entry.
+
+                   A comment cannot go inside the list expression
+                   below: a template action does not nest inside
+                   another action's operand, and the whole step fails
+                   to parse. */}}
             {{- $capabilities := list
                   (dict "key" "platformViewer" "kind" "FolderIAMMember" "roles" (list
                     "roles/browser"
@@ -1551,13 +1563,6 @@ spec:
                     "roles/container.admin"))
                   (dict "key" "secretsAdmin" "kind" "ProjectIAMMember" "roles" (list
                     "roles/secretmanager.admin"))
-                  {{- /* Reading a pod's logs is not in container.viewer,
-                         and the only predefined role that has it also
-                         grants exec and every write. So a custom role
-                         carries the one permission, and because a
-                         project custom role may only be granted on its
-                         own project, it binds there rather than on the
-                         folder. */}}
                   (dict "key" "platformViewer" "kind" "ProjectIAMMember" "roles" (list
                     (printf "projects/%s/roles/rl_pod_log_reader" $project))) }}
             {{- range $capability := $capabilities }}
