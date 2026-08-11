@@ -58,9 +58,15 @@ destroyed as a whole.
 - **Seed project** — `prj-b-seed-<suffix>`. No code: it holds the
   identity that creates installations, so it exists before any folder
   and one serves the whole organisation.
-- **Service account** — `sa-qw01-platform`, `sa-qw01-boot`. No
-  environment, following the guide, which names an identity for its job
-  rather than its tier.
+- **Service account** — no environment where the identity is one per
+  installation, following the guide, which names an identity for its job
+  rather than its tier: `sa-qw01-platform` runs the whole installation,
+  `sa-qw01-boot` sits outside the folder entirely. An identity belonging
+  to one cluster takes the environment, because every cluster wants the
+  same job done and the name has to say whose:
+  `sa-qw01-c-nodes` for the management cluster's nodes,
+  `sa-qw01-c-secrets` for the operator reading secrets on it, and
+  `sa-qw01-d-nodes` or `sa-qw01-p-nodes` for an instance's.
 - **Group** — `grp-gcp-<capability>` at the organisation,
   `grp-gcp-qw01-<capability>` for an installation. The `gcp` segment is
   the guide's, marking these as cloud access groups within a directory
