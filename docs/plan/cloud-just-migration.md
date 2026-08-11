@@ -629,6 +629,39 @@ so a failing `ExternalSecret` means nobody has done the GitHub step yet
 rather than that something is broken. Worth knowing before it is
 debugged as a fault.
 
+#### What an instance repeats
+
+Two things here are the management cluster's answer to a question every
+instance asks again, and both fail on the plane that inherits them
+rather than the one that built them.
+
+**A node identity per cluster.** A node pool given no service account
+runs as the default compute account, which is shared by everything in
+the project that never chose one and holds whatever the organisation's
+policy on automatic grants leaves it holding. An instance's node pool
+needs its own, granted `container.defaultNodeServiceAccount` and
+nothing else, and the identity has to be named per cluster rather than
+per installation: `sa-qw01-nodes` is wrong for the same reason
+`gke-qw01-mgmt` would be, and the environment segment every other name
+carries is what distinguishes them. `sa-qw01-c-nodes` for the
+management cluster, `sa-qw01-d-nodes` and `sa-qw01-p-nodes` for
+instances. Service accounts otherwise take no environment segment,
+because the others are one per installation; a node identity is the
+first that is not.
+
+The management one is still `sa-qw01-nodes`. Renaming it replaces the
+node pool, because `nodeConfig.serviceAccount` is immutable and upjet
+refuses to replace on its own, so it waits for the next change that
+rebuilds the pool anyway rather than spending an outage on a name
+nothing yet collides with.
+
+**Permission to use it.** Attaching a service account requires
+`iam.serviceAccounts.actAs` on it, and the plane that creates an
+instance project owns it and gets that for free — so an instance is
+safe where the management cluster was not, and only because the
+management project was created by a different identity than the one
+that inherits it.
+
 #### Rights the boot plane has by accident
 
 GCP makes whoever creates a project its owner, and the composite
