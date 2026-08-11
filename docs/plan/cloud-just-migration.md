@@ -24,16 +24,14 @@ created. This plan is that, and what follows it.
 
 ## Picking this up cold
 
-**Where the work is: step 5 of [The pivot](#the-pivot)** — moving the
-composite onto the management plane and verifying the adoption resource
-by resource. Steps 1 to 4 are done and applied: the platform identity
-holds its rights, the management cluster runs Crossplane and Argo, and
-Argo reconciles the plane's own configuration from this repository.
-What blocks step 5 is a credential, since the composite lives in a
-private repository and an operator holding `platformViewer` cannot
-apply it by hand. Read that step, then verify against the live account
-rather than against this line, because a sentence naming a step is the
-first thing here to go stale.
+**The pivot is done.** Steps 1 to 6 are complete: the management plane
+reconciles the installation from the committed manifest, and the boot
+plane that built it is gone. What remains is listed under
+[what is left](#what-is-left), and none of it blocks anything.
+
+Read that, then verify against the live account rather than against
+this line, because a sentence naming a step is the first thing here to
+go stale.
 
 Read "How the machinery fits together" below before touching the
 composition. It is the hour that does not need spending twice.
@@ -63,7 +61,10 @@ The files this plan acts on:
   `-composition.yml` — the API and what it builds
 - `infra/platform/crossplane-providers/providers.yml` — the package set
 - `infra/helm/xp-mp/` — Crossplane and Argo, as a chart, for the boot
-  plane
+  plane only
+- `infra/helm/management-plane-config/` — the configurations whose kinds
+  arrive with the packages, kept out of the parent so a missing kind
+  fails one Application rather than all of them
 - `infra/helm/management-plane/` — what the management plane reconciles
   about itself, delivered by Argo
 - `justfiles/gcp.just` — the new recipes
@@ -76,8 +77,9 @@ To re-read the live state rather than trusting this document:
 which access group is read in the Admin console, not here — see
 [cloud-account](../recipes/cloud-account.md).
 
-To get back to a working control plane from nothing, join
-`grp-gcp-qw01-platform-admin` and:
+To get back to a boot plane — which is now a recovery act rather than
+part of running the installation — join `grp-gcp-qw01-platform-admin`
+and:
 
 ```
 just gcp-adc-boot                 # interactive, opens a browser
@@ -90,7 +92,14 @@ holds them: the folder and project it adopts, the parent, the code,
 the access mapping. Adoption rather than a second installation is a
 property of that file, not of what somebody remembered to type. Then
 `just gcp-plane-down`, `just gcp-adc-revoke`, and leave the group.
-Nothing reconciles between sessions, which is what the pivot is for.
+
+You should not need any of it. The management plane reconciles
+continuously now, and a change to the installation is a merge to
+`installations` rather than a plane raised to apply it. Raise one to
+rebuild a management cluster that is gone, or to grant the platform
+identity something it cannot grant itself — which is a real category,
+since the binding that repairs project IAM is itself a project IAM
+binding.
 
 A *first* installation has no such file, and mints one:
 
@@ -117,8 +126,8 @@ Three files, three different kinds of object:
   `kind: XQueenswoodInstallation`. That is all it does.
 - **Composition** — `xqueenswoodinstallation-composition.yml`. A
   program, in `mode: Pipeline`. It says what an installation is made of.
-- **XR** — the composite itself, `name: qw01`. The manifest. Today it
-  exists only as a heredoc inside `gcp-plane-apply`.
+- **XR** — the composite itself, `name: qw01`. The manifest, committed
+  to `installations` and applied to the management cluster by Argo.
 
 The flow, once all three are in a cluster:
 
@@ -157,48 +166,67 @@ installation.
 
 ## Where this stands
 
-The installation `qw01` exists in GCP and matches the recipes: folder
-`fldr-qw01`; management project with six APIs; `vpc-qw01-c-mgmt` and
-`sb-qw01-c-mgmt-euw2`; `gke-qw01-c-mgmt` and `np-qw01-c-mgmt`, zonal,
-one node; `sa-qw01-platform` with a Workload Identity binding to
-`crossplane-system/crossplane-provider-gcp`; folder bindings for
-`platformViewer` and `clusterAdmin`, and a management-project binding
-for `secretsAdmin`.
+**The pivot is done.** `qw01` is reconciled by the management plane it
+describes, from the manifest committed to `installations`, and the
+throwaway plane that built it has been discarded.
 
-Five facts about that shape everything below.
+Four facts, replacing the five this section carried while it was being
+built.
 
-**Nothing reconciles it.** The throwaway kind plane has been discarded,
-so the composite exists nowhere. The GCP resources survived because
-deleting a cluster deletes nothing in GCP — the controllers simply
-stopped.
+**It reconciles itself.** Forty-seven managed resources on
+`gke-qw01-c-mgmt`, all Synced and Ready, composed from an
+`XQueenswoodInstallation` that Argo pulls from the private repository.
+Argo brings the provider packages, the runtime and provider
+configurations, external-secrets and the API itself from this
+repository; the manifest naming the installation comes from the other
+one. Changing what exists is now a merge.
 
-**It is recorded, and nothing reads the record.** The private
-`installations` repository exists, with `qw01/installation.yml` on main
-and a README stating the repository's rules. So what git says and what
-GCP holds agree, and the installation is reproducible from the file
-rather than from somebody's scrollback. Argo is not pointed at it yet —
-that waits on the management cluster having Argo at all, which is step 5.
+**Nothing on it holds a key.** The GCP providers authenticate as
+`sa-qw01-platform` through Workload Identity, external-secrets as
+`sa-qw01-c-secrets`, the nodes as `sa-qw01-c-nodes`. The one credential
+in the design — a GitHub App private key, so Argo can read a private
+repository — lives in Secret Manager and is fetched by an identity with
+no key of its own. Nothing was placed on the cluster by hand.
 
-**The management cluster is stock.** `kubectl get crd` returns GKE's own
-CRDs and nothing else. No `crossplane-system` namespace, no Argo, no
-provider packages.
-
-**The platform identity holds one role.** `sa-qw01-platform` has
-`roles/billing.user` on the billing account, granted by
-`gcp-platform-billing-role`, and nothing at all on the folder or the
-management project — those are step 2 below, declared in the
-composition and waiting on a plane to apply them.
-`just gcp-platform-status` prints both. The only identity with real
-rights inside the installation is still `sa-qw01-boot`, which GCP
-granted `resourcemanager.folderAdmin` for having created the folder.
+**The adoption was asserted, not assumed.** One folder, one management
+project, the same node: nothing created where something should have
+been adopted, which is the failure both `createFolder.folderId` and
+`management.adopt` exist to prevent and which would otherwise look
+exactly like success.
 
 **Nothing is liened.** `liens list` on the management project returns
-nothing. The declarations are all in place —
-`managementPolicies` without `Delete`, `deletionProtection`,
-`deletionPolicy: PREVENT` — with nothing underneath them, which inverts
+nothing. The declarations are all in place — `managementPolicies`
+without `Delete`, `deletionProtection`, `deletionPolicy: PREVENT` —
+with nothing underneath them, which inverts
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)'s
 own position that the lien matters more than the policy, because a
-policy is a convention a later edit can undo.
+policy is a convention a later edit can undo. It stays open because
+there is no `Lien` resource in the provider to compose, so it wants a
+recipe rather than a managed resource — see
+[what is left](#what-is-left).
+
+## What is left
+
+Small, and none of it blocking:
+
+- **Liens**, above. A recipe, run once, since nothing composes them.
+- **Labels** carrying the installation code on the folder and the
+  management project, which is what would let a bare login find an
+  installation without knowing a random suffix, and would retire the
+  project-id prefix match in `gcp-mgmt-cluster-ctx`. A `Project` takes
+  labels; a `Folder` takes only tags, which are a separate mechanism
+  with their own resources, so the project alone may be enough.
+- **Resource requests** on what runs on the management cluster. Nothing
+  declares any, so the scheduler reads the node as two-thirds empty
+  while it is nearly full, and eviction order is backwards — the pods
+  that matter are `BestEffort` and go first.
+- **`sa-qw01-nodes` renamed but the cluster not.** `gke-qw01-c-mgmt` and
+  `np-qw01-c-mgmt` keep names that predate the rule in
+  [cloud-naming](../recipes/cloud-naming.md), because renaming either
+  destroys the cluster. New installations get the shorter forms.
+
+Then the durable tier and the first instance, both described under
+[after the pivot](#after-the-pivot).
 
 ## Why the XR is reusable, and what makes it fragile
 
