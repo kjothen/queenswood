@@ -196,6 +196,25 @@ spec:
                             leaves this alone; a mirror that vendors
                             the project under a directory sets it, and
                             every path below is relative to it.
+                    manifestRepoURL:
+                      type: string
+                      description: |
+                        The repository this installation's own manifest
+                        is committed to, which the management plane
+                        reconciles itself from once it holds a
+                        credential for it.
+
+                        Absent where there is none, and then no
+                        credential machinery is composed at all: an
+                        installation applied only from a boot plane
+                        needs nothing to read.
+
+                        Not management.source, which is where the
+                        plane's configuration comes from. This is where
+                        the record of the installation lives, and the
+                        two are different repositories for the reason
+                        the plan gives -- one is public and the other
+                        is not.
                     bootstrap:
                       type: boolean
                       description: |

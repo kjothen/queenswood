@@ -520,6 +520,56 @@ NAMESPACED column, not the version. The rule generalises — prefer the
 `.m.` group for every provider, and treat an API group copied from
 `crossplane-configs/` as belonging to the previous generation.
 
+### 3b. A way to read a secret
+
+Argo cannot reach the private repository without a credential, and an
+operator holding `platformViewer` cannot place one — writing a Secret to
+`argocd` needs `clusterAdmin`, which is break-glass. So the credential
+has to arrive the way everything else does, and the operator that
+delivers it is `external-secrets`, installed by Argo from the upstream
+chart and authenticated by Workload Identity.
+
+**A second identity, `sa-<code>-secrets`**, holding
+`secretmanager.secretAccessor` on the management project and nothing
+else. The platform identity already holds `secretmanager.admin` and
+could do the reading, but it can also create projects and administer
+every cluster in the folder — so an operator whose whole job is
+fetching a secret would be holding the installation. That is the same
+argument that made the platform identity worth separating from the boot
+identity.
+
+**A `ClusterSecretStore`** naming the management project, with no auth
+block: the controller's pod carries the annotated service account, so
+the provider takes the identity it already has. The same property the
+GCP provider configuration has, reached the same way.
+
+**The credential itself is two human acts**, and they are the last two
+in the chain. The GitHub App is created by a person in a UI, because
+GitHub has no API that creates one — see
+[cloud-foundation](../recipes/cloud-foundation.md) — and
+`gcp-github-app-secret` writes its three values into Secret Manager as
+one JSON entry, run by a person holding `secretsAdmin`. The identifiers
+travel with the key rather than through a second channel, so nothing
+about an installation's GitHub App reaches either repository.
+
+The container is composed; only the version is placed. What exists is
+declared, and what it holds never touches git.
+
+**None of it is composed for an installation that has no manifest
+repository.** `management.manifestRepoURL` is absent by default, and
+the chart renders no `ExternalSecret` without it — an installation
+applied only from a boot plane has nothing to read and needs no
+credential to read it with.
+
+**Which changes the character of what follows.** Every chain up to here
+converged on its own given time. This one has a person in the middle:
+the `ExternalSecret` cannot succeed until the key is stored, and the
+Application reading the private repository cannot succeed until that
+Secret exists. Both fail and retry exactly as the missing-CRD race did,
+so a failing `ExternalSecret` means nobody has done the GitHub step yet
+rather than that something is broken. Worth knowing before it is
+debugged as a fault.
+
 ### 4. The manifest in git — done
 
 The private `installations` repository holds
