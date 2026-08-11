@@ -197,7 +197,7 @@ you need.
 
 ## Both paths
 
-### Three identities
+### Four identities
 
 - **The bootstrap identity** creates the management project. Members of
   `grp-gcp-qw01-platform-admin@` impersonate it; where an organisation
@@ -210,6 +210,14 @@ you need.
   Secret. Separate from the platform identity, which could do the same
   reading but can also create projects and administer every cluster in
   the folder.
+- **The node identity** is what the management cluster's nodes run as,
+  holding only what a GKE node needs to report itself. Never the
+  default compute service account: that one is shared by everything in
+  the project that never chose an identity, and holds whatever the
+  organisation's policy on automatic grants leaves it holding. A node
+  pool asks for `cloud-platform` scopes, so whatever it holds is
+  reachable by every workload on the cluster through the metadata
+  server.
 
 None ever has a key: `iam.disableServiceAccountKeyCreation` is
 enforced on the folder, so that is structural rather than a habit.
