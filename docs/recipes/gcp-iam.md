@@ -89,7 +89,10 @@ and are generated on a schedule — they lag a fix by up to a day.
 - Audit an inheriting identity against every resource it must manage,
   before the identity that created them is discarded.
 - Prefer a project custom role over a predefined role that grants
-  writes you do not want.
+  writes you do not want, and name it with underscores: a custom role
+  id takes no hyphens.
+- Grant `iam.serviceAccounts.actAs` on any service account something
+  must attach to a resource.
 
 **MUST NOT:**
 

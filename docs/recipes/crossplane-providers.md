@@ -74,6 +74,8 @@ turns out not to exist.
 - Use the `.m.` API group.
 - Set the external name explicitly where it must differ from the
   Kubernetes name, or where something else spells it.
+- Feed a generated id back as an adopt value where the external name is
+  empty after create, or the resource never completes.
 
 **MUST NOT:**
 

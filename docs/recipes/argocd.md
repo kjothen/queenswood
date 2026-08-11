@@ -69,6 +69,8 @@ field the manifest can set.
 - Set retry budgets that outlast an operator install.
 - Set `prune: false` where pruning would delete something a missing
   file should not delete.
+- Merge a change before expecting Argo to apply it. It reads the
+  revision an Application names, never a working tree.
 
 **MUST NOT:**
 

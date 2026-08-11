@@ -48,16 +48,20 @@ Change a resource's `- name:` to rebuild it under a new
 and recreates from the composite's record, so renaming the object alone
 rebuilds the old one. Set `policy.fromFieldPath: Required` where a
 missing source is a mistake rather than a meaning — a patch whose
-source is absent is skipped silently. Put constants in `base`, because
-a `Format` transform with no verb for its input corrupts the value.
-Install a provider for every kind the composite composes, on every
-plane that composes it, and never compose a cluster-scoped kind from a
-namespaced composite: either failure stops the whole pipeline rather
-than the one resource. Do not patch a field the composition sets and
-expect it to hold, and do not delete a composite to tidy up — it
-deletes what it composes, subject to each resource's
-`managementPolicies`. Read `Synced`, `Ready` and `LastAsyncOperation`
-before concluding anything; they report different failures.
+source is absent is skipped silently — and put constants in `base`,
+because a `Format` transform with no verb for its input corrupts the
+value. The composition owns what it patches, so deleting a patch
+deletes the field, and patching such a field by hand does not hold.
+Withhold `Delete` from `managementPolicies` for anything whose loss is
+unrecoverable: deleting the managed resource then orphans the cloud
+resource rather than destroying it, and deleting a composite destroys
+whatever its resources permit. Install a provider for every kind the
+composite composes, on every plane that composes it, and never compose
+a cluster-scoped kind from a namespaced composite. Neither failure
+belongs to the resource it names: one pipeline step failing — an
+unparseable template, a kind with no CRD — stops every composed
+resource and reports on the composite. Read `Synced`, `Ready` and
+`LastAsyncOperation` before concluding anything.
 See [crossplane](../../../docs/recipes/crossplane.md).
 
 ## Provider resources are Terraform underneath
@@ -69,8 +73,10 @@ anything that identifies it: a ForceNew change is refused rather than
 performed, and the refusal appears in `LastAsyncOperation`, so
 diagnosing from `Synced` alone misreads it. Use the `.m.` API group.
 Set the external name explicitly where it must differ from the
-Kubernetes name, or where something else spells the same string. Do not
-re-add a patch for a field late-initialisation now owns.
+Kubernetes name or where something else spells the same string, and
+feed a generated id back as an adopt value where the external name is
+empty after create, or the resource never completes. Do not re-add a
+patch for a field late-initialisation now owns.
 See [crossplane-providers](../../../docs/recipes/crossplane-providers.md).
 
 ## An automation identity is granted, never inherited
@@ -81,13 +87,15 @@ default compute service account being powerless — that is an org policy
 enforced somewhere else. Grant both halves of Workload Identity, the
 GCP binding and the `iam.gke.io/gcp-service-account` annotation, and
 pin the Kubernetes service account name so the binding matches
-something. Audit an inheriting identity against every resource it must
-manage before the identity that created them is discarded: whoever
-creates a project owns it, so a bootstrap identity holds rights nothing
-declared. Prefer a project custom role over a predefined role that
-grants writes you do not want, and do not assume a role can be granted
-at the scope its feature acts on. `gcloud auth login` does not refresh
-ADC.
+something. Grant `iam.serviceAccounts.actAs` on any account something
+must attach to a resource. Audit an inheriting identity against every
+resource it must manage before the identity that created them is
+discarded: whoever creates a project owns it, so a bootstrap identity
+holds rights nothing declared. Prefer a project custom role over a
+predefined role granting writes you do not want, naming it with
+underscores because a custom role id takes no hyphens, and do not
+assume a role can be granted at the scope its feature acts on.
+`gcloud auth login` does not refresh ADC.
 See [gcp-iam](../../../docs/recipes/gcp-iam.md).
 
 ## A parent Application holds only kinds that already exist
@@ -102,5 +110,7 @@ whose client-side apply exceeds the annotation limit. Set retry budgets
 that outlast an operator install, since an Application that exhausts
 its retries waits for a revision change or a manual sync — a merged fix
 does not reach it. Set `prune: false` where pruning would delete
-something a missing file should not delete.
+something a missing file should not delete. Merge a change before
+expecting Argo to apply it: it reads the revision an Application names,
+never a working tree.
 See [argocd](../../../docs/recipes/argocd.md).

@@ -79,6 +79,9 @@ the same way: `no matches for kind`.
   plane that composes it.
 - Read `Synced`, `Ready` and `LastAsyncOperation` before concluding
   anything. They report different failures.
+- Withhold `Delete` from `managementPolicies` for anything whose loss
+  is not recoverable. Deleting the managed resource then orphans the
+  cloud resource rather than destroying it.
 
 **MUST NOT:**
 
@@ -86,6 +89,11 @@ the same way: `no matches for kind`.
 - Compose a cluster-scoped kind from a namespaced composite.
 - Delete a composite to tidy up. It deletes what it composes, subject
   to each resource's `managementPolicies`.
+- Delete a patch for a field you want kept. The composition owns what
+  it patches, so the field goes with the patch.
+- Treat a failure as belonging to the resource it names. One pipeline
+  step failing — a template that will not parse, a kind with no CRD —
+  stops every composed resource, and reports on the composite.
 
 ## References
 
