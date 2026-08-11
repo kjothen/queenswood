@@ -330,6 +330,39 @@ spec:
                     string:
                       type: Format
                       fmt: "prj-%s-c-mgmt"
+          - name: management-service-secretmanager
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: secretmanager.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-secretmanager"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
           - name: management-service-container
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
