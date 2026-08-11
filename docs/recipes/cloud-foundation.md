@@ -226,52 +226,10 @@ enforced on the folder, so that is structural rather than a habit.
 ### What lives in git
 
 The manifest, one per installation, in whichever repository the applier
-reconciles from. It carries ids and names, nothing secret — secrets go to
-Secret Manager in the management project, and `status` is read back
-rather than committed.
-
-A merge is the privileged action, so merged state applies and a
-`pull_request` trigger gets no cloud identity. Otherwise a fork's pull
-request runs as the platform identity.
-
-### The GitHub App
-
-Argo reads the installation manifest from a private repository, and
-GitHub offers no credential-free way to do that. A GitHub App is the
-form to use rather than a deploy key: it belongs to the organisation
-instead of to a person, appears in the organisation's installed
-applications with an audit trail, is revoked by uninstalling it, and
-reaches GitHub over HTTPS where a deploy key needs SSH egress.
-
-Created once, by an organisation owner, in the UI — GitHub has no API
-that creates an App:
-
-1. Organisation settings, then Developer settings, then GitHub Apps,
-   then New GitHub App.
-2. Name it for what it reads. App names are globally unique on GitHub,
-   so it carries the organisation as well —
-   `queenswood-installations-reader`.
-3. Homepage URL is required and unused. The repository's URL will do.
-4. Untick Webhook Active. Nothing calls back.
-5. Repository permissions: Contents, read-only, and nothing else.
-   Metadata read-only is mandatory and selects itself.
-6. Only on this account.
-7. Create it, and record the App ID from the page that follows.
-8. Generate a private key. A `.pem` downloads, and it is shown once.
-9. Install App, then Only select repositories, then the installations
-   repository.
-10. The installation's settings URL ends in the Installation ID:
-    `.../settings/installations/<id>`.
-
-Three values come out. The App ID and the Installation ID are
-identifiers; the private key is the only secret. All three go to Secret
-Manager in the management project, where the secrets identity reads
-them.
-
-What Argo actually authenticates with is an installation token minted
-from that key, valid an hour, refreshed by Argo itself. Rotating the key
-is not disruptive, because an App may hold two at once: add the new one,
-update the stored secret, delete the old.
+reconciles from — and the GitHub App that lets a plane read that
+repository where it is private. Both are configuration rather than
+foundation, so both are in
+[queenswood-installation](queenswood-installation.md).
 
 ### Where this stands
 
@@ -324,6 +282,8 @@ generations.
   and why foundations are liened.
 - [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
+- [queenswood-installation](queenswood-installation.md) — configuring
+  Queenswood for an organisation once a plane exists to read it.
 - [cloud-account](cloud-account.md) — the organisation, access groups and
   billing account.
 - [cloud-deployment](cloud-deployment.md) — the tier model and up/down

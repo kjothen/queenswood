@@ -146,6 +146,10 @@ those in full before non-trivial work on their topic.
   layout, one management plane on GKE, foundations liened rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **Installing Queenswood** — the two repositories a plane reads, the
+  GitHub App that reaches the private one, the manifest's fields, and
+  who holds which access capability. See
+  [recipes/queenswood-installation.md](docs/recipes/queenswood-installation.md).
 - **Crossplane** — what identifies a composed resource, what a patch
   does when its source is absent, which condition carries which error.
   See [recipes/crossplane.md](docs/recipes/crossplane.md).
@@ -154,8 +158,10 @@ those in full before non-trivial work on their topic.
   than the Terraform docs. See
   [recipes/crossplane-providers.md](docs/recipes/crossplane-providers.md).
 - **Argo CD** — app-of-apps, waves against missing kinds, server-side
-  apply for large CRDs, retry budgets. See
-  [recipes/argocd.md](docs/recipes/argocd.md).
+  apply for large CRDs, retry budgets; and the GitHub App that reaches a
+  private repository. See
+  [recipes/argocd.md](docs/recipes/argocd.md) and
+  [recipes/argocd-github.md](docs/recipes/argocd-github.md).
 - **GCP IAM for automation** — Workload Identity's two halves, node
   identities, rights held by accident, role scopes. See
   [recipes/gcp-iam.md](docs/recipes/gcp-iam.md).

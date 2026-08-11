@@ -1,0 +1,251 @@
+# Queenswood installation
+
+<!-- tessl-plugin: deployment -->
+
+## Problem
+
+You have a control plane that deploys Crossplane applications, and want
+to deploy Queenswood.
+
+## Solution
+
+Configure it for your organisation, then commit a manifest. An
+installation is one file — everything Queenswood needs from your
+organisation is in it or named by it — and changing what exists
+afterwards is a merge.
+
+Building the plane that reads that file is
+[cloud-foundation](cloud-foundation.md). This recipe starts once you
+have one.
+
+### An installation, in full
+
+This is the whole of it. The sections below take it a field at a time.
+
+```yaml
+apiVersion: platform.queenswood.repldriven.com/v1alpha1
+kind: XQueenswoodInstallation
+metadata:
+  name: "<metadata-name>" # e.g. qw01
+  namespace: crossplane-system
+spec:
+  code: "<code>" # e.g. qw01
+  region: "<region>" # e.g. europe-west2
+  regionCode: "<region-code>" # e.g. euw2
+  zone: "<zone>" # e.g. europe-west2-a
+  access:
+    platformViewer: ["group:grp-gcp-<code>-platform-viewer@<your-domain>"]
+    platformAdmin: ["group:grp-gcp-<code>-platform-admin@<your-domain>"]
+    clusterAdmin: ["group:grp-gcp-<code>-cluster-admin@<your-domain>"]
+    secretsAdmin: ["group:grp-gcp-<code>-secrets-admin@<your-domain>"]
+  management:
+    projectId: "prj-<code>-c-mgmt-xxxxxx"
+    adopt: "projects/prj-<code>-c-mgmt-xxxxxx"
+    source:
+      repoURL: "<source-repo>"
+      targetRevision: "main"
+      pathPrefix: "."
+    manifestRepoURL: "<manifest-repo>"
+  createFolder:
+    parent: "organizations/<org-id>"
+    displayName: "fldr-<code>"
+    folderId: "folders/<folder-id>"
+```
+
+A first apply carries neither `adopt` nor `folderId`: both name
+something that does not exist yet, and a pre-set external name turns a
+create into a failed observe. Both are added once the folder and project
+do, and what they then do is below.
+
+Angle brackets mark what differs on every installation: your domain,
+your GitHub organisation, and the numeric organisation and folder ids —
+which are placeholders for a second reason too, since a public document
+should carry names rather than account identifiers. `xxxxxx` stands for
+the random suffix GCP appends to a project id.
+
+`<source-repo>` is upstream — `https://github.com/repldriven/queenswood`
+— unless you run a fork you review or a mirror that vendors this layout,
+which is a real choice rather than a placeholder.
+`<manifest-repo>` is always yours.
+
+`metadata.name` and `spec.code` carry the same string and are not the
+same thing. Nothing in the composition reads `metadata.name`: every
+composed name derives from `spec.code`, which the XRD constrains to four
+lowercase characters because it is baked into GCP resource names across
+the whole organisation. `metadata.name` only has to be unique in one
+namespace on one cluster. Nothing enforces that they agree, and the
+recipes assume they do — `gcp-plane-apply` waits on
+`xqueenswoodinstallation/<code>` — so a manifest where they differ
+reconciles correctly and is then invisible to the tooling that built it.
+
+`billingAccountId` is absent for the reason given below.
+
+### Two repositories
+
+Queenswood arrives as an API and is described by a manifest. The two sit
+apart because they differ in who owns them and who may read them.
+
+**The source**, named by `management.source`, holds the XRD, the
+composition and the provider packages — what an `XQueenswoodInstallation`
+means. `repoURL` names it, `targetRevision` pins the revision the plane
+follows, and `pathPrefix` says where in that repository the project sits:
+`.` for a fork that keeps this layout, a directory for a mirror that
+vendors it. Upstream, a fork you control, or a mirror inside your own
+network; the plane only has to reach it. An organisation that reviews
+what it runs forks and pins a tag, and upgrading is then a merge like
+everything else.
+
+**The manifests**, named by `management.manifestRepoURL`, hold one file
+per installation. Private, because a manifest is identifiers — the
+organisation, the folder, the billing account, the project ids. Nothing
+in it is secret, and nothing in it wants indexing either.
+
+A change to the composition and the manifest change it needs land in
+different repositories, so keep a new XRD field optional with a default.
+That makes the two-sided change rare rather than co-ordinated.
+
+### The App that reads the private repository
+
+The source repository may be public, and then needs no credential. The
+manifests are private, so Argo authenticates as a GitHub App — created
+once by an organisation owner, yielding an App ID, an Installation ID
+and a private key. See [argocd-github](argocd-github.md) for how one is
+made and what goes wrong with it.
+
+All three go to Secret Manager in the management project, into the
+container the composite composes for them, where the secrets identity
+reads them. They are stored together so the identifiers travel with the
+key rather than through a second channel, and nothing else on the
+cluster holds a credential at all.
+
+### The manifest
+
+One file, and the fields it carries:
+
+- **`code`** — the installation's short name, which every resource name
+  derives from. See [cloud-naming](cloud-naming.md).
+- **`region`, `regionCode`, `zone`** — stated rather than left to the
+  XRD's defaults. A name carries the region abbreviation and moving
+  either rebuilds the subnet and the cluster, so a default that changed
+  underneath a live installation would move it silently.
+- **`management.projectId`** — always supplied. A project id is consumed
+  permanently and cannot be undeleted into usefulness, so carrying it in
+  the file is what stops a rebuilt plane minting a second management
+  project beside the first.
+- **`createFolder.parent`** — where a folder would be created.
+  **`createFolder.folderId`** adopts an existing one instead, which is
+  what you set when a folder was handed to you, and what makes a rebuilt
+  plane take over rather than build a second installation.
+- **`billingAccountId`** — supplied when the project is created rather
+  than committed. The account is a property of the identity, which holds
+  `billing.user` on exactly one, and once the project exists the
+  provider owns that field by late-initialisation.
+- **`access`** — below.
+
+### Who holds which capability
+
+`access` maps a capability to the principals that hold it, and carries
+whole IAM member strings because a principal need not be a group. An
+organisation with access groups already maps them straight in and mints
+nothing:
+
+- **`platformViewer`** — day-to-day reading, across the folder and the
+  management project.
+- **`platformAdmin`** — impersonating the identity that builds a plane.
+- **`clusterAdmin`** — administering the clusters.
+- **`secretsAdmin`** — the management project's secrets.
+
+The last three are break-glass: joined for a task and left. Only the
+viewer capability is expected to carry anybody day to day, and it is the
+one capability also bound at the organisation, with `roles/browser`,
+because tooling cannot reach a folder without resolving the organisation
+above it. Everything else `access` grants is folder- or project-scoped
+and composed from this mapping.
+
+A capability left out binds nothing, so an empty mapping installs. That
+matters where the principals do not exist yet: minting groups needs a
+quota project, and until the management project exists there is none. So
+install first, mint the groups against the new project, and add them in
+a second merge.
+
+### Changing what exists
+
+By editing the manifest and merging it. A merge is the privileged
+action, so merged state applies and a `pull_request` trigger gets no
+cloud identity; otherwise a fork's pull request runs as the platform
+identity.
+
+No edit deletes a project. Retiring one is a deliberate second act — lift
+its lien, then delete — and where no lien is on yet, what stands between
+a manifest edit and a deleted project is `managementPolicies` without
+`Delete`.
+
+`status` is read back rather than committed. It carries the folder id,
+the management project and the platform identity, which is where to read
+them rather than from any document.
+
+### Two states that pass every check
+
+Both leave the composite Ready and every managed resource green.
+
+**A manifest that was never pushed.** Applying from a boot plane reads
+the file from a checkout, and that is all a boot plane needs. A plane
+that has taken over reads it from GitHub, so a file that exists locally
+and was never pushed satisfies everything up to the handover and then
+reconciles from nothing.
+
+**A secret with no version.** The composite composes the container the
+App's credentials go in, and a person adds the version. Between the two,
+Argo holds no credential for the repository it reconciles from. That
+secret is the link between the plane and its manifests, and it is the
+one piece the composite deliberately cannot fill.
+
+## Rules
+
+**MUST:**
+
+- Change what exists by editing the manifest, not by acting on GCP.
+- Apply from merged state only. A `pull_request` trigger gets no cloud
+  identity.
+- Push the manifest before a plane takes over reading it from git.
+- Supply `management.projectId` always, and `createFolder.folderId`
+  wherever the folder already exists.
+- Give `metadata.name` and `spec.code` the same string.
+- Keep the manifests repository private, and read `status` back rather
+  than committing it.
+
+**MUST NOT:**
+
+- Commit anything secret beside the manifest.
+- Name a principal in `access` that does not exist. IAM rejects the
+  binding, not the manifest.
+- Create a key for any identity the installation composes.
+- Leave a new XRD field required, when the manifest that sets it lives
+  in another repository.
+
+**MAY:**
+
+- Point `management.source` at upstream, a fork, or a mirror that
+  vendors this layout, and pin `targetRevision` to a tag.
+- Install with an empty `access` mapping, and add capabilities later.
+- Create more than one installation. One manifest per folder.
+
+## References
+
+- [cloud-foundation](cloud-foundation.md) — building the plane that
+  reads the manifest.
+- [argocd-github](argocd-github.md) — the App that reaches a private
+  repository, and how it is rotated.
+- [cloud-account](cloud-account.md) — the organisation, access groups and
+  billing account, none of which has an API.
+- [cloud-naming](cloud-naming.md) — the installation code, and what every
+  name derives from it.
+- [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+  — the folder as an installation, and why foundations are not deleted.
+- [ADR-0023](../adr/0023-installation-naming-and-access.md) — the access
+  capabilities and who holds them.
+- `infra/platform/crossplane-xrds/xqueenswoodinstallation-xrd.yml` — the
+  fields above, as a schema.
+- `justfiles/gcp.just` — `gcp-plane-manifest` mints a first manifest,
+  `gcp-plane-apply` applies a committed one, and
+  `gcp-github-app-secret` stores the App's three values.
