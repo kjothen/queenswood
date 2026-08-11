@@ -14,7 +14,7 @@ starting; neither the migrator nor the bootstrap Job may be skipped
 in any deployment flow. A cross-pod startup dependency is expressed
 via the deployment's `waitFor` list, which adds a `wait-for-<dep>`
 initContainer polling the target's `/actuator/health/liveness`.
-Deploy flows share the same Helm release name (`bank`) so resource
+Deploy flows share the same Helm release name (`queenswood`) so resource
 names don't diverge between them. Never bake an environment name into
 a resource name — discriminate via `values.yaml` overrides and env
 vars. A project MAY carry a service-specific `application.yml`; a
@@ -56,6 +56,43 @@ Express off as a desired state rather than an absence of one:
 Crossplane reconciles toward what is declared and has no notion of
 stopped.
 See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+
+## Build the plane before a merge can install anything
+
+A control plane running another toolchain cannot apply an
+`XQueenswoodInstallation` at all — the manifest names a kind its API
+server has never heard of — so the plane comes before any merge that
+would install something. Grant the bootstrap identity its rights on the
+folder or the parent, never a key. Commit the manifest before applying
+it, and before any plane takes over reading it from git, and pivot the
+composite off a throwaway plane before discarding that plane. Never
+grant a person `serviceAccountTokenCreator` on the platform identity or
+create a key for any of the four identities, never assume you may create
+a folder — ids are required and one may be handed to you instead — and
+never delete a project as a side effect of an edit. Deploying with
+`instances: []` is valid, asking a platform team for the folder and the
+identity shortens this path without changing it, and another XRD and
+composition loaded onto the plane deploys something else the same way.
+See [crossplane-app-deployment](../../../docs/recipes/crossplane-app-deployment.md).
+
+## An installation is one file, and changing it is a merge
+
+Change what exists by editing the manifest rather than by acting on GCP,
+and apply from merged state only, since a `pull_request` trigger gets no
+cloud identity. Push the manifest before a plane takes over reading it
+from git. Supply `management.projectId` always and
+`createFolder.folderId` wherever the folder already exists, give
+`metadata.name` and `spec.code` the same string, keep the manifests
+repository private, and read `status` back rather than committing it.
+Never commit anything secret beside the manifest, never name a principal
+in `access` that does not exist — IAM rejects the binding, not the
+manifest — never create a key for an identity the installation
+composes, and never leave a new XRD field required when the manifest
+that sets it lives in another repository. `management.source` may name
+upstream, a fork, or a mirror that vendors the layout, pinned to a tag;
+an empty `access` mapping installs and capabilities may be added later;
+and one manifest per folder allows more than one installation.
+See [queenswood-installation](../../../docs/recipes/queenswood-installation.md).
 
 ## Cloud infrastructure is Crossplane, not Terraform
 
@@ -146,6 +183,20 @@ something a missing file should not delete. Merge a change before
 expecting Argo to apply it: it reads the revision an Application names,
 never a working tree.
 See [argocd](../../../docs/recipes/argocd.md).
+
+## Argo reads a private repository as a GitHub App
+
+Use a GitHub App, never a deploy key or a personal access token: it
+belongs to the organisation rather than to a person, is revoked by
+uninstalling it, and needs no SSH egress. Grant it Contents read-only
+and install it only on the repositories Argo reads. Keep the private key
+in a secret store and let an operator place the Secret, and add a new
+key before deleting the one it replaces, since an App may hold two at
+once. Never commit the `.pem` or pass it on a command line, and never
+give the App webhook access or any write permission. One App may serve
+several repositories in the same organisation where the same reader
+should reach all of them.
+See [argocd-github](../../../docs/recipes/argocd-github.md).
 
 ## A recipe fails loudly or not at all
 

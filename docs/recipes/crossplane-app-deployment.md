@@ -1,5 +1,4 @@
 # Deploying Crossplane applications
-
 <!-- tessl-plugin: deployment -->
 
 ## Problem
