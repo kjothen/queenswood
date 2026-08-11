@@ -145,6 +145,19 @@ those in full before non-trivial work on their topic.
   layout, one management plane on GKE, foundations liened rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **Crossplane** — what identifies a composed resource, what a patch
+  does when its source is absent, which condition carries which error.
+  See [recipes/crossplane.md](docs/recipes/crossplane.md).
+- **Crossplane providers** — upjet's refusal to replace, external names
+  as cloud identifiers, late-initialisation, reading the CRD rather
+  than the Terraform docs. See
+  [recipes/crossplane-providers.md](docs/recipes/crossplane-providers.md).
+- **Argo CD** — app-of-apps, waves against missing kinds, server-side
+  apply for large CRDs, retry budgets. See
+  [recipes/argocd.md](docs/recipes/argocd.md).
+- **GCP IAM for automation** — Workload Identity's two halves, node
+  identities, rights held by accident, role scopes. See
+  [recipes/gcp-iam.md](docs/recipes/gcp-iam.md).
 - **Cloud naming** — the installation code, the prefix/code/env/label
   rule and its exceptions, the inventory of every kind and a worked
   example of one installation. See
