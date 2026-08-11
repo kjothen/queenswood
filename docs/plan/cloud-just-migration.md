@@ -272,9 +272,17 @@ namespace, which is where the config looks.
 
 `providers.yml` itself was short of two the durable tier will need:
 storage and secretmanager, for the `Bucket` and `BucketIAMMember`
-ADR-0022 names by hand. They are in the manifest rather than in the
-boot plane's install set, which stays narrow — the durable tier is the
-management plane's to run, not a cluster that lives for minutes.
+ADR-0022 names by hand.
+
+The boot plane installs a narrowed subset of that file, and what
+belongs in it is **the providers whose kinds the composite composes**,
+not the providers an instance eventually needs. That distinction was
+learned the hard way: composing a Secret Manager container for the
+plane's own credential put a `secretmanager` kind in the composite
+while the boot plane had no definition for it, and the whole pipeline
+stopped with `no matches for kind "Secret"` — not that resource alone,
+every resource. A composed kind the applying plane cannot store is a
+composition that cannot run.
 
 ADR-0022 names a third, orgpolicy, for the `Policy` that exempts a
 project from the key-creation ban and for `HMACKey` alongside it. Left

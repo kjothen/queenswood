@@ -588,16 +588,23 @@ gcp-plane-up:
       --set argo-cd.enabled=false --set providers.enabled=false --wait
 
     # Only what this plane needs: a folder, a project and its APIs
-    # (cloudplatform), then a network and a GKE cluster to hand over to
-    # (compute, container), then helm to install onto that cluster once
-    # it exists. dns, sql, storage, secretmanager and certificatemanager
-    # serve instances and the durable tier, and belong to the management
-    # plane rather than to a cluster that lives for minutes. Versions
-    # come from the manifest Argo applies, so only the set is narrowed.
+    # Narrowed to the providers whose kinds the composite composes,
+    # which is what this plane has to reconcile before handing over: a
+    # folder, a project and its APIs (cloudplatform), a network and a
+    # GKE cluster (compute, container), helm to install onto that
+    # cluster, and secretmanager for the container the plane's own
+    # credential is stored in. dns, sql, storage and certificatemanager
+    # compose nothing yet and belong to the management plane rather
+    # than to a cluster that lives for minutes.
+    #
+    # The rule is what the composite composes, not what an instance
+    # eventually needs -- a composed kind this plane cannot store fails
+    # the whole pipeline, not just its own resource. Versions come from
+    # the manifest Argo applies, so only the set is narrowed.
     MANIFEST=infra/platform/crossplane-providers/providers.yml
     for name in provider-gcp-cloudplatform provider-gcp-compute \
-                provider-gcp-container provider-helm \
-                function-patch-and-transform \
+                provider-gcp-container provider-gcp-secretmanager \
+                provider-helm function-patch-and-transform \
                 function-go-templating function-auto-ready ; do
       PKG=$(grep -A2 "name: $name\$" "$MANIFEST" | grep 'package:' | awk '{print $2}')
       if [[ -z "$PKG" ]]; then
@@ -622,6 +629,8 @@ gcp-plane-up:
       provider.pkg.crossplane.io/provider-gcp-cloudplatform
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       provider.pkg.crossplane.io/provider-gcp-container
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
+      provider.pkg.crossplane.io/provider-gcp-secretmanager
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
       provider.pkg.crossplane.io/provider-helm
     kubectl --context {{ BOOT_CTX }} wait --for=condition=healthy --timeout=600s \
