@@ -107,3 +107,47 @@ spec:
         duration: 15s
         factor: 2
         maxDuration: 5m
+{{- if .Values.manifestRepoURL }}
+---
+{{- /*
+  The installation itself, at last: this plane reconciling the composite
+  that describes it, from the private repository the credential above
+  unlocks. Everything before it was machinery for being able to.
+
+  Wave 4, after the API it is an instance of.
+
+  prune is off, deliberately. Removing the manifest would otherwise
+  delete the composite, and deleting a composite deletes what it
+  composes -- the cluster and its node pool carry no protection against
+  that, and the folder and project only survive because their
+  management policies withhold Delete. Retiring an installation is a
+  deliberate act, not a consequence of a file going missing.
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: installation
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+    description: This installation's own manifest
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.manifestRepoURL | quote }}
+    targetRevision: {{ .Values.manifestRevision | quote }}
+    path: {{ .Values.code | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crossplane-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+{{- end }}

@@ -1202,6 +1202,27 @@ not use them; `gcloud` will, and it is what lets a bare login find a
 whole installation without knowing a random suffix. It also retires the
 project-id prefix match in `gcp-mgmt-cluster-ctx`.
 
+**Two planes reconcile the same resources until step 6.** That window
+is safe by construction rather than by luck: both run the same
+composition against the same external names, so they agree about
+everything, and neither creates what the other already adopted. It is
+not a state to linger in, but it is not a race either.
+
+**Never delete the composite on the boot plane.** Deleting a composite
+deletes what it composes, and the cluster and its node pool carry
+`managementPolicies: ["*"]` — so a `kubectl delete
+xqueenswoodinstallation` would destroy the management cluster the
+installation was built to hand over. The folder and project would
+survive, because theirs withhold `Delete`, which is exactly the
+asymmetry [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+describes: foundations are protected, the plane running on them is
+disposable.
+
+The boot plane is discarded by deleting the kind cluster, which deletes
+nothing in GCP because no controller is left to act on the objects. The
+distinction is the whole of step 6, and getting it backwards costs the
+cluster.
+
 ### 6. Discard the boot plane
 
 `just gcp-plane-down`, and `just gcp-adc-revoke`. After this the
