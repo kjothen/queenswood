@@ -35,3 +35,8 @@ externalSecrets:
 # where there is none, and then no credential is fetched and no
 # repository is registered with Argo.
 manifestRepoURL: ""
+
+# Which revision of it. Separate from targetRevision above: the
+# manifests and this project's own configuration are different
+# repositories, moving at different times.
+manifestRevision: main
