@@ -1397,6 +1397,45 @@ spec:
                       fmt: "%s-nodes-resource-metadata-writer"
               - *nodes-project
               - *nodes-member
+          # Attaching a service account to anything requires acting
+          # as it, and nothing here grants that. The boot plane gets
+          # away with it because GCP made it owner of the project it
+          # created -- an accident of who built what, not a right this
+          # composition confers. The platform plane inherits no such
+          # thing: it holds projectCreator, so it owns projects it
+          # creates, and the management project is not one of those.
+          #
+          # Without this the first node pool rebuilt after the handover
+          # fails with "does not have permission to act as service
+          # account", on a plane with no boot plane left to fix it.
+          - name: nodes-identity-platform-user
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.serviceAccountUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-nodes-user"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-nodes"
+              - *platform-member
           - name: secrets-identity
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1

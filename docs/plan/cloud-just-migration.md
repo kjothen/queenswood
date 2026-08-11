@@ -629,6 +629,29 @@ so a failing `ExternalSecret` means nobody has done the GitHub step yet
 rather than that something is broken. Worth knowing before it is
 debugged as a fault.
 
+#### Rights the boot plane has by accident
+
+GCP makes whoever creates a project its owner, and the composite
+creates the management project as the boot identity. So the boot plane
+holds `roles/owner` there — not from anything declared, but from having
+built it.
+
+That matters because owner quietly covers things the composition never
+grants. Attaching a service account to a node pool needs
+`iam.serviceAccounts.actAs` on that account, and nothing binds it: the
+boot plane can do it only because owner includes it. The platform
+identity inherits none of that. It holds `projectCreator`, so it owns
+projects *it* creates, and the management project is not one of those —
+so the first node pool rebuilt after the handover would fail with "does
+not have permission to act as service account", on a plane with no boot
+plane left to fix it.
+
+The binding is now composed. The general form is the thing to keep:
+**a right the boot plane has by accident is a right the management
+plane will discover it lacks**, and it discovers it at the worst
+moment, because the boot plane is what would have fixed it. Worth
+checking for at step 5 rather than after step 6.
+
 ### 4. The manifest in git — done
 
 The private `installations` repository holds
