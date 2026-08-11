@@ -23,3 +23,15 @@ pathPrefix: "."
 # one -- and the XRD's management.providerServiceAccount already
 # assumes it.
 providerServiceAccount: crossplane-provider-gcp
+
+# The external-secrets operator, which reads Secret Manager on the
+# secrets identity's behalf. Pinned here and nowhere else, so nothing
+# can drift -- but Renovate does not read Argo Application sources out
+# of a Helm template, so this is bumped by hand.
+externalSecrets:
+  version: "2.9.0"
+
+# The repository this installation's manifest is committed to. Empty
+# where there is none, and then no credential is fetched and no
+# repository is registered with Argo.
+manifestRepoURL: ""

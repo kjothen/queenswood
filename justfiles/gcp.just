@@ -32,6 +32,11 @@ SOURCE_REVISION := "main"
 # keeps the layout; a directory for a mirror that vendors it.
 SOURCE_PATH_PREFIX := "."
 
+# The repository this installation's manifest is committed to, which
+# the management plane reconciles itself from. Empty where there is
+# none, and then nothing fetches a credential for it.
+MANIFEST_REPO_URL := "https://github.com/repldriven/installations"
+
 # Where the installation manifests are checked out. A separate, private
 # repository holding data and nothing executable: this one is public,
 # and a manifest is identifiers. See docs/plan/cloud-just-migration.md.
@@ -818,6 +823,7 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
           repoURL: "{{ SOURCE_REPO }}"
           targetRevision: "{{ SOURCE_REVISION }}"
           pathPrefix: "{{ SOURCE_PATH_PREFIX }}"
+        manifestRepoURL: "{{ MANIFEST_REPO_URL }}"
       createFolder:
         parent: "{{ parent }}"
         displayName: "$NAME"
@@ -954,6 +960,42 @@ gcp-platform-billing-role billing="":
     fi
     echo ">>> granted. The platform identity can now bill the projects"
     echo ">>> it creates, which is what an instance needs."
+
+# Store the GitHub App credentials the management plane reads the manifest with.
+gcp-github-app-secret pem app_id installation_id:
+    #!/usr/bin/env zsh
+    set -e
+    # A person's act, once per App, from the secretsAdmin capability --
+    # GitHub has no API that creates an App, so nothing here can be
+    # declared. See docs/recipes/cloud-foundation.md for the console
+    # steps that produce these three values.
+    #
+    # The container is composed by the installation; this adds a
+    # version to it. A container that does not exist yet means the
+    # composite has not reconciled, which is worth saying plainly
+    # rather than failing on a gcloud error.
+    if [[ ! -f "{{ pem }}" ]]; then
+      echo "no private key at {{ pem }}" >&2
+      exit 1
+    fi
+    PROJECT=$(just _gcp-mgmt-project)
+    SECRET=sec-{{ CODE }}-c-github-app
+    if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
+      echo "no secret $SECRET in $PROJECT" >&2
+      echo "the installation composes it -- apply the composite first" >&2
+      exit 1
+    fi
+
+    # All three together, so the identifiers travel with the key rather
+    # than through a second channel. --rawfile because a PEM is
+    # multi-line and has to be JSON-escaped, and because it keeps the
+    # key off the command line.
+    jq -n --arg app "{{ app_id }}" --arg inst "{{ installation_id }}" \
+      --rawfile key "{{ pem }}" \
+      '{appID: $app, installationID: $inst, privateKey: $key}' \
+      | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=-
+    echo ">>> added a version to $SECRET"
+    echo ">>> external-secrets refreshes hourly; delete the pod to hurry it"
 
 # Show what the platform identity may do, and where.
 gcp-platform-status:

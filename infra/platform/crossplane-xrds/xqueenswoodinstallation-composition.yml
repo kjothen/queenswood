@@ -706,6 +706,7 @@ spec:
                                 repoURL: ""
                                 targetRevision: ""
                                 pathPrefix: ""
+                                manifestRepoURL: ""
                           destination:
                             server: https://kubernetes.default.svc
                           syncPolicy:
@@ -784,6 +785,11 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.management.source.pathPrefix
                 toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.pathPrefix
+              # Not Required: an installation with no manifest
+              # repository composes no credential machinery, which is
+              # what an empty value means to the chart.
+              - fromFieldPath: spec.management.manifestRepoURL
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.manifestRepoURL
               - *plane-release-policies
               - *plane-release-config
           # ===================================================================
@@ -1113,6 +1119,161 @@ spec:
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - *platform-member
+          # ===================================================================
+          # A second identity, for reading Secret Manager and nothing
+          # else. The platform identity could do it -- it already holds
+          # secretmanager.admin -- but it can also create projects and
+          # administer every cluster in the folder, so an operator that
+          # only needs to read a secret would be holding the whole
+          # installation.
+          #
+          # secretAccessor rather than admin: reading a version is all
+          # this does. Writing one is a person's act, from the
+          # secretsAdmin capability.
+          # ===================================================================
+          - name: secrets-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood secrets reader
+                  description: Reads Secret Manager for external-secrets; see docs/recipes/cloud-foundation.md
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-secrets"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-secrets"
+          - name: secrets-identity-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-secrets-wi"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-secrets"
+              # The chart installs into its own namespace and names its
+              # service account after itself.
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[external-secrets/external-secrets]"
+          # The container, not the value. A version is written by a
+          # person holding secretsAdmin, from a key GitHub issued once
+          # -- so what exists is declared and what it holds never
+          # touches git. No Delete, like everything else here: losing
+          # this is losing the plane's way into its own manifest.
+          - name: github-app-secret
+            base:
+              apiVersion: secretmanager.gcp.m.upbound.io/v1beta1
+              kind: Secret
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  replication:
+                    - auto:
+                        - {}
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sec-%s-c-github-app"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.secretId
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sec-%s-c-github-app"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+          - name: secrets-role-project-secret-accessor
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/secretmanager.secretAccessor
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-secrets-project-secret-accessor"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-secrets@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
     # =======================================================================
     # What each capability may do inside the installation, and nothing
     # about who holds it -- that is the manifest's access mapping, and
