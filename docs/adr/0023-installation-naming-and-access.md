@@ -85,7 +85,9 @@ derives from one it prefixes `gke-` itself. So the prefix buys nothing
 and costs a doubled word in every node name, log line and alert:
 `gke-gke-qw01-c-mgmt-…` rather than `gke-qw01-c-mgmt-…`.
 
-A node pool is `np-<label>` — `np-default` for a cluster with one. It
+A node pool is `np-<label>` — `np-primary` for a cluster with one, and
+not `np-default`, which reads as GKE's own `default-pool` and would
+leave a reader guessing whose it is. It
 is a child of a cluster, so the installation and environment are
 already settled by its parent, and the only thing that varies within
 one cluster is what the pool is for. Repeating the scope produces

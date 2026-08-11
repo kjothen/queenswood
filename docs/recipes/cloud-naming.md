@@ -123,11 +123,13 @@ Compute and data:
 - **GKE cluster** — `qw01-c-mgmt`, without a kind prefix: clusters are
   never listed beside other kinds, and GKE prefixes every name it
   derives from one with `gke-` already, so ours would only double it
-- **node pool** — `np-<label>`, `np-default` where there is one. A
-  child of a cluster, so its parent already settles the installation and
-  the environment. GKE builds node names from both, so the
+- **node pool** — `np-<label>`, `np-primary` where there is one, never
+  `np-default`: GKE creates its own `default-pool` on every cluster, and
+  a name that echoes it leaves a reader guessing whose is whose. A child
+  of a cluster, so its parent already settles the installation and the
+  environment. GKE builds node names from both, so the
   saving is visible everywhere a node is named:
-  `gke-qw01-c-mgmt-np-default-d5a1cdac-mx0x` rather than
+  `gke-qw01-c-mgmt-np-primary-d5a1cdac-mx0x` rather than
   `gke-gke-qw01-c-mgmt-np-qw01-c-mgmt-d5a1cdac-mx0x`, forty against
   forty-eight of a permitted sixty-three
 - **CloudSQL instance** — `sql-qw01-<env>-<label>`
@@ -158,7 +160,7 @@ The installation itself:
 - VPC — `vpc-qw01-c-mgmt`
 - subnet — `sb-qw01-c-mgmt-euw2`
 - cluster — `qw01-c-mgmt`
-- node pool — `np-default`
+- node pool — `np-primary`
 - platform identity —
   `sa-qw01-platform@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
 - node identity —
