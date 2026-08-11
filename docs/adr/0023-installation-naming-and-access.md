@@ -73,9 +73,29 @@ Environment codes are the guide's: `b` bootstrap, `c` common, `d` dev,
 - custom role — `rl_<function>`, underscored: GCP rejects a hyphen in a
   custom role id
 
-Two kinds the guide does not cover take the same shape, environment
-segment included: GKE cluster `gke-qw01-c-mgmt`, node pool
-`np-qw01-c-mgmt`.
+Two kinds the guide does not cover take a shortened shape, for a reason
+that generalises: **a name does not repeat what its container already
+says, nor carry a prefix the platform supplies.**
+
+A GKE cluster is `qw01-c-mgmt`, without the kind prefix. Prefixes earn
+their place where kinds are listed together — `vpc-`, `sb-`, `addr-`
+and `rt-` appear side by side in compute output, so each has to say
+what it is. Clusters never appear in such a listing, and every name GKE
+derives from one it prefixes `gke-` itself. So the prefix buys nothing
+and costs a doubled word in every node name, log line and alert:
+`gke-gke-qw01-c-mgmt-…` rather than `gke-qw01-c-mgmt-…`.
+
+A node pool is `np-<label>` — `np-default` for a cluster with one. It
+is a child of a cluster, so the installation and environment are
+already settled by its parent, and the only thing that varies within
+one cluster is what the pool is for. Repeating the scope produces
+`gke-gke-qw01-c-mgmt-np-qw01-c-mgmt-…`, forty-eight characters against
+a sixty-three character limit, of which twenty-two are said twice.
+
+This applies to new installations. `qw01` keeps the longer names it was
+built with, because the alternative is destroying a working cluster to
+improve a string — which is the right trade and worth writing down as
+one, rather than leaving the inconsistency to look like an oversight.
 
 One project carries no code, because it belongs to no installation. The
 identity that creates a folder must exist before the folder does, and

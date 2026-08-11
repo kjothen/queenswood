@@ -120,8 +120,16 @@ Network:
 
 Compute and data:
 
-- **GKE cluster** — `gke-qw01-c-mgmt`
-- **node pool** — `np-qw01-c-mgmt`
+- **GKE cluster** — `qw01-c-mgmt`, without a kind prefix: clusters are
+  never listed beside other kinds, and GKE prefixes every name it
+  derives from one with `gke-` already, so ours would only double it
+- **node pool** — `np-<label>`, `np-default` where there is one. A
+  child of a cluster, so its parent already settles the installation and
+  the environment. GKE builds node names from both, so the
+  saving is visible everywhere a node is named:
+  `gke-qw01-c-mgmt-np-default-d5a1cdac-mx0x` rather than
+  `gke-gke-qw01-c-mgmt-np-qw01-c-mgmt-d5a1cdac-mx0x`, forty against
+  forty-eight of a permitted sixty-three
 - **CloudSQL instance** — `sql-qw01-<env>-<label>`
 - **bucket** — `bkt-qw01-<label>`
 - **secret** — `sec-qw01-<env>-<label>`
@@ -149,10 +157,19 @@ The installation itself:
   `svc-qw01-c-compute`, `svc-qw01-c-container`
 - VPC — `vpc-qw01-c-mgmt`
 - subnet — `sb-qw01-c-mgmt-euw2`
-- cluster — `gke-qw01-c-mgmt`
-- node pool — `np-qw01-c-mgmt`
+- cluster — `qw01-c-mgmt`
+- node pool — `np-default`
 - platform identity —
   `sa-qw01-platform@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
+- node identity —
+  `sa-qw01-c-nodes@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
+- secrets identity —
+  `sa-qw01-c-secrets@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
+
+The worked example is what a new installation is built to. `qw01` was
+built before the cluster and node pool names were shortened, and keeps
+`gke-qw01-c-mgmt` and `np-qw01-c-mgmt`: renaming either destroys and
+rebuilds the cluster, which is not worth doing to a working one.
 
 Its capabilities, in a directory we happen to own:
 
