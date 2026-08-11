@@ -4,7 +4,7 @@
 # All new GCP work lands here, and anything still needed from
 # cloud.just moves here rather than being called across -- cloud.just is
 # the previous generation and shrinks as its recipes are replaced by
-# managed resources. See docs/recipes/cloud-foundation.md.
+# managed resources. See docs/recipes/crossplane-app-deployment.md.
 # =========================================================================
 
 # Throwaway control plane used to create the folder and the management
@@ -314,7 +314,7 @@ gcp-boot-identity org="" billing="":
       echo ">>> creating service account $SA"
       gcloud iam service-accounts create sa-{{ CODE }}-boot --project="$PROJECT" \
         --display-name="sa-{{ CODE }}-boot" \
-        --description="Creates the management project; see docs/recipes/cloud-foundation.md"
+        --description="Creates the management project"
     fi
 
     # A freshly created service account is not immediately visible to
@@ -976,7 +976,7 @@ gcp-github-app-secret pem app_id installation_id:
     set -e
     # A person's act, once per App, from the secretsAdmin capability --
     # GitHub has no API that creates an App, so nothing here can be
-    # declared. See docs/recipes/cloud-foundation.md for the console
+    # declared. See docs/recipes/crossplane-app-deployment.md for the console
     # steps that produce these three values.
     #
     # The container is composed by the installation; this adds a

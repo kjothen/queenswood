@@ -42,7 +42,7 @@ spec:
 
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
-                # are built; see docs/recipes/cloud-foundation.md.
+                # are built; see docs/recipes/crossplane-app-deployment.md.
                 billingAccountId:
                   type: string
                   description: |
