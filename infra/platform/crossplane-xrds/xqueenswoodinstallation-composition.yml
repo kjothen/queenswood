@@ -1296,7 +1296,13 @@ spec:
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - *platform-member
-          - name: nodes-identity
+          # Named for the cluster, as the account is: an instance
+          # brings its own, and a composed resource's name is how
+          # Crossplane tells one from another. Changing this name is
+          # also the only way to make it build a resource under a new
+          # metadata.name -- the composite records the old one, and
+          # deleting the object just rebuilds it from that record.
+          - name: management-nodes-identity
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
               kind: ServiceAccount
@@ -1365,7 +1371,7 @@ spec:
                   string:
                     fmt: "serviceAccount:sa-%s-c-nodes@%s.iam.gserviceaccount.com"
                 toFieldPath: spec.forProvider.member
-          - name: nodes-identity-platform-user
+          - name: management-nodes-identity-user
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
               kind: ServiceAccountIAMMember
@@ -1428,7 +1434,7 @@ spec:
                     string:
                       type: Format
                       fmt: "sa-%s-c-secrets"
-          - name: secrets-identity-workload-identity
+          - name: management-secrets-identity-wi
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
               kind: ServiceAccountIAMMember
