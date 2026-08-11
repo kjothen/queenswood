@@ -35,6 +35,13 @@ constant belongs in `base`.
 Two sources into one field is one `CombineFromComposite`. Two patches
 to the same field is the second overwriting the first.
 
+### Fixed and varying sets
+
+`patch-and-transform` composes a fixed set of resources. It cannot
+express "no resource at all" for an absent input, so anything whose
+*count* varies with the manifest — a binding per member, none where a
+capability is not provided — needs `function-go-templating`.
+
 ### Ownership
 
 Kubernetes records, for every field, which *field manager* set it —
@@ -91,6 +98,15 @@ cluster-scoped kind fails the whole pipeline with `cannot apply cluster
 scoped composed resource … for a namespaced composite resource`, and
 may survive one reconcile before it does, because create and apply are
 different paths.
+
+### Readiness
+
+A managed resource reports `Ready` from its own conditions, which may
+not reflect the cloud. A GCP folder deleted through the console sits in
+`DELETE_REQUESTED` for thirty days and still reads as existing, so the
+provider reported it `Available` throughout — no event, no log line.
+Add a `readinessCheck` against the field that carries the real state,
+and alert on composites rather than on managed resources.
 
 ### Failure
 

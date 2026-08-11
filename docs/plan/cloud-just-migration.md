@@ -1192,9 +1192,14 @@ replaced node pool. Adoption is asserted resource by resource here
 because the two known traps are both silent: a duplicate folder looks
 like success, and a project stuck observing looks like a slow create.
 
-Liens land here too, on the folder and the management project, so that
-the plane taking over meets a refusal in GCP rather than a convention in
-a manifest if a later edit removes a `managementPolicies` entry.
+A lien lands on the management project, so that the plane taking over
+meets a refusal in GCP rather than a convention in a manifest if a
+later edit removes a `managementPolicies` entry. Not on the folder: a
+lien is a project mechanism and a folder cannot carry one, which
+corrects what
+[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+assumed. A folder is protected instead by nobody holding
+`resourcemanager.folders.delete`.
 
 Labels land here as well, carrying the installation code on the folder,
 the management project and later every instance project. Crossplane will

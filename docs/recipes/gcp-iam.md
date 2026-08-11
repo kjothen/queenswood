@@ -69,6 +69,16 @@ project custom role with the one permission is the answer where an
 organisation role is not ours to define. Custom role ids take letters,
 numbers, underscores and periods — never hyphens.
 
+### Deleting is not symmetrical
+
+Liens are a project mechanism. A folder cannot carry one, and is
+protected instead by nobody holding `resourcemanager.folders.delete` —
+which Organization Administrator does not carry, so it needs a group of
+its own.
+
+A folder's display name must be unique among its siblings, so a second
+installation is refused rather than silently duplicated.
+
 ### Credentials
 
 `gcloud auth login` does not refresh application-default credentials.
