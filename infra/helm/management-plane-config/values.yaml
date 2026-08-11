@@ -1,0 +1,10 @@
+# The installation's four-character code, and its management project.
+# Names and addresses here derive from them, and have to spell what the
+# installation composition spelled.
+code: ""
+managementProjectId: ""
+
+# The repository this installation's manifest is committed to. Empty
+# where there is none, and then no credential is fetched and no
+# repository is registered with Argo.
+manifestRepoURL: ""

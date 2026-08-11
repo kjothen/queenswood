@@ -32,6 +32,48 @@ spec:
         maxDuration: 5m
 ---
 {{- /*
+  How this plane authenticates and where it reads secrets from -- every
+  one a custom resource of a kind installed at wave 1, and the reason
+  they are a child Application rather than resources of this chart.
+  Argo cannot build a sync task for a kind the cluster does not have,
+  and a parent that fails there never applies the children that would
+  install it. Here that failure is this Application's alone.
+
+  Wave 2: after the installs, before the API that uses them.
+*/}}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: management-plane-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    description: Provider configurations, secret store and repository credential
+spec:
+  project: default
+  source:
+    repoURL: {{ .Values.repoURL | quote }}
+    targetRevision: {{ .Values.targetRevision | quote }}
+    path: {{ printf "%s/infra/helm/management-plane-config" .Values.pathPrefix | clean | quote }}
+    helm:
+      valuesObject:
+        code: {{ .Values.code | quote }}
+        managementProjectId: {{ .Values.managementProjectId | quote }}
+        manifestRepoURL: {{ .Values.manifestRepoURL | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+---
+{{- /*
   The installation API, and deliberately not any installation: the
   manifest naming one lives in a private repository and arrives
   separately.

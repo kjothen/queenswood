@@ -582,6 +582,29 @@ the composite composes decides what has to exist first. A provider for
 the kind, on the plane doing the composing, and an enabled API on the
 project being composed into.
 
+**A parent that carries resources fails on behalf of its children.**
+Argo cannot build a sync task for a kind the cluster does not have --
+`SkipDryRunOnMissingResource` skips the dry run, not the apply -- so a
+chart holding both a child Application and a custom resource of a kind
+that Application installs deadlocks: the parent fails on the resource,
+never applies the child, and the child is what would have registered
+the kind. It cost a hand-applied patch to break, and hand-applying
+needs cluster write access the access model withholds.
+
+So the parent holds Applications and the one resource whose kind
+Crossplane itself provides, the `DeploymentRuntimeConfig`. Everything
+of a kind installed by something else is a child Application of its
+own, where a missing kind is that child's failure and its retries
+outlast an operator install.
+
+Two second-order traps in the same area. An Application that exhausts
+its retry budget stops on its own until the revision changes or
+somebody syncs it -- so a fix landing in git after the budget ran out
+still needs a nudge, and a nudge is cluster write access again. And a
+failure at any wave stops the waves after it, so one unresolvable
+resource holds back everything downstream of it rather than only
+itself.
+
 **A CRD large enough to break the apply.** external-secrets' own
 `SecretStore` and `ClusterSecretStore` definitions carry every
 provider's schema and exceed 256KB, and Argo's default client-side
