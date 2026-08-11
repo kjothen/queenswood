@@ -37,14 +37,52 @@ to the same field is the second overwriting the first.
 
 ### Ownership
 
-The composition owns every field it patches, under server-side apply.
-Deleting a patch deletes the field. A `kubectl patch` of a field the
-composition sets reverts within seconds; a field it has never set
-sticks. That decides which lever works: `managementPolicies` is set in
-`base` and cannot be patched by hand, `deletionPolicy` usually can.
+Kubernetes records, for every field, which *field manager* set it —
+visible in `metadata.managedFields`. Server-side apply then enforces
+one rule: **a manager that stops declaring a field it solely owns
+removes that field.** Everything below follows from it.
 
-`managementPolicies` without `Delete` orphans the cloud resource when
-the managed resource is deleted.
+Three managers write to a composed resource:
+
+- the **composition**, which declares every field it sets in `base` or
+  patches;
+- the **provider**, which writes status and any field it
+  late-initialises from the cloud;
+- the **reference resolver**, which writes fields it resolves from a
+  `*Ref`.
+
+So:
+
+- **Every field the composition sets, it owns.** Adding a patch is not
+  free: it takes the field from whoever had it.
+- **Deleting a patch deletes the field.** Not "leaves it as it was" —
+  the sole owner relinquished it, so it is removed. On the next
+  reconcile the provider may write it back under its own manager, but
+  the window is real.
+- **A field the composition never set is free.** The provider can
+  late-initialise it, the resolver can resolve it, and a `kubectl
+  patch` of it holds.
+- **Two owners are stable.** If the composition and the provider both
+  declare a field, one relinquishing does not remove it.
+
+Which is why a hand patch sometimes sticks and sometimes reverts within
+seconds. Check `managedFields` before assuming either.
+
+Worked examples, all from one composition:
+
+- `forProvider.folderId` — never set by the composition, resolved from
+  `folderIdRef`. Survives every apply, because the composition has no
+  claim on it.
+- `forProvider.billingAccount` — set by the composition at creation,
+  late-initialised by the provider afterwards. Dropping the patch moves
+  it to the provider; while both declare it, dropping one changes
+  nothing.
+- `managementPolicies` — set in `base`, so composition-owned. A
+  `kubectl patch` reverts on the next reconcile, and the only way to
+  change it is to change the composition.
+- `deletionPolicy` — never set by this composition. A `kubectl patch`
+  sticks, which makes it the usable lever when a managed resource must
+  be deleted without taking the cloud resource with it.
 
 ### Scope
 
@@ -79,6 +117,8 @@ the same way: `no matches for kind`.
   plane that composes it.
 - Read `Synced`, `Ready` and `LastAsyncOperation` before concluding
   anything. They report different failures.
+- Check `metadata.managedFields` before assuming a hand patch will
+  hold, or that a field will survive a patch being removed.
 - Withhold `Delete` from `managementPolicies` for anything whose loss
   is not recoverable. Deleting the managed resource then orphans the
   cloud resource rather than destroying it.

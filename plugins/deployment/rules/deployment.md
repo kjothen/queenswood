@@ -50,8 +50,13 @@ rebuilds the old one. Set `policy.fromFieldPath: Required` where a
 missing source is a mistake rather than a meaning — a patch whose
 source is absent is skipped silently — and put constants in `base`,
 because a `Format` transform with no verb for its input corrupts the
-value. The composition owns what it patches, so deleting a patch
-deletes the field, and patching such a field by hand does not hold.
+value. Server-side apply gives every field a manager, and a manager
+that stops declaring a field it solely owns removes it — so the
+composition owns everything it patches, deleting a patch deletes the
+field rather than leaving it, a field the composition never set stays
+free for the provider to late-initialise or for a hand patch to hold,
+and two managers declaring one field make it stable. Check
+`metadata.managedFields` before assuming either way.
 Withhold `Delete` from `managementPolicies` for anything whose loss is
 unrecoverable: deleting the managed resource then orphans the cloud
 resource rather than destroying it, and deleting a composite destroys
