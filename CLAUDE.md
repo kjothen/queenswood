@@ -128,13 +128,14 @@ those in full before non-trivial work on their topic.
 - **Deployment** — Helm chart, kind dev loop, per-service
   Docker images. See
   [recipes/deployment.md](docs/recipes/deployment.md).
-- **Cloud deployment** — running on GCP from GHCR-published
-  charts and images, which tier stays up between sessions and
-  which cycles, and the up/down runbook. See
+- **Cloud deployment (previous generation)** — the GHCR-published
+  charts, the `QUEENSWOOD_ENV` model and the up/down runbook that
+  `cloud.just` still runs. Superseded by the installation model; read
+  it for what the old path does, never for what to do now. See
   [recipes/cloud-deployment.md](docs/recipes/cloud-deployment.md).
-- **Recovery** — restoring FoundationDB from backup: the routine
-  teardown/rebuild cycle, choosing an earlier restore point, and why
-  a stuck restore blocks the whole deployment. See
+- **Recovery (previous generation's environment model)** — how
+  FoundationDB and Keycloak restore, which has not changed, wrapped in
+  a `QUEENSWOOD_ENV` and `pass` model that has. See
   [recipes/recovery-procedures.md](docs/recipes/recovery-procedures.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
   plane; Argo CD wires the bootstrap chain; queenswood-platform
@@ -145,11 +146,28 @@ those in full before non-trivial work on their topic.
   layout, one management plane on GKE, foundations liened rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **Crossplane** — what identifies a composed resource, what a patch
+  does when its source is absent, which condition carries which error.
+  See [recipes/crossplane.md](docs/recipes/crossplane.md).
+- **Crossplane providers** — upjet's refusal to replace, external names
+  as cloud identifiers, late-initialisation, reading the CRD rather
+  than the Terraform docs. See
+  [recipes/crossplane-providers.md](docs/recipes/crossplane-providers.md).
+- **Argo CD** — app-of-apps, waves against missing kinds, server-side
+  apply for large CRDs, retry budgets. See
+  [recipes/argocd.md](docs/recipes/argocd.md).
+- **GCP IAM for automation** — Workload Identity's two halves, node
+  identities, rights held by accident, role scopes. See
+  [recipes/gcp-iam.md](docs/recipes/gcp-iam.md).
 - **Cloud naming** — the installation code, the prefix/code/env/label
   rule and its exceptions, the inventory of every kind and a worked
   example of one installation. See
   [recipes/cloud-naming.md](docs/recipes/cloud-naming.md) and
   [ADR-0023](docs/adr/0023-installation-naming-and-access.md).
+- **Justfile recipes** — the `set -e` shapes that abort silently,
+  capturing before piping, and not rediscovering what the caller
+  supplied. See
+  [recipes/justfile-recipes.md](docs/recipes/justfile-recipes.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See
   [ADR-0012](docs/adr/0012-pre-commit-hooks.md).

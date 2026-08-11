@@ -1,6 +1,21 @@
-<!-- tessl-plugin: deployment -->
-
 # Recovery procedures
+
+## Status
+
+Superseded in its environment model, and accurate about its mechanics.
+It assumes `QUEENSWOOD_ENV`, `pass` and the `gcp-up` / `gcp-down` cycle
+of the previous generation, none of which the current installation
+has. How FoundationDB and Keycloak restore has not changed; where their
+credentials and restore points live has.
+
+The backup path is also being redesigned: an S3-to-GCS proxy replaces
+the HMAC key this describes, because the org-policy exemption it needs
+is not available in an organisation we do not own. See
+[the plan](../plan/cloud-just-migration.md).
+
+This document carries no plugin label, so nothing here becomes a rule.
+
+## What to run
 
 What to run when data has to come back. Both stores restore the same
 way — a target recorded at teardown, acted on before anything writes —
