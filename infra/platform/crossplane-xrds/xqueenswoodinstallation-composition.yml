@@ -1224,8 +1224,7 @@ spec:
                   name: default
                 forProvider:
                   replication:
-                    - auto:
-                        - {}
+                    auto: {}
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
@@ -1234,8 +1233,13 @@ spec:
                     string:
                       type: Format
                       fmt: "sec-%s-c-github-app"
+              # The secret's id is its external name -- there is no
+              # secretId field -- and both the recipe that writes a
+              # version and the ExternalSecret that reads one spell it,
+              # so it is stated rather than left to default from the
+              # Kubernetes name.
               - fromFieldPath: spec.code
-                toFieldPath: spec.forProvider.secretId
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
                 transforms:
                   - type: string
                     string:
