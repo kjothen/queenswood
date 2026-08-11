@@ -30,6 +30,33 @@ rather than throughput until `message-bus/send` carries a partition
 key and topics have more than one partition.
 See [deployment](../../../docs/recipes/deployment.md).
 
+## A folder is an installation, and its foundations are not deleted
+
+A GCP folder is what an installation is: an IAM boundary, the one place
+an org-policy exemption is expressed, and the only stable handle, since
+project ids carry random suffixes and everything else is discovered from
+the folder down. Inside it, a management project running Crossplane and
+Argo, never torn down, and one disposable project per instance. There
+may be as many folders as the installer wants; each is independent and
+identically shaped, with its own bootstrap identity and management
+project because those rights are folder-scoped.
+
+Protect a foundation in GCP rather than in a manifest. Projects, DNS
+zones and backup buckets carry `managementPolicies` without `Delete` and
+a project lien; a folder cannot carry a lien, so what protects it is
+that nobody holds `resourcemanager.folders.delete`. The lien matters
+more than the policy — a policy is a convention a later edit undoes, and
+the hazard is not a deleted control plane, which leaves managed
+resources with no finalizers running, but a live one watching its
+resources vanish through a prune and doing what it was told. Only the
+disposable tier — clusters, databases, addresses, certificates — is
+fully managed with `Delete`.
+
+Express off as a desired state rather than an absence of one:
+Crossplane reconciles toward what is declared and has no notion of
+stopped.
+See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+
 ## Cloud infrastructure is Crossplane, not Terraform
 
 Cloud infrastructure is declared via Crossplane, not Terraform. A
