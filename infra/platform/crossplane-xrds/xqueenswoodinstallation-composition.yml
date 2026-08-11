@@ -1244,6 +1244,66 @@ spec:
                       fmt: "%s-rl-pod-log-reader"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
+          # ===================================================================
+          # The two the composition cannot run without, and could not
+          # grant itself. Every ProjectIAMMember here needs
+          # projects.setIamPolicy and every ProjectService needs
+          # services.enable, and no folder role the platform identity
+          # holds carries either -- so both work today only because the
+          # boot plane owns the project it built.
+          #
+          # The circularity is why they are worth naming: the binding
+          # that would repair a missing projects.setIamPolicy is itself
+          # a ProjectIAMMember, so a plane that lost it could not grant
+          # it back, and the boot plane that could is discarded at the
+          # end of the pivot.
+          # ===================================================================
+          - name: platform-role-project-iam-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/resourcemanager.projectIamAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-iam-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
+          - name: platform-role-project-service-usage-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/serviceusage.serviceUsageAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-service-usage-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
           # The composition creates three service accounts in this
           # project and could not do so on its own: no folder role it
           # holds carries iam.serviceAccounts.create, and it works today
