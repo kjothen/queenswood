@@ -119,3 +119,18 @@ something a missing file should not delete. Merge a change before
 expecting Argo to apply it: it reads the revision an Application names,
 never a working tree.
 See [argocd](../../../docs/recipes/argocd.md).
+
+## A recipe fails loudly or not at all
+
+Under `set -e`, `cmd && break`, `[[ test ]] && cmd` and a bare
+`VAR=$(cmd)` whose command may fail each end the recipe rather than the
+line — and before its first `echo`, so the symptom is an instant exit
+with no output. Consume the failure you expect instead: `if cmd; then
+break; fi`, or `|| true` where emptiness is handled explicitly. Capture
+a command's output into a variable before piping it, since a pipeline
+takes the last command's status and a denial otherwise reads as an
+empty result. Use whatever the caller supplied and discover only what
+they did not, because discovery fails where an argument would have
+worked. Declare an overridable variable with `env_var_or_default`, and
+name a recipe for what it acts on.
+See [justfile-recipes](../../../docs/recipes/justfile-recipes.md).

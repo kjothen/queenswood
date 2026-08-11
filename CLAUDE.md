@@ -163,6 +163,10 @@ those in full before non-trivial work on their topic.
   example of one installation. See
   [recipes/cloud-naming.md](docs/recipes/cloud-naming.md) and
   [ADR-0023](docs/adr/0023-installation-naming-and-access.md).
+- **Justfile recipes** — the `set -e` shapes that abort silently,
+  capturing before piping, and not rediscovering what the caller
+  supplied. See
+  [recipes/justfile-recipes.md](docs/recipes/justfile-recipes.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See
   [ADR-0012](docs/adr/0012-pre-commit-hooks.md).
