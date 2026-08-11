@@ -143,9 +143,17 @@ those in full before non-trivial work on their topic.
   [tdd/infrastructure.md](docs/tdd/infrastructure.md) and
   [ADR-0016](docs/adr/0016-crossplane-over-terraform.md).
 - **Cloud foundation** — the folder/seed/hub-and-spoke project
-  layout, one management plane on GKE, foundations liened rather
+  layout, one management plane on GKE, foundations protected rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **Building the ability to deploy** — why a plane of the wrong kind
+  cannot install this at all, what the composite builds, the path from
+  a throwaway plane to a durable one, and the four identities. See
+  [crossplane-app-deployment.md](docs/recipes/crossplane-app-deployment.md).
+- **Installing Queenswood** — the two repositories a plane reads, the
+  GitHub App that reaches the private one, the manifest's fields, and
+  who holds which access capability. See
+  [recipes/queenswood-installation.md](docs/recipes/queenswood-installation.md).
 - **Crossplane** — what identifies a composed resource, what a patch
   does when its source is absent, which condition carries which error.
   See [recipes/crossplane.md](docs/recipes/crossplane.md).
@@ -154,8 +162,10 @@ those in full before non-trivial work on their topic.
   than the Terraform docs. See
   [recipes/crossplane-providers.md](docs/recipes/crossplane-providers.md).
 - **Argo CD** — app-of-apps, waves against missing kinds, server-side
-  apply for large CRDs, retry budgets. See
-  [recipes/argocd.md](docs/recipes/argocd.md).
+  apply for large CRDs, retry budgets; and the GitHub App that reaches a
+  private repository. See
+  [recipes/argocd.md](docs/recipes/argocd.md) and
+  [recipes/argocd-github.md](docs/recipes/argocd-github.md).
 - **GCP IAM for automation** — Workload Identity's two halves, node
   identities, rights held by accident, role scopes. See
   [recipes/gcp-iam.md](docs/recipes/gcp-iam.md).

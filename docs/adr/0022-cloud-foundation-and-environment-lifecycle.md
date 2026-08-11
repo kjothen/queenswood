@@ -82,7 +82,7 @@ what forces the management plane to hold its own service account rather
 than borrowing this one.
 
 The runbook for both paths is
-[cloud-foundation](../recipes/cloud-foundation.md).
+[crossplane-app-deployment](../recipes/crossplane-app-deployment.md).
 
 Its rights are folder-scoped once the folder exists, but creating the
 folder is not: `resourcemanager.folders.create` is checked on the

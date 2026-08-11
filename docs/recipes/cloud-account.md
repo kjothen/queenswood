@@ -174,10 +174,10 @@ just gcp-preflight
 ```
 
 An organisation and a billing account is enough to continue with
-[cloud-foundation](cloud-foundation.md). Run as the operating user, the
-roles line reads "not readable by this account" — Browser carries no
-`organizations.getIamPolicy`, and group-derived roles never appear
-there anyway.
+[crossplane-app-deployment](crossplane-app-deployment.md). Run as the
+operating user, the roles line reads "not readable by this account" —
+Browser carries no `organizations.getIamPolicy`, and group-derived roles
+never appear there anyway.
 
 ## Rules
 
@@ -208,5 +208,5 @@ there anyway.
 
 ## References
 
-- [cloud-foundation](cloud-foundation.md) — what to do once the
-  organisation exists.
+- [crossplane-app-deployment](crossplane-app-deployment.md) — what to do
+  once the organisation exists.

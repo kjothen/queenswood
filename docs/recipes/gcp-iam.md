@@ -113,7 +113,7 @@ and are generated on a schedule — they lag a fix by up to a day.
 
 ## References
 
-- [cloud-foundation](cloud-foundation.md) — the identities an
-  installation has, and why each is separate.
+- [crossplane-app-deployment](crossplane-app-deployment.md) — the
+  identities an installation has, and why each is separate.
 - [crossplane-providers](crossplane-providers.md) — how a provider
   authenticates as one.

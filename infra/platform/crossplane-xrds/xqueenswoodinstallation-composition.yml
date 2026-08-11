@@ -864,7 +864,7 @@ spec:
                   name: default
                 forProvider:
                   displayName: Queenswood platform
-                  description: Runs the management plane; see docs/recipes/cloud-foundation.md
+                  description: Runs the management plane
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
@@ -1379,7 +1379,7 @@ spec:
                   name: default
                 forProvider:
                   displayName: Queenswood cluster nodes
-                  description: Runs the management cluster's nodes; see docs/recipes/cloud-foundation.md
+                  description: Runs the management cluster's nodes
             patches:
               - &nodes-name
                 fromFieldPath: spec.code
@@ -1476,7 +1476,7 @@ spec:
                   name: default
                 forProvider:
                   displayName: Queenswood secrets reader
-                  description: Reads Secret Manager for external-secrets; see docs/recipes/cloud-foundation.md
+                  description: Reads Secret Manager for external-secrets
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name

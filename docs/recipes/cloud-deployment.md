@@ -9,11 +9,11 @@ laptop. Kept because `justfiles/cloud.just` still runs an instance this
 way and nothing has replaced that yet.
 
 The current model is an installation reconciled by its own management
-plane — see [cloud-foundation](cloud-foundation.md),
-[cloud-naming](cloud-naming.md) and
-[the plan](../plan/cloud-just-migration.md). This document carries no
-plugin label, so nothing here becomes a rule; read it for what the old
-path does, never for what to do now.
+plane — see [crossplane-app-deployment](crossplane-app-deployment.md),
+[cloud-naming](cloud-naming.md) and [the
+plan](../plan/cloud-just-migration.md). This document carries no plugin
+label, so nothing here becomes a rule; read it for what the old path
+does, never for what to do now.
 
 ## Problem
 

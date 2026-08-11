@@ -236,5 +236,5 @@ installation is that field and nothing else.
   decision this recipe carries out, and the reasoning behind the code.
 - [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as an installation, and its lifecycle.
-- [cloud-foundation](cloud-foundation.md) — what a deployment builds,
-  and the two identities that build it.
+- [crossplane-app-deployment](crossplane-app-deployment.md) — what a
+  deployment builds, and the two identities that build it.
