@@ -128,13 +128,14 @@ those in full before non-trivial work on their topic.
 - **Deployment** — Helm chart, kind dev loop, per-service
   Docker images. See
   [recipes/deployment.md](docs/recipes/deployment.md).
-- **Cloud deployment** — running on GCP from GHCR-published
-  charts and images, which tier stays up between sessions and
-  which cycles, and the up/down runbook. See
+- **Cloud deployment (previous generation)** — the GHCR-published
+  charts, the `QUEENSWOOD_ENV` model and the up/down runbook that
+  `cloud.just` still runs. Superseded by the installation model; read
+  it for what the old path does, never for what to do now. See
   [recipes/cloud-deployment.md](docs/recipes/cloud-deployment.md).
-- **Recovery** — restoring FoundationDB from backup: the routine
-  teardown/rebuild cycle, choosing an earlier restore point, and why
-  a stuck restore blocks the whole deployment. See
+- **Recovery (previous generation's environment model)** — how
+  FoundationDB and Keycloak restore, which has not changed, wrapped in
+  a `QUEENSWOOD_ENV` and `pass` model that has. See
   [recipes/recovery-procedures.md](docs/recipes/recovery-procedures.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
   plane; Argo CD wires the bootstrap chain; queenswood-platform

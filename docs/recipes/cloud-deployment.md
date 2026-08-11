@@ -1,5 +1,19 @@
 # Cloud deployment
-<!-- tessl-plugin: deployment -->
+
+## Status
+
+Superseded, and describing the previous generation: one environment
+keyed to `QUEENSWOOD_ENV`, secrets in `pass`, `gcp-up` and `gcp-down`
+as imperative orchestrators, and a permanent kind control plane on one
+laptop. Kept because `justfiles/cloud.just` still runs an instance this
+way and nothing has replaced that yet.
+
+The current model is an installation reconciled by its own management
+plane — see [cloud-foundation](cloud-foundation.md),
+[cloud-naming](cloud-naming.md) and
+[the plan](../plan/cloud-just-migration.md). This document carries no
+plugin label, so nothing here becomes a rule; read it for what the old
+path does, never for what to do now.
 
 ## Problem
 
