@@ -48,9 +48,9 @@ its own kinds do not exist, not a failed CRD. Set
 `selfHeal` corrects drift. It does not retry a failed sync — those are
 different things, and an Application whose sync failed stays failed
 whatever `selfHeal` says. One that exhausts its retry budget then
-stops until the revision changes or someone syncs it. A fix merged after the budget ran out
-still needs a nudge, and a nudge is cluster write access. Prefer
-budgets that outlast an ordinary incident.
+stops until the revision changes or someone syncs it. A fix merged
+after the budget ran out still needs a nudge, and a nudge is cluster
+write access. Prefer budgets that outlast an ordinary incident.
 
 Trigger a sync without the CLI by setting `.operation` on the
 Application.
