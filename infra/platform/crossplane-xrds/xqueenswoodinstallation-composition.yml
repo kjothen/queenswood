@@ -595,6 +595,19 @@ spec:
                 toFieldPath: spec.forProvider.location
               - fromFieldPath: spec.management.machineType
                 toFieldPath: spec.forProvider.nodeConfig.machineType
+              # Immutable, so changing it replaces the pool and restarts
+              # everything on the cluster. Worth pairing with any other
+              # change that also replaces it -- machineType is the other
+              # one.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-nodes@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.nodeConfig.serviceAccount
           # ===================================================================
           # Crossplane on the management cluster, installed by the plane
           # that built the cluster. This is the first thing composed
@@ -1164,6 +1177,153 @@ spec:
           # this does. Writing one is a person's act, from the
           # secretsAdmin capability.
           # ===================================================================
+          # ===================================================================
+          # The identity the cluster's nodes run as. Not the default
+          # compute service account, which is the point: that account is
+          # shared by everything in the project that never chose one, and
+          # holds whatever the organisation's policy on automatic grants
+          # leaves it holding -- nothing here, Editor in an organisation
+          # that does not enforce the policy. The node pool asks for
+          # cloud-platform scopes, so whatever it holds, every workload
+          # on the cluster reaches through the metadata server.
+          #
+          # The roles below are what a GKE node needs to report itself
+          # and nothing more. Whether logs and metrics are worth
+          # shipping is a separate question, settled on the cluster's
+          # logging and monitoring configuration rather than here: this
+          # identity makes the choice available rather than making it.
+          #
+          # artifactregistry.reader is not among them. Every image this
+          # plane runs comes from a public registry.
+          # ===================================================================
+          - name: nodes-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood cluster nodes
+                  description: Runs the management cluster's nodes; see docs/recipes/cloud-foundation.md
+            patches:
+              - &nodes-name
+                fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-nodes"
+              - &nodes-project
+                fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *nodes-name
+          - name: nodes-role-logging-log-writer
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/logging.logWriter
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-nodes-logging-log-writer"
+              - *nodes-project
+              - &nodes-member
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-nodes@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          - name: nodes-role-monitoring-metric-writer
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/monitoring.metricWriter
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-nodes-monitoring-metric-writer"
+              - *nodes-project
+              - *nodes-member
+          - name: nodes-role-monitoring-viewer
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/monitoring.viewer
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-nodes-monitoring-viewer"
+              - *nodes-project
+              - *nodes-member
+          - name: nodes-role-resource-metadata-writer
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/stackdriver.resourceMetadata.writer
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-nodes-resource-metadata-writer"
+              - *nodes-project
+              - *nodes-member
           - name: secrets-identity
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1

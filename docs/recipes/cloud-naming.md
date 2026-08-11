@@ -78,6 +78,15 @@ Resource-manager and identity:
 - **API enablement** — `svc-qw01-c-<api>`, the API's first label:
   `svc-qw01-c-iam`, `svc-qw01-c-container`.
 - **service account** — `sa-qw01-platform`
+- **Kubernetes objects** — two rules, by how the name is arrived at. A
+  name a composition builds from the installation's code, or that
+  another resource then references by that constructed name, follows
+  the scheme above: `sa-qw01-secrets`, `qw01-mgmt`,
+  `sec-qw01-c-github-app`. A cluster-singleton — a chart, an Argo
+  Application, a configuration nothing constructs a name for — is named
+  in plain words instead: `management-plane`, `crossplane-providers`,
+  `external-secrets`. There is one installation per management cluster,
+  so a code on those would distinguish nothing.
 - **custom role** — `rl-<function>`
 - **group** — `grp-gcp-qw01-platform-viewer`
 
