@@ -1300,7 +1300,15 @@ spec:
                 fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - *nodes-name
-          - name: nodes-role-logging-log-writer
+          # One role rather than the four the older guidance lists.
+          # container.defaultNodeServiceAccount is narrower than they
+          # are -- monitoring.viewer alone grants project-wide read of
+          # every alert policy and dashboard, which a node has no use
+          # for -- and it carries autoscaling.sites.writeMetrics, which
+          # none of them do and horizontal autoscaling needs. Google
+          # maintains it, so a change in what a node requires arrives
+          # here rather than leaving a hand-written list stale.
+          - name: nodes-role-default-node-service-account
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
               kind: ProjectIAMMember
@@ -1311,7 +1319,7 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  role: roles/logging.logWriter
+                  role: roles/container.defaultNodeServiceAccount
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
@@ -1319,10 +1327,9 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "%s-nodes-logging-log-writer"
+                      fmt: "%s-nodes-default-node-service-account"
               - *nodes-project
-              - &nodes-member
-                type: CombineFromComposite
+              - type: CombineFromComposite
                 combine:
                   variables:
                     - fromFieldPath: spec.code
@@ -1331,83 +1338,6 @@ spec:
                   string:
                     fmt: "serviceAccount:sa-%s-nodes@%s.iam.gserviceaccount.com"
                 toFieldPath: spec.forProvider.member
-          - name: nodes-role-monitoring-metric-writer
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/monitoring.metricWriter
-            patches:
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-nodes-monitoring-metric-writer"
-              - *nodes-project
-              - *nodes-member
-          - name: nodes-role-monitoring-viewer
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/monitoring.viewer
-            patches:
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-nodes-monitoring-viewer"
-              - *nodes-project
-              - *nodes-member
-          - name: nodes-role-resource-metadata-writer
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/stackdriver.resourceMetadata.writer
-            patches:
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-nodes-resource-metadata-writer"
-              - *nodes-project
-              - *nodes-member
-          # Attaching a service account to anything requires acting
-          # as it, and nothing here grants that. The boot plane gets
-          # away with it because GCP made it owner of the project it
-          # created -- an accident of who built what, not a right this
-          # composition confers. The platform plane inherits no such
-          # thing: it holds projectCreator, so it owns projects it
-          # creates, and the management project is not one of those.
-          #
-          # Without this the first node pool rebuilt after the handover
-          # fails with "does not have permission to act as service
-          # account", on a plane with no boot plane left to fix it.
           - name: nodes-identity-platform-user
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
