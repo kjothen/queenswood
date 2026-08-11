@@ -1,0 +1,14 @@
+apiVersion: v2
+name: management-plane-config
+description: |
+  The custom resources a management plane is configured by: how its
+  Crossplane providers authenticate, where it reads secrets from, and
+  the repository credential it reads its own manifest with.
+
+  Separate from management-plane because every kind here is registered
+  by something that chart installs. A missing kind fails one
+  Application rather than the parent that would have installed it.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"
