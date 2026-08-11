@@ -684,6 +684,25 @@ carries `iam.serviceAccounts.create`, so that worked only because the
 boot plane owns the project it built. Found by trying to delete a stray
 account and being refused, which is a thin thread to have found it on.
 
+A sweep of every permission the composition needs against every role the
+platform identity holds found two more, and they are the two it cannot
+run without: `resourcemanager.projects.setIamPolicy`, which every
+`ProjectIAMMember` needs, and `serviceusage.services.enable`, which
+every `ProjectService` needs. Both now composed as
+`projectIamAdmin` and `serviceUsageAdmin` on the management project.
+
+The circularity is what makes them worth naming rather than just
+fixing. The binding that would repair a missing `projects.setIamPolicy`
+is itself a `ProjectIAMMember`, so a plane that lost it could not grant
+it back, and the plane that could is discarded at the end of the pivot.
+
+Two remain unfixed and deliberately so: `resourcemanager.projects.update`
+and `resourcemanager.folders.update`, which the display-name patches
+would need. The role carrying them is `projectEditor`, far too broad for
+a field set once at creation and not usefully changed afterwards. So a
+display name is fixed after handover, which is a limitation rather than
+a fault.
+
 The general form is the thing to keep:
 **a right the boot plane has by accident is a right the management
 plane will discover it lacks**, and it discovers it at the worst
