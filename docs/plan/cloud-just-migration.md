@@ -569,6 +569,21 @@ the chart renders no `ExternalSecret` without it — an installation
 applied only from a boot plane has nothing to read and needs no
 credential to read it with.
 
+**A CRD large enough to break the apply.** external-secrets' own
+`SecretStore` and `ClusterSecretStore` definitions carry every
+provider's schema and exceed 256KB, and Argo's default client-side
+apply writes a copy of the whole resource into
+`last-applied-configuration` — which the API server then rejects as
+`Too long: may not be more than 262144 bytes`. Twenty-three of the
+twenty-five CRDs install, the two the controller actually needs do not,
+and it crash-loops looking for kinds nothing registered. The
+Application carries `ServerSideApply=true`, which does not write that
+annotation at all.
+
+Worth generalising, because it is invisible until it happens: any chart
+whose CRDs are large wants server-side apply, and the symptom is a
+crash-looping workload rather than a failed CRD.
+
 **Which changes the character of what follows.** Every chain up to here
 converged on its own given time. This one has a person in the middle:
 the `ExternalSecret` cannot succeed until the key is stored, and the
