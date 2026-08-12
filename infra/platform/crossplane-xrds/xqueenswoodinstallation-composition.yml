@@ -482,6 +482,16 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                # Withheld Delete: this cluster is the plane, not the
+                # disposable tier ADR-0022 leaves fully managed. Deleting
+                # the managed resource orphans it rather than destroying
+                # it, so composite deletion is survivable. Rebuilding it
+                # is a boot plane and a deliberate delete.
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -556,6 +566,14 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                # Withheld for the same reason as the cluster it belongs
+                # to. A pool orphaned on its own is recoverable; one
+                # destroyed with the composite is not.
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
