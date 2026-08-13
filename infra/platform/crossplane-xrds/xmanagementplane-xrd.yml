@@ -1,0 +1,292 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xmanagementplanes.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XManagementPlane
+    plural: xmanagementplanes
+  defaultCompositionRef:
+    name: xmanagementplane.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - createFolder
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. Every name
+                    below derives from it, so nothing needs a lookup to
+                    place a resource and a second installation cannot
+                    collide with the first. See ADR-0023.
+                regionCode:
+                  type: string
+                  default: euw2
+                  description: |
+                    The region, abbreviated, for names that carry one --
+                    a subnet is per-region and says so. Separate from
+                    region because GCP publishes no short form.
+
+                # Folder only, for now. The management project, the
+                # durable tier and the instances join this spec as they
+                # are built; see docs/recipes/crossplane-app-deployment.md.
+                billingAccountId:
+                  type: string
+                  description: |
+                    Billing account for every project in the
+                    installation. Optional, and normally absent: the
+                    identity holds billing.user on exactly one account,
+                    so the binding already settles which is used and a
+                    field restating it is a second copy that can
+                    disagree.
+
+                    Wanted only where a project is being created, and
+                    supplied then by gcp-plane-apply from the identity's
+                    own binding. Once a project exists the provider's
+                    late-initialisation owns forProvider.billingAccount,
+                    so a manifest omitting this leaves billing untouched
+                    rather than unsetting it.
+                access:
+                  type: object
+                  description: |
+                    Which principals hold which capability inside the
+                    installation; see ADR-0023. The capability names are
+                    ours, the principals are the organisation's to create
+                    and to name, and a folder may be handed to you by one
+                    whose groups are named nothing like ours. A capability
+                    the organisation does not provide is left out, and
+                    nothing is bound for it: an installation stands up
+                    with no human bindings at all.
+                  properties:
+                    platformViewer:
+                      type: array
+                      description: |
+                        Read inside the folder, assembled from predefined
+                        viewer roles -- never roles/viewer, which is
+                        primitive. The populated one: somebody's job
+                        rather than a capability they join for.
+                      items: &member
+                        type: string
+                        pattern: '^(user|group|serviceAccount|domain|principal|principalSet):'
+                        description: |
+                          A whole IAM member string, not a bare group
+                          address: a capability may be answered by a
+                          group, by a user in a small organisation, or by
+                          a principalSet from a federated directory.
+                    platformAdmin:
+                      type: array
+                      description: |
+                        May assume the identity that runs the
+                        installation, which holds the administrative
+                        rights GCP grants a folder's creator -- so this
+                        is administration of the whole folder, arrived at
+                        by impersonation. Break-glass.
+                      items: *member
+                    clusterAdmin:
+                      type: array
+                      description: |
+                        container.admin on the folder. Break-glass: acting
+                        on a cluster by hand bypasses what reconciles it.
+                      items: *member
+                    secretsAdmin:
+                      type: array
+                      description: |
+                        secretmanager.admin on the management project.
+                        Break-glass.
+                      items: *member
+                region:
+                  type: string
+                  default: europe-west2
+                zone:
+                  type: string
+                  default: europe-west2-a
+                  description: |
+                    The cluster is zonal, not regional: one zonal control
+                    plane falls under the free allowance, and a plane
+                    running Crossplane and Argo does not need three.
+                management:
+                  type: object
+                  properties:
+                    providerServiceAccount:
+                      type: string
+                      default: crossplane-provider-gcp
+                      description: |
+                        The Kubernetes service account Crossplane's GCP
+                        providers run as on the management cluster,
+                        pinned by a DeploymentRuntimeConfig. Workload
+                        Identity binds to this name, so it cannot be the
+                        generated one.
+                    machineType:
+                      type: string
+                      default: e2-standard-2
+                      description: |
+                        Each upjet provider pod is a Terraform runtime,
+                        and Argo brings five components, so the floor is
+                        higher than it looks. Smaller is worth trying,
+                        measured rather than assumed.
+                    projectId:
+                      type: string
+                      description: |
+                        The management project's id. Always supplied: a
+                        project id is consumed permanently and cannot be
+                        undeleted into usefulness, so a rebuilt plane
+                        that invented one would strand the first.
+                    adopt:
+                      type: string
+                      pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                      description: |
+                        An existing management project to take over,
+                        written projects/<id> -- the prefixed form
+                        Crossplane records as the external name.
+
+                        Separate from projectId because creation and
+                        adoption cannot share a field. GCP answers
+                        permission denied, never not found, for a project
+                        id you do not own, so an external name set before
+                        the project exists makes the first observation
+                        fail and creation never follows.
+                    source:
+                      type: object
+                      default:
+                        repoURL: https://github.com/repldriven/queenswood
+                        targetRevision: main
+                      description: |
+                        Where the management plane reconciles its own
+                        configuration from -- the provider packages, the
+                        installation API, and the runtime and provider
+                        configurations underneath them.
+
+                        Defaulted to this project, and meant to be set
+                        by anyone running a fork. The composition
+                        travels with the fork, so a hard-coded URL here
+                        would have a forked installation build its
+                        cluster and then reconcile upstream's manifests
+                        onto it. Pinning targetRevision to a tag is the
+                        other reason: main is a moving target for a
+                        plane that is meant to be durable.
+
+                        Not the manifest naming an installation, which
+                        is private and arrives separately.
+                      properties:
+                        repoURL:
+                          type: string
+                          default: https://github.com/repldriven/queenswood
+                        targetRevision:
+                          type: string
+                          default: main
+                        pathPrefix:
+                          type: string
+                          default: "."
+                          description: |
+                            Where this project sits inside that
+                            repository. A fork keeps the layout and
+                            leaves this alone; a mirror that vendors
+                            the project under a directory sets it, and
+                            every path below is relative to it.
+                    manifestRepoURL:
+                      type: string
+                      description: |
+                        The repository this installation's own manifest
+                        is committed to, which the management plane
+                        reconciles itself from once it holds a
+                        credential for it.
+
+                        Absent where there is none, and then no
+                        credential machinery is composed at all: an
+                        installation applied only from a boot plane
+                        needs nothing to read.
+
+                        Not management.source, which is where the
+                        plane's configuration comes from. This is where
+                        the record of the installation lives, and the
+                        two are different repositories for the reason
+                        the plan gives -- one is public and the other
+                        is not.
+                    bootstrap:
+                      type: boolean
+                      description: |
+                        Whether this plane may install the management
+                        plane's own Crossplane and Argo, rather than
+                        only watch them.
+
+                        Set by the plane that installs this one, and
+                        absent from the committed manifest, so the
+                        management plane reconciling itself observes
+                        what installed it and never acts on it -- a
+                        composition edit would otherwise have Crossplane
+                        upgrading itself mid-reconcile, and a delete
+                        would need a boot plane raised to recover.
+
+                        The same seam billingAccountId uses: supplied at
+                        creation by whoever is creating, and left out of
+                        the record afterwards.
+                    displayName:
+                      type: string
+                      description: |
+                        Overrides the derived name. Absent by default:
+                        a project's display name mirrors its id, so the
+                        console and a manifest read alike and meaning
+                        lives in labels. Set it where a project is
+                        handed to us already named.
+                createFolder:
+                  type: object
+                  required:
+                    - parent
+                    - displayName
+                  properties:
+                    parent:
+                      type: string
+                      pattern: '^(organizations|folders)/[0-9]+$'
+                      description: |
+                        Where the folder is nested. GCP checks
+                        resourcemanager.folders.create on this, not on
+                        the organisation, so it may be either.
+                    displayName:
+                      type: string
+                      description: |
+                        Names this installation for humans -- the
+                        folder id is the identifier, and a folder handed
+                        to you carries whatever name its organisation
+                        chose. fldr-<code> by convention: display names
+                        must be unique among siblings, and the code
+                        already makes them so.
+                    folderId:
+                      type: string
+                      pattern: '^folders/[0-9]+$'
+                      description: |
+                        An existing folder to adopt instead of creating
+                        one. A rebuilt control plane has no record of
+                        what the last one made, and GCP permits two
+                        folders with the same display name under one
+                        parent, so without this a rebuild silently
+                        creates a second installation.
+            status:
+              type: object
+              properties:
+                managementProjectId:
+                  type: string
+                  description: The management project, once it exists.
+                clusterEndpoint:
+                  type: string
+                  description: The management cluster's API endpoint.
+                folderId:
+                  type: string
+                  description: |
+                    The folder as folders/<id>, which is the form a
+                    parent reference takes and what every later step
+                    reads. Comes from the external-name annotation,
+                    which holds the resource name rather than the
+                    bare number.

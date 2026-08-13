@@ -1,0 +1,1731 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xmanagementplane.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.repldriven.com/v1alpha1
+    kind: XManagementPlane
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # ===================================================================
+          # The folder is the installation. Everything but Delete: a
+          # folder holds every project, and reconciliation must never be
+          # able to take it. v2 namespaced MRs have no deletionPolicy, so
+          # managementPolicies is the only spelling. Liens are applied
+          # separately, and are the control that holds if this is edited.
+          # ===================================================================
+          - name: folder
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: Folder
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: queenswood
+                  parent: organizations/0
+                  # Stops the provider deleting the folder. Not a
+                  # person: a console delete goes through regardless,
+                  # which is what nobody holding folders.delete is for.
+                  # Already the default, stated because it matters.
+                  deletionProtection: true
+            # A soft-deleted folder still reads as existing, so the
+            # provider reports this resource Ready for the whole 30-day
+            # window and goes on doing so -- 22 minutes of deletion
+            # produced no condition change, no event and no log line.
+            # This check moves the composite to Ready: False. The managed
+            # resource itself still says True, so alerting belongs on
+            # composites rather than on MRs.
+            readinessChecks:
+              - type: MatchString
+                fieldPath: status.atProvider.lifecycleState
+                matchString: ACTIVE
+            patches:
+              # Named from the code rather than generated, so every
+              # reference below can spell it and the Kubernetes name
+              # matches the GCP one.
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "fldr-%s"
+              # Adoption. Skipped when absent, so a first run creates and
+              # a rebuild takes over what is already there.
+              - fromFieldPath: spec.createFolder.folderId
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - fromFieldPath: spec.createFolder.parent
+                toFieldPath: spec.forProvider.parent
+              - fromFieldPath: spec.createFolder.displayName
+                toFieldPath: spec.forProvider.displayName
+              # The numeric id lands in the external-name annotation
+              # before it appears anywhere in status.atProvider.
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.annotations[crossplane.io/external-name]
+                toFieldPath: status.folderId
+          # ===================================================================
+          # The management project, referenced to the folder rather than
+          # patched from its id: folderIdRef resolves the composed
+          # Folder by name, so Crossplane orders the two itself.
+          # ===================================================================
+          - name: management-project
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: Project
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  name: queenswood management
+                  # No default VPC. The org policy says the same thing,
+                  # and a folder handed to us may not carry it.
+                  autoCreateNetwork: false
+                  # Provider-side, and already the default. The project
+                  # holds the platform: nothing reconciling should be
+                  # able to remove it.
+                  deletionPolicy: PREVENT
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+              # Adoption only. Setting this before the project exists
+              # makes observe fail with permission denied, which
+              # Crossplane cannot tell from a real error, so it never
+              # creates.
+              - fromFieldPath: spec.management.adopt
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.projectId
+              # Derived first, then overridden: a later patch wins when
+              # its source is set and is skipped when it is absent, so
+              # this is how a field gets a default it cannot state.
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+              - fromFieldPath: spec.management.displayName
+                toFieldPath: spec.forProvider.name
+              - fromFieldPath: spec.billingAccountId
+                toFieldPath: spec.forProvider.billingAccount
+              # Names the composed Folder, so Crossplane resolves it and
+              # orders the two itself rather than the id being threaded
+              # through status.
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.folderIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "fldr-%s"
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.annotations[crossplane.io/external-name]
+                toFieldPath: status.managementProjectId
+          # ===================================================================
+          # APIs the management project needs before anything runs in it.
+          # projectRef names the composed Project, so each waits for it
+          # without an id being threaded through.
+          # ===================================================================
+          - name: management-service-iam
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: iam.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-iam"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          - name: management-service-iamcredentials
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: iamcredentials.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-iamcredentials"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          - name: management-service-serviceusage
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: serviceusage.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-serviceusage"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          - name: management-service-resourcemanager
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: cloudresourcemanager.googleapis.com
+                  # Leaving an API enabled on the way down is harmless
+                  # and avoids a dependent-resource cascade.
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-resourcemanager"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          - name: management-service-compute
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: compute.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-compute"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          - name: management-service-secretmanager
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: secretmanager.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-secretmanager"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          - name: management-service-container
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: container.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-container"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          # ===================================================================
+          # Network for the management cluster. Nothing else lives here,
+          # so one subnet with the two secondary ranges GKE needs.
+          # Network and Subnetwork take a project id rather than a ref,
+          # so it comes from the manifest, which always carries it.
+          # ===================================================================
+          - name: management-vpc
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Network
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  autoCreateSubnetworks: false
+                  routingMode: REGIONAL
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "vpc-%s-c-mgmt"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+          - name: management-subnet
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Subnetwork
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  ipCidrRange: 10.60.0.0/16
+                  privateIpGoogleAccess: true
+                  secondaryIpRange:
+                    - rangeName: pods
+                      ipCidrRange: 10.61.0.0/16
+                    - rangeName: services
+                      ipCidrRange: 10.62.0.0/20
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.regionCode
+                  strategy: string
+                  string:
+                    fmt: "sb-%s-c-mgmt-%s"
+                toFieldPath: metadata.name
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.networkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "vpc-%s-c-mgmt"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+
+          # ===================================================================
+          # The cluster that will run Crossplane and Argo, and nothing
+          # else. Zonal, because one zonal control plane falls under the
+          # free allowance and a management plane does not need three.
+          #
+          # The default node pool is removed and replaced, which costs
+          # about ten minutes here but makes every later change of
+          # machine type a pool replacement rather than a cluster one --
+          # and the right size for this is not yet known.
+          # ===================================================================
+          - name: management-cluster
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: Cluster
+              metadata:
+                namespace: crossplane-system
+              spec:
+                # Withheld Delete: this cluster is the plane, not the
+                # disposable tier ADR-0022 leaves fully managed. Deleting
+                # the managed resource orphans it rather than destroying
+                # it, so composite deletion is survivable. Rebuilding it
+                # is a boot plane and a deliberate delete.
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  initialNodeCount: 1
+                  removeDefaultNodePool: true
+                  deletionProtection: false
+                  releaseChannel:
+                    channel: REGULAR
+                  ipAllocationPolicy:
+                    clusterSecondaryRangeName: pods
+                    servicesSecondaryRangeName: services
+                # A kubeconfig for this cluster, written by the provider
+                # on every reconcile and read by provider-helm's
+                # ProviderConfig. It carries the endpoint and the CA and
+                # no credential: the token comes from the identity block
+                # on that config. A v2 namespaced MR writes it into its
+                # own namespace, which is where the config looks.
+                writeConnectionSecretToRef:
+                  name: gke-kubeconfig
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "gke-%s-c-mgmt"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.writeConnectionSecretToRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "gke-%s-c-mgmt-kubeconfig"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.networkRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "vpc-%s-c-mgmt"
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.regionCode
+                  strategy: string
+                  string:
+                    fmt: "sb-%s-c-mgmt-%s"
+                toFieldPath: spec.forProvider.subnetworkRef.name
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              # Workload Identity, so the platform's own service account
+              # is assumed by a pod rather than held as a key.
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.workloadIdentityConfig.workloadPool
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s.svc.id.goog"
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.endpoint
+                toFieldPath: status.clusterEndpoint
+          - name: management-nodes
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: NodePool
+              metadata:
+                namespace: crossplane-system
+              spec:
+                # Withheld for the same reason as the cluster it belongs
+                # to. A pool orphaned on its own is recoverable; one
+                # destroyed with the composite is not.
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  nodeCount: 1
+                  nodeConfig:
+                    diskSizeGb: 50
+                    diskType: pd-standard
+                    oauthScopes:
+                      - https://www.googleapis.com/auth/cloud-platform
+                    workloadMetadataConfig:
+                      mode: GKE_METADATA
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "np-%s-c-mgmt"
+              # By value, not clusterRef. The reference extractor reads a
+              # field the provider never fills for Cluster -- there is no
+              # forProvider.name, and atProvider.name stays empty -- so it
+              # resolves to nothing forever. The cluster's name is its
+              # external name, which this composition sets, so the value
+              # is as deterministic as the reference would have been.
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.cluster
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "gke-%s-c-mgmt"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.management.machineType
+                toFieldPath: spec.forProvider.nodeConfig.machineType
+              # Immutable, so changing it replaces the pool and restarts
+              # everything on the cluster. Worth pairing with any other
+              # change that also replaces it -- machineType is the other
+              # one.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-c-nodes@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.nodeConfig.serviceAccount
+          # ===================================================================
+          # Crossplane on the management cluster, installed by the plane
+          # that built the cluster. This is the first thing composed
+          # here that acts on Kubernetes rather than on GCP, and it
+          # reaches the cluster through the helm ProviderConfig
+          # gcp-plane-up applies -- a kubeconfig for the endpoint and
+          # the CA, and the impersonated identity for the token.
+          #
+          # The chart version is pinned rather than floating, and
+          # scripts/check-versions.sh holds it to the one the xp-mp
+          # chart resolves, which is what Renovate bumps.
+          #
+          # Observe unless the applying plane says otherwise, which only
+          # the plane installing this one does. So the management plane,
+          # reconciling the composite that describes itself, watches the
+          # release that installed it and never acts on it. The base
+          # carries the safe value because a patch whose source is
+          # absent is skipped, and the committed manifest is what leaves
+          # it absent.
+          # ===================================================================
+          - name: management-crossplane
+            base:
+              apiVersion: helm.m.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                namespace: crossplane-system
+                # The Kubernetes name carries the installation, because
+                # the applying plane holds one per installation. The
+                # helm release name does not: it names a release inside
+                # one cluster, where there is only ever this one, and
+                # the chart derives every resource name from it.
+                annotations:
+                  crossplane.io/external-name: crossplane
+              spec:
+                managementPolicies:
+                  - Observe
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                forProvider:
+                  namespace: crossplane-system
+                  chart:
+                    repository: https://charts.crossplane.io/stable
+                    name: crossplane
+                    version: "2.3.4"
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "crossplane-%s-c-mgmt"
+              # Both cases are spelled, so setting the field to false is
+              # as explicit as leaving it out. map takes a string key,
+              # and the field is a boolean, so it is converted first.
+              - &plane-release-policies
+                fromFieldPath: spec.management.bootstrap
+                toFieldPath: spec.managementPolicies
+                transforms:
+                  - type: convert
+                    convert:
+                      toType: string
+                  - type: map
+                    map:
+                      "true":
+                        - Observe
+                        - Create
+                        - Update
+                        - LateInitialize
+                      "false":
+                        - Observe
+              - &plane-release-config
+                fromFieldPath: spec.code
+                toFieldPath: spec.providerConfigRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-mgmt"
+          # ===================================================================
+          # Argo CD on the management cluster, installed the same way and
+          # observed on the same terms. What it reconciles from is not
+          # here: this puts Argo on the cluster, and pointing it at a
+          # repository is its own step.
+          #
+          # argocd is the namespace and the release name everything else
+          # in this repository already assumes -- the chart derives
+          # argocd-server and the rest from it, and the bootstrap
+          # Applications name that namespace directly.
+          # ===================================================================
+          - name: management-argo
+            base:
+              apiVersion: helm.m.crossplane.io/v1beta1
+              kind: Release
+              metadata:
+                namespace: crossplane-system
+                annotations:
+                  crossplane.io/external-name: argocd
+              spec:
+                managementPolicies:
+                  - Observe
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                forProvider:
+                  namespace: argocd
+                  chart:
+                    repository: https://argoproj.github.io/argo-helm
+                    name: argo-cd
+                    version: "10.2.1"
+                  # What tells Argo where git is, carried by the
+                  # release that installs Argo so that bringing up a
+                  # management plane stays one act. The public
+                  # repository: nothing here needs a credential.
+                  values:
+                    extraObjects:
+                      - apiVersion: argoproj.io/v1alpha1
+                        kind: Application
+                        metadata:
+                          name: management-plane
+                          namespace: argocd
+                          finalizers:
+                            - resources-finalizer.argocd.argoproj.io
+                        spec:
+                          project: default
+                          source:
+                            # Both patched from the composite. The
+                            # literals are what an unpatched render
+                            # shows and never reach a cluster.
+                            repoURL: ""
+                            targetRevision: ""
+                            path: ""
+                            helm:
+                              # valuesObject rather than parameters, so
+                              # the patches below address named keys.
+                              # Both are filled from the composite;
+                              # the values here are what an unpatched
+                              # render would show, and never reach a
+                              # cluster.
+                              valuesObject:
+                                code: ""
+                                managementProjectId: ""
+                                repoURL: ""
+                                targetRevision: ""
+                                pathPrefix: ""
+                                manifestRepoURL: ""
+                          destination:
+                            server: https://kubernetes.default.svc
+                          syncPolicy:
+                            automated:
+                              prune: true
+                              selfHeal: true
+                            # Long enough to outlast a package install.
+                            # The provider configurations are of kinds
+                            # those packages register, and Argo reports
+                            # the packages applied well before they are
+                            # installed.
+                            retry:
+                              limit: 10
+                              backoff:
+                                duration: 30s
+                                factor: 2
+                                maxDuration: 10m
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "argocd-%s-c-mgmt"
+              # One index, because extraObjects is a list and this is
+              # its only member. Everything past it is a named key.
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.code
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.managementProjectId
+              # Twice each: the root Application reads its own source,
+              # and the chart's child Applications read the values it
+              # passes them. One installation, one answer to where its
+              # configuration comes from.
+              #
+              # Required, unlike every other patch here. Absence is
+              # meaningful for billingAccountId and bootstrap, so those
+              # are skipped and the base wins -- there is no
+              # installation whose configuration comes from nowhere, so
+              # a missing source here is a schema that was never
+              # applied, and it should say so rather than compose an
+              # empty URL nothing complains about.
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.repoURL
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.repoURL
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.repoURL
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.repoURL
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.targetRevision
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.targetRevision
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.targetRevision
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.targetRevision
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.pathPrefix
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.path
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s/infra/helm/management-plane"
+                  # A prefix of "." would otherwise hand Argo
+                  # ./infra/... and leave normalising it to Argo.
+                  - type: string
+                    string:
+                      type: TrimPrefix
+                      trim: "./"
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.source.pathPrefix
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.pathPrefix
+              # Not Required: an installation with no manifest
+              # repository composes no credential machinery, which is
+              # what an empty value means to the chart.
+              - fromFieldPath: spec.management.manifestRepoURL
+                toFieldPath: spec.forProvider.values.extraObjects[0].spec.source.helm.valuesObject.manifestRepoURL
+              - *plane-release-policies
+              - *plane-release-config
+          # ===================================================================
+          # The platform's own identity. Created here, assumed by pods on
+          # the management cluster through Workload Identity, and never
+          # held by anyone -- the same property the bootstrap identity
+          # has, arrived at differently.
+          #
+          # What it may do follows below, folder-scoped and
+          # project-scoped.
+          # ===================================================================
+          - name: platform-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood platform
+                  description: Runs the management plane
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-platform"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              # The account id is the external name, so it is stated
+              # rather than generated: the Workload Identity member
+              # string below has to spell the same address.
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-platform"
+          - name: platform-identity-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-platform-wi"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-platform"
+              # serviceAccount:<project>.svc.id.goog[<namespace>/<ksa>]
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[crossplane-system/crossplane-provider-gcp]"
+          # ===================================================================
+          # What the platform identity may do inside the installation --
+          # which is everything this composition does, once the
+          # management plane is the thing running it rather than the
+          # boot plane.
+          #
+          # A fifth principal beside the four capabilities below, and
+          # the reason it is composed here rather than there: its role
+          # set is fixed and derived from what an installation builds,
+          # where a capability's is keyed off whoever the manifest
+          # names.
+          #
+          # Assembled from predefined roles rather than folderAdmin,
+          # which is what GCP granted the boot identity for creating the
+          # folder and is more than this should hold. Billing is not
+          # here at all: the account sits above the folder, so
+          # gcp-platform-billing-role binds it as a person.
+          #
+          # The member is spelled rather than referenced, as the
+          # Workload Identity binding above spells it, and for the same
+          # reason -- the account id is the identity's external name, so
+          # both addresses are derivable from the code and the project.
+          # ===================================================================
+          # Creating a project makes the identity its owner, so an
+          # instance project is administered by having built it rather
+          # than by a folder-wide grant for every kind it holds.
+          - name: platform-role-folder-project-creator
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/resourcemanager.projectCreator
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-project-creator"
+              - &platform-folder-ref
+                fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.folderRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "fldr-%s"
+              # Two variables, so one patch: the account id is the
+              # identity's external name and the project is where it
+              # lives, and a second patch to the same field would
+              # overwrite the first rather than complete it.
+              - &platform-member
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-platform@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          # Binds the four capabilities the access step composes, which
+          # is the one role here that acts on people rather than on
+          # infrastructure. Folder-scoped, so nothing it can grant
+          # reaches outside the installation.
+          - name: platform-role-folder-iam-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/resourcemanager.folderIamAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-iam-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-compute-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/compute.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-compute-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-container-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-container-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-dns-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/dns.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-dns-admin"
+              - *platform-folder-ref
+              - *platform-member
+          - name: platform-role-folder-cloudsql-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-cloudsql-admin"
+              - *platform-folder-ref
+              - *platform-member
+          # Folder-scoped, though the durable bucket is in the
+          # management project: a folder binding inherits into every
+          # project under it, so one grant covers that bucket and
+          # whatever an instance later holds, where the project form
+          # would cover only the first.
+          - name: platform-role-folder-storage-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: FolderIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/storage.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-folder-storage-admin"
+              - *platform-folder-ref
+              - *platform-member
+          # Org policy administration is not here, and cannot be: GCP
+          # answers "Role roles/orgpolicy.policyAdmin is not supported
+          # for this resource" at both folder and project scope, so it
+          # is granted at the organisation, by a person, alongside the
+          # billing role. See docs/plan/cloud-just-migration.md.
+          # ===================================================================
+          # Project-scoped, because what it governs is: Secret Manager
+          # holds the durable tier's secrets in the management project.
+          #
+          # Named by id rather than by a reference to the composed
+          # Project, as the access step's own project binding is -- the
+          # literal is the form proven against this provider version.
+          # ===================================================================
+          - name: platform-role-project-secretmanager-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/secretmanager.admin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-secretmanager-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
+          # ===================================================================
+          # A second identity, for reading Secret Manager and nothing
+          # else. The platform identity could do it -- it already holds
+          # secretmanager.admin -- but it can also create projects and
+          # administer every cluster in the folder, so an operator that
+          # only needs to read a secret would be holding the whole
+          # installation.
+          #
+          # secretAccessor rather than admin: reading a version is all
+          # this does. Writing one is a person's act, from the
+          # secretsAdmin capability.
+          # ===================================================================
+          # ===================================================================
+          # The identity the cluster's nodes run as. Not the default
+          # compute service account, which is the point: that account is
+          # shared by everything in the project that never chose one, and
+          # holds whatever the organisation's policy on automatic grants
+          # leaves it holding -- nothing here, Editor in an organisation
+          # that does not enforce the policy. The node pool asks for
+          # cloud-platform scopes, so whatever it holds, every workload
+          # on the cluster reaches through the metadata server.
+          #
+          # The roles below are what a GKE node needs to report itself
+          # and nothing more. Whether logs and metrics are worth
+          # shipping is a separate question, settled on the cluster's
+          # logging and monitoring configuration rather than here: this
+          # identity makes the choice available rather than making it.
+          #
+          # artifactregistry.reader is not among them. Every image this
+          # plane runs comes from a public registry.
+          # ===================================================================
+          # ===================================================================
+          # Reading a pod's logs, and nothing else. container.viewer does
+          # not carry container.pods.getLogs, and the only predefined
+          # role that does -- container.developer -- also grants exec,
+          # port-forward and every write. Debugging a workload should not
+          # require the power to change it.
+          #
+          # A project custom role rather than an organisation one, so an
+          # installation built in an organisation we do not own needs
+          # nothing from whoever does. The cost is that it grants on this
+          # project alone; an instance project wants its own.
+          #
+          # Two spellings of one name: a GCP custom role id takes letters,
+          # numbers, underscores and periods, and a Kubernetes name takes
+          # hyphens and not underscores. The id is the external name.
+          # ===================================================================
+          - name: pod-log-reader-role
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMCustomRole
+              metadata:
+                namespace: crossplane-system
+                annotations:
+                  crossplane.io/external-name: rl_pod_log_reader
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  title: Pod log reader
+                  description: Reads container logs through the Kubernetes API, and changes nothing
+                  permissions:
+                    - container.pods.getLogs
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-rl-pod-log-reader"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+          # ===================================================================
+          # The two the composition cannot run without, and could not
+          # grant itself. Every ProjectIAMMember here needs
+          # projects.setIamPolicy and every ProjectService needs
+          # services.enable, and no folder role the platform identity
+          # holds carries either -- so both work today only because the
+          # boot plane owns the project it built.
+          #
+          # The circularity is why they are worth naming: the binding
+          # that would repair a missing projects.setIamPolicy is itself
+          # a ProjectIAMMember, so a plane that lost it could not grant
+          # it back, and the boot plane that could is discarded at the
+          # end of the pivot.
+          # ===================================================================
+          - name: platform-role-project-iam-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/resourcemanager.projectIamAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-iam-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
+          - name: platform-role-project-service-usage-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/serviceusage.serviceUsageAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-service-usage-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
+          # The composition creates three service accounts in this
+          # project and could not do so on its own: no folder role it
+          # holds carries iam.serviceAccounts.create, and it works today
+          # only because the boot plane owns the project it built.
+          - name: platform-role-project-service-account-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.serviceAccountAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-service-account-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
+          # The platform identity has to be able to maintain a role this
+          # composition creates.
+          - name: platform-role-project-role-admin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.roleAdmin
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-platform-project-role-admin"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *platform-member
+          # Named for the cluster, as the account is: an instance
+          # brings its own, and a composed resource's name is how
+          # Crossplane tells one from another. Changing this name is
+          # also the only way to make it build a resource under a new
+          # metadata.name -- the composite records the old one, and
+          # deleting the object just rebuilds it from that record.
+          - name: management-nodes-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood cluster nodes
+                  description: Runs the management cluster's nodes
+            patches:
+              - &nodes-name
+                fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-nodes"
+              - &nodes-project
+                fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *nodes-name
+          # One role rather than the four the older guidance lists.
+          # container.defaultNodeServiceAccount is narrower than they
+          # are -- monitoring.viewer alone grants project-wide read of
+          # every alert policy and dashboard, which a node has no use
+          # for -- and it carries autoscaling.sites.writeMetrics, which
+          # none of them do and horizontal autoscaling needs. Google
+          # maintains it, so a change in what a node requires arrives
+          # here rather than leaving a hand-written list stale.
+          - name: nodes-role-default-node-service-account
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.defaultNodeServiceAccount
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-nodes-default-node-service-account"
+              - *nodes-project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-c-nodes@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          - name: management-nodes-identity-user
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.serviceAccountUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-nodes-user"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-nodes"
+              - *platform-member
+          - name: secrets-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood secrets reader
+                  description: Reads Secret Manager for external-secrets
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-secrets"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-secrets"
+          - name: management-secrets-identity-wi
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-secrets-wi"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-secrets"
+              # The chart installs into its own namespace and names its
+              # service account after itself.
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[external-secrets/external-secrets]"
+          # The container, not the value. A version is written by a
+          # person holding secretsAdmin, from a key GitHub issued once
+          # -- so what exists is declared and what it holds never
+          # touches git. No Delete, like everything else here: losing
+          # this is losing the plane's way into its own manifest.
+          - name: github-app-secret
+            base:
+              apiVersion: secretmanager.gcp.m.upbound.io/v1beta1
+              kind: Secret
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  replication:
+                    auto: {}
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sec-%s-c-github-app"
+              # The secret's id is its external name -- there is no
+              # secretId field -- and both the recipe that writes a
+              # version and the ExternalSecret that reads one spell it,
+              # so it is stated rather than left to default from the
+              # Kubernetes name.
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sec-%s-c-github-app"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+          - name: secrets-role-project-secret-accessor
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/secretmanager.secretAccessor
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-secrets-project-secret-accessor"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-c-secrets@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+    # =======================================================================
+    # What each capability may do inside the installation, and nothing
+    # about who holds it -- that is the manifest's access mapping, and
+    # the principals in it belong to whoever owns the directory.
+    # Organisation scope is bound by gcp-groups-bind; everything here is
+    # folder or project scoped, so it belongs beside what it applies to.
+    #
+    # A separate step because the resources vary: none for a capability
+    # the organisation does not provide, one per member per role where it
+    # does. Patch-and-transform composes a fixed set.
+    # =======================================================================
+    - step: access
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $code := $xr.spec.code }}
+            {{- $access := dig "access" dict $xr.spec }}
+            {{- $project := dig "management" "projectId" "" $xr.spec }}
+            {{- /* platformViewer appears twice. Its folder-scoped roles
+                   are predefined; the project-scoped one is a custom
+                   role carrying container.pods.getLogs, which
+                   container.viewer lacks and only container.developer
+                   otherwise provides -- along with exec and every
+                   write. A project custom role may be granted only on
+                   its own project, so it cannot join the folder entry.
+
+                   A comment cannot go inside the list expression
+                   below: a template action does not nest inside
+                   another action's operand, and the whole step fails
+                   to parse. */}}
+            {{- $capabilities := list
+                  (dict "key" "platformViewer" "kind" "FolderIAMMember" "roles" (list
+                    "roles/browser"
+                    "roles/compute.viewer"
+                    "roles/container.viewer"
+                    "roles/iam.serviceAccountViewer"
+                    "roles/logging.viewer"
+                    "roles/monitoring.viewer"))
+                  (dict "key" "platformAdmin" "kind" "ServiceAccountIAMMember" "roles" (list
+                    "roles/iam.serviceAccountTokenCreator"))
+                  (dict "key" "clusterAdmin" "kind" "FolderIAMMember" "roles" (list
+                    "roles/container.admin"))
+                  (dict "key" "secretsAdmin" "kind" "ProjectIAMMember" "roles" (list
+                    "roles/secretmanager.admin"))
+                  (dict "key" "platformViewer" "kind" "ProjectIAMMember" "roles" (list
+                    (printf "projects/%s/roles/rl_pod_log_reader" $project))) }}
+            {{- range $capability := $capabilities }}
+            {{- range $member := dig $capability.key list $access }}
+            {{- range $role := $capability.roles }}
+            {{- /* Hashed, not indexed: a member removed from the middle of
+                   the list would otherwise renumber the ones after it, and
+                   Crossplane would delete and recreate live bindings. */}}
+            {{- /* A custom role is named projects/<id>/roles/<name>, so
+                   the last segment is what identifies it -- a slug
+                   built from the whole string would carry slashes and
+                   not be a Kubernetes name. */}}
+            {{- $slug := printf "%s-%s"
+                  ($role | splitList "/" | last | replace "." "-" | replace "_" "-" | lower)
+                  (sha256sum $member | trunc 8) }}
+            {{- $resource := printf "access-%s-%s" (kebabcase $capability.key) $slug }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: {{ $capability.kind }}
+            metadata:
+              name: {{ printf "%s-%s" $code $resource }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
+            spec:
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                role: {{ $role | quote }}
+                member: {{ $member | quote }}
+            {{- if eq $capability.kind "FolderIAMMember" }}
+                folderRef:
+                  name: {{ printf "fldr-%s" $code | quote }}
+            {{- else if eq $capability.kind "ProjectIAMMember" }}
+                project: {{ $project | quote }}
+            {{- else if eq $capability.kind "ServiceAccountIAMMember" }}
+                serviceAccountIdRef:
+                  name: {{ printf "sa-%s-platform" $code | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+    # =======================================================================
+    # Readiness for whatever the access step composed. Last, and not
+    # optional: patch-and-transform sets readiness only for the resources
+    # it composes itself, and go-templating sets none at all, so without
+    # this the access bindings are never ready in the desired state. The
+    # composite then sits at Creating however healthy GCP is -- every
+    # managed resource Ready, nine unready names in the message, and a
+    # wait on the composite that can only time out.
+    # =======================================================================
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready
