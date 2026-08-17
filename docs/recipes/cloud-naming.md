@@ -86,7 +86,11 @@ Resource-manager and identity:
 - **project** — `prj-qw01-c-mgmt-<suffix>`. The suffix is six hex
   characters, because a project id is globally unique.
 - **API enablement** — `svc-qw01-c-<api>`, the API's first label:
-  `svc-qw01-c-iam`, `svc-qw01-c-container`.
+  `svc-qw01-c-iam`, `svc-qw01-c-container`. The management project ends
+  the name there because there is one of it. An instance keeps its
+  label and takes the API as the qualifier —
+  `svc-qw01-n-test-compute` — since two nonprod instances would
+  otherwise both claim `svc-qw01-n-compute`.
 - **service account** — `sa-qw01-platform`
 - **Kubernetes objects** — two rules, by how the name is arrived at. A
   name a composition builds from the installation's code, or that
