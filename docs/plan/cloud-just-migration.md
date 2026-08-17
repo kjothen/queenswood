@@ -55,10 +55,23 @@ composes today:
 - `vpc-qw01-n-test`, `sb-qw01-n-test-euw2` (10.10.0.0/16, with the pods
   and services ranges GKE allocates from) and
   `sb-qw01-n-test-proxy-euw2` (REGIONAL_MANAGED_PROXY)
+- `sa-qw01-n-test-nodes`, holding
+  `roles/container.defaultNodeServiceAccount` and nothing else
+- `qw01-n-test`, a zonal cluster with Workload Identity and the Gateway
+  API on, writing a kubeconfig to a Secret beside itself
+- `np-primary` under it, the one resource `state` governs today: three
+  nodes at `up`, none at `down`
 
-Nothing costs anything yet. The next step is the cluster, its node pool
-and its node identity, which is where `state: up | down` earns a field
-to govern and where the bill starts. `XPlatform`'s twenty-four
+`state` and the cluster arrived together, because a field naming a
+desired state has nothing to govern until something can be stopped. The
+cluster and the pool are the first things here fully managed with
+`Delete`: they are the disposable tier
+[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+describes, where the project, the network and the identities around
+them are not, and that line is what lets `down` be a word in a file
+rather than a teardown.
+
+They are also where the bill starts. `XPlatform`'s twenty-four
 resources are the port list for everything after that — CloudSQL, the
 apex address and DNS, the certificate — and
 [ADR-0024](../adr/0024-instances-are-their-own-composites.md) says all
@@ -1643,10 +1656,19 @@ declaring the instances inside the plane's own composite puts every
 environment's project, cluster and database in the blast radius of a
 plane rebuild.
 
-**Where it got to.** The project, its APIs and its network are
-composed and reconciling; the cluster is next, and with it the `state`
-field, which has nothing to govern until something can be stopped. Four
-things wait rather than block:
+**Where it got to.** The project, its APIs, its network, its node
+identity and its cluster are composed, and `state: up | down` came with
+the cluster, because until then it had nothing to govern. What is left
+of the port list is CloudSQL, the apex address, its DNS record and the
+certificate, and then the workloads — which is where the choice
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) leaves
+open, between composing `Release` resources directly and composing an
+Argo `Application` per instance, has to be made.
+
+`state` governs the node pool and only the node pool. CloudSQL's
+`activationPolicy` is the second thing it takes, and it can only be
+written against a database that exists. Four things wait rather than
+block:
 
 - **A lien on the instance project.** Deferred deliberately while the
   shape is still changing — a lien makes every teardown two acts, which

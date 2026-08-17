@@ -64,9 +64,13 @@ destroyed as a whole.
   `sa-qw01-boot` sits outside the folder entirely. An identity belonging
   to one cluster takes the environment, because every cluster wants the
   same job done and the name has to say whose:
-  `sa-qw01-c-nodes` for the management cluster's nodes,
-  `sa-qw01-c-secrets` for the operator reading secrets on it, and
-  `sa-qw01-d-nodes` or `sa-qw01-p-nodes` for an instance's.
+  `sa-qw01-c-nodes` for the management cluster's nodes and
+  `sa-qw01-c-secrets` for the operator reading secrets on it. An
+  instance's carries its label too — `sa-qw01-n-test-nodes` — for the
+  reason API enablement does: two nonprod instances would both claim
+  `sa-qw01-n-nodes`, and while their projects would keep them apart in
+  GCP, the composed resources naming them all sit in one namespace on
+  the management cluster.
 - **Group** — `grp-gcp-<capability>` at the organisation,
   `grp-gcp-qw01-<capability>` for an installation. The `gcp` segment is
   the guide's, marking these as cloud access groups within a directory
@@ -138,7 +142,8 @@ Compute and data:
   saving is visible everywhere a node is named:
   `gke-qw01-c-mgmt-np-primary-d5a1cdac-mx0x` rather than
   `gke-gke-qw01-c-mgmt-np-qw01-c-mgmt-d5a1cdac-mx0x`, forty against
-  forty-eight of a permitted sixty-three
+  forty-eight of a permitted sixty-three. Its Kubernetes name is the
+  one exception to the section below, which says why
 - **CloudSQL instance** — `sql-qw01-<env>-<label>`
 - **bucket** — `bkt-qw01-<label>`
 - **secret** — `sec-qw01-<env>-<label>`
@@ -180,7 +185,21 @@ built before the cluster and node pool names were shortened, and keeps
 `gke-qw01-c-mgmt` and `np-qw01-c-mgmt`: renaming either destroys and
 rebuilds the cluster, which is not worth doing to a working one.
 
-Its capabilities, in a directory we happen to own:
+One environment inside it, `n-test`, built to the rule rather than
+before it:
+
+- project — `prj-qw01-n-test-xxxxxx`
+- APIs — `svc-qw01-n-test-compute`, `svc-qw01-n-test-container`,
+  `svc-qw01-n-test-iam`, `svc-qw01-n-test-resourcemanager`,
+  `svc-qw01-n-test-serviceusage`
+- VPC — `vpc-qw01-n-test`
+- subnets — `sb-qw01-n-test-euw2` and `sb-qw01-n-test-proxy-euw2`
+- cluster — `qw01-n-test`
+- node pool — `np-primary`, as `np-qw01-n-test-primary` in Kubernetes
+- node identity —
+  `sa-qw01-n-test-nodes@prj-qw01-n-test-xxxxxx.iam.gserviceaccount.com`
+
+The installation's capabilities, in a directory we happen to own:
 
 - `grp-gcp-qw01-platform-viewer@queenswood.io`
 - `grp-gcp-qw01-platform-admin@queenswood.io`
@@ -202,6 +221,15 @@ makes a console tab and a terminal describe the same thing.
 
 A composed resource whose name is generated cannot be referenced by
 another, so this is load-bearing rather than cosmetic.
+
+The exception is a name GCP scopes to a parent rather than to a
+project. A node pool is the only one so far: every cluster may hold an
+`np-primary`, where the Kubernetes objects for every instance in an
+installation share one namespace, so the two cannot be the same string.
+The Kubernetes name carries the environment — `np-qw01-n-test-primary`
+— and `crossplane.io/external-name` holds the cloud name. Diverging
+them is what the annotation is for; leaving the Kubernetes name to
+collide instead would compose one pool and silently drop the other.
 
 ### Names the manifest derives
 

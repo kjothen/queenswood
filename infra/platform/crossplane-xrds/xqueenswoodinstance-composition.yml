@@ -524,6 +524,353 @@ spec:
                   string:
                     fmt: "vpc-%s-%s-%s"
                 toFieldPath: spec.forProvider.networkRef.name
+          # ===================================================================
+          # The identity this instance's nodes run as. Not the default
+          # compute service account, which is shared by everything in
+          # the project that never chose one and holds whatever the
+          # organisation's policy on automatic grants leaves it holding.
+          # The pool asks for cloud-platform scopes, so whatever it
+          # holds, every workload on the cluster reaches through the
+          # metadata server.
+          #
+          # Delete is withheld. ADR-0024 says down leaves the project,
+          # its DNS zone and its identities standing, so an identity is
+          # not the disposable tier even though the cluster it runs is.
+          #
+          # The label is in the name where the plane's node identity has
+          # only the environment letter: two nonprod instances in one
+          # installation would otherwise both claim sa-<code>-n-nodes,
+          # and Crossplane holds every instance's resources in one
+          # namespace whatever project each lands in.
+          # ===================================================================
+          - name: instance-nodes-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood instance nodes
+                  description: Runs this environment's cluster nodes
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-nodes"
+                toFieldPath: metadata.name
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              # The account id is the external name, so it is stated
+              # rather than left to default from metadata.name: the node
+              # pool below spells the same address, and a generated one
+              # would leave it spelling nothing.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-nodes"
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+          # One role rather than the four the older guidance lists.
+          # container.defaultNodeServiceAccount is narrower than they
+          # are -- monitoring.viewer alone grants project-wide read of
+          # every alert policy and dashboard, which a node has no use
+          # for -- and it carries autoscaling.sites.writeMetrics, which
+          # none of them do and horizontal autoscaling needs. Google
+          # maintains it, so a change in what a node requires arrives
+          # here rather than leaving a hand-written list stale.
+          #
+          # Nothing grants the platform identity serviceAccountUser on
+          # this account, as the plane's composition has to for its own:
+          # the platform identity created this project, which makes it
+          # owner of it, and attaching a service account to a node pool
+          # is a right owner already holds.
+          - name: instance-nodes-role-default-node-service-account
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.defaultNodeServiceAccount
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-nodes-default-node-service-account"
+                toFieldPath: metadata.name
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-%s-%s-nodes@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          # ===================================================================
+          # The cluster this environment runs on, and where its bill
+          # starts: everything composed above it costs nothing standing
+          # still.
+          #
+          # Fully managed, Delete included, which is what ADR-0022
+          # leaves the disposable tier. Retiring an instance destroys
+          # the cluster and leaves the project, the network and the
+          # identities, which is the line that makes state a word in a
+          # file rather than a teardown.
+          #
+          # No nodeConfig here on purpose. It only ever configures the
+          # default node pool, which removeDefaultNodePool deletes
+          # immediately, and GKE then recomputes node_config on the
+          # cluster. The provider sees a diff on a field that can only
+          # change by replacing the cluster and refuses to reconcile,
+          # leaving it stuck Creating. The real node configuration is on
+          # the pool below.
+          # ===================================================================
+          - name: instance-cluster
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: Cluster
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - Delete
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  initialNodeCount: 1
+                  removeDefaultNodePool: true
+                  # The composite is what protects this, through
+                  # managementPolicies and the manifest that declares
+                  # it. A second lock GCP holds outside Crossplane only
+                  # makes a declared teardown fail halfway.
+                  deletionProtection: false
+                  releaseChannel:
+                    channel: REGULAR
+                  ipAllocationPolicy:
+                    clusterSecondaryRangeName: pods
+                    servicesSecondaryRangeName: services
+                  addonsConfig:
+                    httpLoadBalancing:
+                      disabled: false
+                  # What the proxy-only subnet is for. Upbound's CRD
+                  # nests this at the top level rather than under
+                  # networkConfig, and placing it elsewhere is silently
+                  # dropped.
+                  gatewayApiConfig:
+                    channel: CHANNEL_STANDARD
+                # A kubeconfig for this cluster, written by the provider
+                # on every reconcile. It carries the endpoint and the CA
+                # and no credential: the token comes from the identity
+                # block on whichever provider config reads it. This is
+                # what provider-helm will want when the workloads
+                # arrive.
+                writeConnectionSecretToRef:
+                  name: instance-kubeconfig
+            patches:
+              # No kind prefix: a cluster is never listed beside other
+              # kinds, and GKE prefixes every name it derives from one
+              # with gke- already.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-kubeconfig"
+                toFieldPath: spec.writeConnectionSecretToRef.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: spec.forProvider.networkRef.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.regionCode
+                  strategy: string
+                  string:
+                    fmt: "sb-%s-%s-%s-%s"
+                toFieldPath: spec.forProvider.subnetworkRef.name
+              - &cluster-project
+                fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - &cluster-zone
+                fromFieldPath: spec.zone
+                toFieldPath: spec.forProvider.location
+              # Workload Identity, so a pod assumes a service account
+              # rather than holding a key. Nothing binds to the pool
+              # yet; the cluster is where the choice is made available.
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.workloadIdentityConfig.workloadPool
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s.svc.id.goog"
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.endpoint
+                toFieldPath: status.clusterEndpoint
+          # ===================================================================
+          # The one pool, and the only place state governs anything
+          # today: up is three nodes, down is none.
+          #
+          # The count is in the map rather than in a field of its own,
+          # and that is a property of patch-and-transform rather than a
+          # preference. A map transform must name every key it may see
+          # or it errors, so a state patch always writes the count --
+          # which means a second patch carrying a manifest's own count
+          # either overwrites the state or is overwritten by it,
+          # depending only on which is written last. A per-instance
+          # count needs a templating step to arrive, and there is
+          # nothing running here yet to size one against.
+          #
+          # Fully managed with the cluster it belongs to, and named
+          # np-primary in GCP rather than np-default: GKE creates its
+          # own default-pool on every cluster, and a name echoing it
+          # leaves a reader guessing whose is whose.
+          # ===================================================================
+          - name: instance-nodes
+            base:
+              apiVersion: container.gcp.m.upbound.io/v1beta1
+              kind: NodePool
+              metadata:
+                namespace: crossplane-system
+                # A node pool's GCP name is scoped by its cluster, so
+                # it is not unique in a namespace holding every
+                # instance's resources, and this is the one place the
+                # Kubernetes name and the cloud name diverge.
+                annotations:
+                  crossplane.io/external-name: np-primary
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - Delete
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  nodeConfig:
+                    diskSizeGb: 50
+                    diskType: pd-standard
+                    oauthScopes:
+                      - https://www.googleapis.com/auth/cloud-platform
+                    workloadMetadataConfig:
+                      mode: GKE_METADATA
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "np-%s-%s-%s-primary"
+                toFieldPath: metadata.name
+              # By value, not clusterRef. The reference extractor reads
+              # a field the provider never fills for Cluster -- there is
+              # no forProvider.name, and atProvider.name stays empty --
+              # so it resolves to nothing forever. The cluster's name is
+              # its external name, which this composition sets, so the
+              # value is as deterministic as the reference would have
+              # been.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s"
+                toFieldPath: spec.forProvider.cluster
+              - *cluster-project
+              - *cluster-zone
+              - fromFieldPath: spec.machineType
+                toFieldPath: spec.forProvider.nodeConfig.machineType
+              - fromFieldPath: spec.state
+                toFieldPath: spec.forProvider.nodeCount
+                transforms:
+                  - type: map
+                    map:
+                      up: 3
+                      down: 0
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-nodes@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.nodeConfig.serviceAccount
     - step: auto-ready
       functionRef:
         name: function-auto-ready
