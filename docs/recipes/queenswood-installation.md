@@ -127,11 +127,17 @@ cluster holds a credential at all.
 
 ### The manifest
 
-One file, and the fields it carries:
+One file, and the fields it carries. `management.*` says which project
+and where its configuration comes from, which a plane needs because it
+composes a folder and a project and `createFolder.*` is the other half
+of that pair. Everything describing the cluster it builds is flat, and
+an instance — which composes one project and no folder — has nothing to
+disambiguate, so its manifest is flat throughout and spells the shared
+fields identically.
 
 - **`code`** — the installation's short name, which every resource name
   derives from. See [cloud-naming](cloud-naming.md).
-- **`region`, `regionCode`, `zone`, `management.machineType`** — stated
+- **`region`, `regionCode`, `zone`, `machineType`** — stated
   rather than left to the XRD's defaults. A name carries the region
   abbreviation, and moving the region, the zone or the machine type
   rebuilds a subnet, a cluster or a node pool, so a default that

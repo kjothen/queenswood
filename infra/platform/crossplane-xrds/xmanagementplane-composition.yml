@@ -710,7 +710,7 @@ spec:
                 toFieldPath: spec.forProvider.location
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.management.machineType
+                fromFieldPath: spec.machineType
                 toFieldPath: spec.forProvider.nodeConfig.machineType
               # Immutable, so changing it replaces the pool and restarts
               # everything on the cluster. Worth pairing with any other
