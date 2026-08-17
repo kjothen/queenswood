@@ -112,3 +112,18 @@ metadata:
   name: function-auto-ready
 spec:
   package: xpkg.crossplane.io/crossplane-contrib/function-auto-ready:v0.7.0
+---
+# Reads EnvironmentConfigs and merges them into the composition context,
+# so a fact true of a whole installation is stated once rather than in
+# every manifest that needs it. Crossplane 2 dropped the native
+# spec.environment this replaces.
+#
+# What it is for here: an instance's billing account. Crossplane cannot
+# discover it -- reconciliation declares rather than looks up -- and
+# repeating it per instance is what the config avoids.
+apiVersion: pkg.crossplane.io/v1
+kind: Function
+metadata:
+  name: function-environment-configs
+spec:
+  package: xpkg.crossplane.io/crossplane-contrib/function-environment-configs:v0.7.3
