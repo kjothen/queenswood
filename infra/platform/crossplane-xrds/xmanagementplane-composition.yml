@@ -1803,6 +1803,11 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
             spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
               providerConfigRef:
                 kind: ClusterProviderConfig
                 name: default
