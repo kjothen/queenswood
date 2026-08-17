@@ -16,6 +16,15 @@ spec:
         kind: Resources
         resources:
           # ===================================================================
+          # Nothing composed here carries Delete while the composite is
+          # being replaced. Deleting a managed resource then orphans the
+          # cloud resource rather than destroying it, which is what lets
+          # a composite of the new kind adopt what the old one built.
+          #
+          # The IAM bindings take Delete back once XManagementPlane owns
+          # them. Until then a binding this stops declaring stays where
+          # it is, and revoking one means removing it in GCP too.
+          # ===================================================================
           # The folder is the installation. Everything but Delete: a
           # folder holds every project, and reconciliation must never be
           # able to take it. v2 namespaced MRs have no deletionPolicy, so
@@ -409,6 +418,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -432,6 +446,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -910,6 +929,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -971,6 +995,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1017,6 +1046,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1039,6 +1073,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1061,6 +1100,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1083,6 +1127,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1105,6 +1154,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1132,6 +1186,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1167,6 +1226,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1283,6 +1347,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1306,6 +1375,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1333,6 +1407,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1358,6 +1437,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1426,6 +1510,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1456,6 +1545,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1519,6 +1613,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1600,6 +1699,11 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1699,6 +1803,11 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
             spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
               providerConfigRef:
                 kind: ClusterProviderConfig
                 name: default
