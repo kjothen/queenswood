@@ -395,6 +395,90 @@ gcp-boot-org-roles org="":
     echo
     echo ">>> $SA can now create the folder"
 
+# Report the organisation policies in force, at the org and the folder.
+gcp-policy-status org="" folder="":
+    #!/usr/bin/env zsh
+    set -e
+    ORG=$(just _gcp-org-id "{{ org }}")
+    SA=$(just _gcp-boot-sa)
+
+    FOLDER="{{ folder }}"
+    if [[ -z "$FOLDER" ]]; then
+      FOLDER=$(gcloud resource-manager folders list \
+                 --organization="$ORG" \
+                 --filter="displayName=fldr-{{ CODE }}" \
+                 --format='value(name)' 2>/dev/null | head -1 || true)
+    fi
+    FOLDER="${FOLDER#folders/}"
+
+    # Read as the bootstrap identity. No capability carries
+    # orgpolicy.policyViewer -- not platformViewer, which is the one
+    # that reads everything else -- so a person cannot answer this
+    # question about their own organisation.
+    IMP="--impersonate-service-account=$SA"
+
+    echo "organisation $ORG"
+    echo "policies set here:"
+    if OUT=$(gcloud resource-manager org-policies list --organization="$ORG" \
+               $IMP --format='value(constraint)' 2>/dev/null); then
+      printf '%s\n' "${OUT:-  none}" | sed 's/^/  /'
+    else
+      echo "  not readable -- $SA needs orgpolicy.policyViewer, or you"
+      echo "  cannot impersonate it; see gcp-boot-identity"
+    fi
+
+    if [[ -n "$FOLDER" ]]; then
+      echo
+      echo "folder $FOLDER"
+      echo "policies set here:"
+      if OUT=$(gcloud resource-manager org-policies list --folder="$FOLDER" \
+                 $IMP --format='value(constraint)' 2>/dev/null); then
+        printf '%s\n' "${OUT:-  none}" | sed 's/^/  /'
+      else
+        echo "  not readable"
+      fi
+    fi
+
+    # What is actually in force where an installation's projects live,
+    # which is what a set-here listing does not answer: a constraint
+    # enforced at the organisation and unset at the folder still binds.
+    #
+    # The list is the constraints this project has an opinion about,
+    # not GCP's. Anything absent from it is unexamined rather than
+    # judged safe.
+    echo
+    echo "in force on ${FOLDER:-the organisation}, constraint by constraint:"
+    SCOPE="--organization=$ORG"
+    if [[ -n "$FOLDER" ]]; then SCOPE="--folder=$FOLDER"; fi
+    for c in \
+      compute.skipDefaultNetworkCreation \
+      compute.disableSerialPortAccess \
+      compute.requireOsLogin \
+      compute.vmExternalIpAccess \
+      iam.disableServiceAccountKeyCreation \
+      iam.automaticIamGrantsForDefaultServiceAccounts \
+      iam.allowedPolicyMemberDomains \
+      sql.restrictPublicIp \
+      storage.uniformBucketLevelAccess ; do
+      # Two reads rather than one: a boolean constraint answers in
+      # booleanPolicy and a list constraint in listPolicy, and asking
+      # for the wrong one prints an empty string either way.
+      B=$(gcloud resource-manager org-policies describe "$c" $SCOPE --effective \
+            $IMP --format='value(booleanPolicy.enforced)' 2>/dev/null || true)
+      L=$(gcloud resource-manager org-policies describe "$c" $SCOPE --effective \
+            $IMP --format='value(listPolicy.allValues)' 2>/dev/null || true)
+      STATE="not set"
+      if [[ "$B" == "True" ]]; then STATE="enforced"; fi
+      if [[ "$B" == "False" ]]; then STATE="explicitly off"; fi
+      if [[ -n "$L" ]]; then STATE="list: $L"; fi
+      printf '  %-52s %s\n' "$c" "$STATE"
+    done
+
+    echo
+    echo ">>> enforcing one is gcp-folder-skip-default-network's shape:"
+    echo ">>> the bootstrap identity, because orgpolicy.policyAdmin is"
+    echo ">>> granted at the organisation and nowhere else."
+
 # Show the bootstrap identity, its rights, and who may impersonate it.
 gcp-boot-status org="":
     #!/usr/bin/env zsh
