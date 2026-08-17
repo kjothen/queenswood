@@ -143,11 +143,52 @@ One file, and the fields it carries:
   **`createFolder.folderId`** adopts an existing one instead, which is
   what you set when a folder was handed to you, and what makes a rebuilt
   plane take over rather than build a second installation.
-- **`billingAccountId`** — supplied when the project is created rather
-  than committed. The account is a property of the identity, which holds
-  `billing.user` on exactly one, and once the project exists the
-  provider owns that field by late-initialisation.
+- **`billingAccountId`** — supplied when the management project is
+  created rather than committed, because the account is a property of
+  the identity, which holds `billing.user` on exactly one. Nothing then
+  declares it: the field is absent from the managed resource and absent
+  from `atProvider` too, so a project billed once stays billed with
+  reconciliation neither owning the field nor fighting a change to it.
+  Instances get theirs from the installation's shared facts instead.
 - **`access`** — below.
+
+### The installation's shared facts
+
+A second file in the same directory, holding what is true of the whole
+installation rather than of one composite:
+
+```yaml
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: <code>
+  labels:
+    installation: <code>
+data:
+  billingAccountId: "<billing-account-id>"
+```
+
+The label is what selects it: a composition matches `installation`
+against its own `spec.code`, because the name has to follow the code and
+a reference takes a literal. The resource is cluster-scoped, so nothing
+composes it — a namespaced composite may not compose a cluster-scoped
+kind — and Argo applies it from this directory like everything else.
+
+What belongs here is a fact identical across every instance that carries
+no naming or ordering consequence. A billing account qualifies.
+**Region does not**: it is baked into resource names, so an
+installation-wide default would silently want to rebuild every
+instance's subnet and cluster when edited, which is the hazard the
+manifest's own `region` field avoids by being stated. **A folder id
+does not** for parenting either — a composition resolves the folder by
+reference, which orders the two resources and cannot go stale, where a
+copied number does neither.
+
+Resolution is `Required`, so an installation with no config is a
+composite that says so rather than a project that comes up unbilled and
+looks healthy. That makes the order matter in one direction: this file
+exists before a composition reads it, and adding it early is free
+because a config nothing reads does nothing.
 
 ### Who holds which capability
 

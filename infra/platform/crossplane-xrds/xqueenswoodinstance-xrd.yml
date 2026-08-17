@@ -103,9 +103,11 @@ spec:
                 billingAccountId:
                   type: string
                   description: |
-                    The billing account to charge. Absent leaves the
-                    project unbilled, which is valid and which almost
-                    nothing then works on.
+                    The billing account to charge, where this instance
+                    is charged somewhere other than the rest of the
+                    installation. Normally absent: the account comes
+                    from the installation's EnvironmentConfig, and this
+                    overrides it.
 
                     The platform identity holds billing.user on the
                     account rather than the composition granting it:
