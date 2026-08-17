@@ -85,19 +85,28 @@ derives from one it prefixes `gke-` itself. So the prefix buys nothing
 and costs a doubled word in every node name, log line and alert:
 `gke-gke-qw01-c-mgmt-…` rather than `gke-qw01-c-mgmt-…`.
 
-A node pool is `np-<label>` — `np-primary` for a cluster with one, and
-not `np-default`, which reads as GKE's own `default-pool` and would
-leave a reader guessing whose it is. It
-is a child of a cluster, so the installation and environment are
-already settled by its parent, and the only thing that varies within
-one cluster is what the pool is for. Repeating the scope produces
-`gke-gke-qw01-c-mgmt-np-qw01-c-mgmt-…`, forty-eight characters against
-a sixty-three character limit, of which twenty-two are said twice.
+A node pool is `np-qw01-<env>-<label>-primary` — `primary` and not
+`default`, which reads as GKE's own `default-pool` and would leave a
+reader guessing whose it is.
 
-This applies to new installations. `qw01` keeps the longer names it was
-built with, because the alternative is destroying a working cluster to
-improve a string — which is the right trade and worth writing down as
-one, rather than leaving the inconsistency to look like an oversight.
+This was `np-<label>` alone when the decision was first written, on the
+argument that a pool is a child of a cluster, so its parent already
+settles the installation and the environment, and repeating them
+produces `gke-gke-qw01-c-mgmt-np-qw01-c-mgmt-…` — forty-eight of a
+sixty-three character limit, of which twenty-two are said twice. That
+argument holds in GCP and does not survive the section below. A pool's
+name is scoped to its cluster there and to a namespace in Kubernetes,
+and one namespace holds the composed resources of every instance in an
+installation, so the short form is available on one side only. Taking
+it would mean two names for one thing, which is the cost that section
+exists to refuse. The scope is repeated, and the length is what it
+buys.
+
+This applies to new installations. `qw01` keeps `gke-qw01-c-mgmt` and
+`np-qw01-c-mgmt`, the names it was built with, because the alternative
+is destroying a working cluster to improve a string. That is the right
+trade and worth writing down as one, rather than leaving the
+inconsistency to look like an oversight.
 
 One project carries no code, because it belongs to no installation. The
 identity that creates a folder must exist before the folder does, and
@@ -118,9 +127,19 @@ never inside a folder, so they hold only in an organisation we own.
 ### Kubernetes names mirror GCP names
 
 A managed resource is named for what it manages: `fldr-qw01`,
-`prj-qw01-c-mgmt`, `gke-qw01-mgmt`. So `kubectl get managed` and the
+`prj-qw01-c-mgmt`, `qw01-c-mgmt`. So `kubectl get managed` and the
 Cloud Console read the same, which is what someone debugging needs. It
 costs explicit patches where a single format string would otherwise do.
+
+Where the two sides would allow different names, the one both accept
+wins in both. GCP scopes some names to a parent and Kubernetes scopes
+everything to a namespace, so a resource may be unambiguous in GCP
+under a shorter name — a node pool is the first — while colliding with
+another installation's in the namespace they share. Setting
+`crossplane.io/external-name` would keep the short name in GCP at the
+price of a second name to know, which is the price this section is
+here to refuse. The annotation is for a name Kubernetes cannot
+express, not for one that is merely tidier.
 
 ### Inside the zone, automation owns everything
 

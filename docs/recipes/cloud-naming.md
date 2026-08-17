@@ -64,9 +64,13 @@ destroyed as a whole.
   `sa-qw01-boot` sits outside the folder entirely. An identity belonging
   to one cluster takes the environment, because every cluster wants the
   same job done and the name has to say whose:
-  `sa-qw01-c-nodes` for the management cluster's nodes,
-  `sa-qw01-c-secrets` for the operator reading secrets on it, and
-  `sa-qw01-d-nodes` or `sa-qw01-p-nodes` for an instance's.
+  `sa-qw01-c-nodes` for the management cluster's nodes and
+  `sa-qw01-c-secrets` for the operator reading secrets on it. An
+  instance's carries its label too — `sa-qw01-n-test-nodes` — for the
+  reason API enablement does: two nonprod instances would both claim
+  `sa-qw01-n-nodes`, and while their projects would keep them apart in
+  GCP, the composed resources naming them all sit in one namespace on
+  the management cluster.
 - **Group** — `grp-gcp-<capability>` at the organisation,
   `grp-gcp-qw01-<capability>` for an installation. The `gcp` segment is
   the guide's, marking these as cloud access groups within a directory
@@ -130,15 +134,18 @@ Compute and data:
 - **GKE cluster** — `qw01-c-mgmt`, without a kind prefix: clusters are
   never listed beside other kinds, and GKE prefixes every name it
   derives from one with `gke-` already, so ours would only double it
-- **node pool** — `np-<label>`, `np-primary` where there is one, never
-  `np-default`: GKE creates its own `default-pool` on every cluster, and
-  a name that echoes it leaves a reader guessing whose is whose. A child
-  of a cluster, so its parent already settles the installation and the
-  environment. GKE builds node names from both, so the
-  saving is visible everywhere a node is named:
-  `gke-qw01-c-mgmt-np-primary-d5a1cdac-mx0x` rather than
-  `gke-gke-qw01-c-mgmt-np-qw01-c-mgmt-d5a1cdac-mx0x`, forty against
-  forty-eight of a permitted sixty-three
+- **node pool** — `np-qw01-<env>-<label>-primary`, and `primary` rather
+  than `default` because GKE creates its own `default-pool` on every
+  cluster and a name echoing it leaves a reader guessing whose is
+  whose. The environment is in it even though the cluster above it
+  already settles that, because GCP scopes a pool's name to its parent
+  and Kubernetes does not: every cluster may hold an `np-primary`,
+  where the composed resources for every instance in an installation
+  share one namespace. The short form is only available on one side, so
+  taking it would mean two names for one thing. The cost is visible
+  wherever a node is named — GKE builds node names from the cluster and
+  the pool, so `gke-qw01-n-test-np-qw01-n-test-primary-d5a1cdac-mx0x`,
+  fifty-two of a permitted sixty-three
 - **CloudSQL instance** — `sql-qw01-<env>-<label>`
 - **bucket** — `bkt-qw01-<label>`
 - **secret** — `sec-qw01-<env>-<label>`
@@ -167,7 +174,7 @@ The installation itself:
 - VPC — `vpc-qw01-c-mgmt`
 - subnet — `sb-qw01-c-mgmt-euw2`
 - cluster — `qw01-c-mgmt`
-- node pool — `np-primary`
+- node pool — `np-qw01-c-mgmt-primary`
 - platform identity —
   `sa-qw01-platform@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
 - node identity —
@@ -176,11 +183,26 @@ The installation itself:
   `sa-qw01-c-secrets@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
 
 The worked example is what a new installation is built to. `qw01` was
-built before the cluster and node pool names were shortened, and keeps
-`gke-qw01-c-mgmt` and `np-qw01-c-mgmt`: renaming either destroys and
-rebuilds the cluster, which is not worth doing to a working one.
+built before the cluster prefix was dropped and before the pool took
+`primary`, and keeps `gke-qw01-c-mgmt` and `np-qw01-c-mgmt`: renaming
+either destroys and rebuilds the cluster, which is not worth doing to a
+working one.
 
-Its capabilities, in a directory we happen to own:
+One environment inside it, `n-test`, built to the rule rather than
+before it:
+
+- project — `prj-qw01-n-test-xxxxxx`
+- APIs — `svc-qw01-n-test-compute`, `svc-qw01-n-test-container`,
+  `svc-qw01-n-test-iam`, `svc-qw01-n-test-resourcemanager`,
+  `svc-qw01-n-test-serviceusage`
+- VPC — `vpc-qw01-n-test`
+- subnets — `sb-qw01-n-test-euw2` and `sb-qw01-n-test-proxy-euw2`
+- cluster — `qw01-n-test`
+- node pool — `np-qw01-n-test-primary`
+- node identity —
+  `sa-qw01-n-test-nodes@prj-qw01-n-test-xxxxxx.iam.gserviceaccount.com`
+
+The installation's capabilities, in a directory we happen to own:
 
 - `grp-gcp-qw01-platform-viewer@queenswood.io`
 - `grp-gcp-qw01-platform-admin@queenswood.io`
@@ -202,6 +224,14 @@ makes a console tab and a terminal describe the same thing.
 
 A composed resource whose name is generated cannot be referenced by
 another, so this is load-bearing rather than cosmetic.
+
+It also decides a name where GCP would allow a shorter one. A node pool
+is scoped to its cluster, so `np-primary` is unambiguous in GCP and
+collides in the namespace every instance's resources share. Where the
+two disagree, the longer name wins in both rather than
+`crossplane.io/external-name` holding a second one — the annotation is
+for a name Kubernetes cannot express, not for a name that is merely
+tidier.
 
 ### Names the manifest derives
 

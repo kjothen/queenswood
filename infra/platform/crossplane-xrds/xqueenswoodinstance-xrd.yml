@@ -19,8 +19,8 @@ spec:
           type: object
           description: |
             One environment of the bank inside an installation: its own
-            project, and in time the network, cluster, database and
-            workloads that run in it.
+            project, network and cluster, and in time the database and
+            the workloads that run on it.
 
             Its own composite rather than a field on the plane's,
             because a composite is a unit of replacement and rebuilding
@@ -68,6 +68,34 @@ spec:
                     What this environment is for, within its tier:
                     test, uat, prod. Follows env in every name the
                     composition builds.
+                state:
+                  type: string
+                  enum:
+                    - up
+                    - down
+                  default: up
+                  description: |
+                    Whether this environment is running. Off is a
+                    desired state rather than an absence of one:
+                    Crossplane reconciles toward what is declared and
+                    has no notion of stopped, so down is spelled and
+                    reconciled like anything else. See ADR-0022.
+
+                    down is the node pool at zero. The cluster, the
+                    project, the network and the identities stand; what
+                    stops is everything that runs on a node, which is
+                    where the bill is. In time it also takes CloudSQL to
+                    activationPolicy NEVER and leaves the disposable
+                    tier absent.
+
+                    draining is not here. ADR-0024 says an instance may
+                    ship with up and down before the ordered teardown is
+                    trustworthy, and its precondition -- an unattended
+                    Keycloak restore -- is not met.
+
+                    Defaulted rather than required, because the
+                    manifests that set it live in another repository and
+                    a newly required field invalidates them all at once.
                 region:
                   type: string
                   default: europe-west2
@@ -92,6 +120,31 @@ spec:
                     The region, abbreviated, as it appears in the name
                     of anything regional. GCP publishes no short form,
                     so the manifest states it and nothing derives it.
+                zone:
+                  type: string
+                  default: europe-west2-a
+                  description: |
+                    Where the cluster's control plane and its nodes sit.
+                    Zonal rather than regional: a regional cluster
+                    replicates the node count into every zone it spans,
+                    so the same pool costs three times as much, and an
+                    environment that survives a zone going away is not
+                    what a test instance is for.
+
+                    Stated in every manifest for the same reason region
+                    is, even though no name carries it: moving it
+                    rebuilds the cluster.
+                machineType:
+                  type: string
+                  default: e2-standard-2
+                  description: |
+                    What the nodes are. Immutable, so changing it
+                    replaces the pool and restarts everything on the
+                    cluster -- worth pairing with any other change that
+                    also replaces it.
+
+                    The floor for the bank rather than a measured
+                    answer: nothing runs on this yet.
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
@@ -146,3 +199,12 @@ spec:
                   description: |
                     The project as Crossplane records it,
                     projects/<id>. Read back rather than committed.
+                clusterEndpoint:
+                  type: string
+                  description: |
+                    The cluster's API server address. Read back rather
+                    than committed, and the one thing here anything
+                    outside the composite needs -- a kubeconfig for it
+                    is written to a Secret beside the composed cluster,
+                    which is what provider-helm reads when the workloads
+                    arrive.
