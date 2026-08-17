@@ -60,7 +60,7 @@ See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle
 ## Build the plane before a merge can install anything
 
 A control plane running another toolchain cannot apply an
-`XQueenswoodInstallation` at all — the manifest names a kind its API
+`XManagementPlane` at all — the manifest names a kind its API
 server has never heard of — so the plane comes before any merge that
 would install something. Grant the bootstrap identity its rights on the
 folder or the parent, never a key. Commit the manifest before applying

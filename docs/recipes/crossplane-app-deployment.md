@@ -21,7 +21,7 @@ privilege is ambient: somebody established it before any of this, and
 the install is a merge.
 
 That privilege has to be of the right kind. A plane reconciling
-Terraform against AWS cannot apply an `XQueenswoodInstallation` at all —
+Terraform against AWS cannot apply an `XManagementPlane` at all —
 the manifest names a kind its API server has never heard of, so the
 capability that installs everything else in that organisation installs
 nothing here. The question is not whether you deploy declaratively, but
@@ -36,7 +36,7 @@ general capability afterwards.
 
 ### What gets built
 
-`XQueenswoodInstallation` is one Crossplane composite owning the contents
+`XManagementPlane` is one Crossplane composite owning the contents
 of a folder. Given that folder and an identity with rights on it, it
 creates:
 
@@ -262,5 +262,5 @@ generations.
   `-manifest` / `-apply` / `-status` / `-down`. Nothing pivots yet, and
   group membership is Admin console work for the reason the directory
   work is.
-- `infra/platform/crossplane-xrds/xqueenswoodinstallation-*.yml` — the
+- `infra/platform/crossplane-xrds/xmanagementplane-*.yml` — the
   XRD and Composition.

@@ -22,8 +22,8 @@ starts once you have one.
 This is the whole of it. The sections below take it a field at a time.
 
 ```yaml
-apiVersion: platform.queenswood.repldriven.com/v1alpha1
-kind: XQueenswoodInstallation
+apiVersion: platform.repldriven.com/v1alpha1
+kind: XManagementPlane
 metadata:
   name: "<metadata-name>" # e.g. qw01
   namespace: crossplane-system
@@ -67,6 +67,14 @@ the random suffix GCP appends to a project id.
 which is a real choice rather than a placeholder.
 `<manifest-repo>` is always yours.
 
+The kind is `XManagementPlane` rather than anything named after this
+bank. What the manifest builds is the folder's control plane — a
+management project, a cluster, the identities that run it, and
+Crossplane and Argo on top — and Queenswood is then one of the things
+that plane can install, rather than the reason it exists. The
+installation is still the folder, and the manifest is still one file
+per folder.
+
 `metadata.name` and `spec.code` carry the same string and are not the
 same thing. Nothing in the composition reads `metadata.name`: every
 composed name derives from `spec.code`, which the XRD constrains to four
@@ -74,7 +82,7 @@ lowercase characters because it is baked into GCP resource names across
 the whole organisation. `metadata.name` only has to be unique in one
 namespace on one cluster. Nothing enforces that they agree, and the
 recipes assume they do — `gcp-plane-apply` waits on
-`xqueenswoodinstallation/<code>` — so a manifest where they differ
+`xmanagementplane/<code>` — so a manifest where they differ
 reconciles correctly and is then invisible to the tooling that built it.
 
 `billingAccountId` is absent for the reason given below.
@@ -85,7 +93,7 @@ Queenswood arrives as an API and is described by a manifest. The two sit
 apart because they differ in who owns them and who may read them.
 
 **The source**, named by `management.source`, holds the XRD, the
-composition and the provider packages — what an `XQueenswoodInstallation`
+composition and the provider packages — what an `XManagementPlane`
 means. `repoURL` names it, `targetRevision` pins the revision the plane
 follows, and `pathPrefix` says where in that repository the project sits:
 `.` for a fork that keeps this layout, a directory for a mirror that
@@ -243,7 +251,7 @@ one piece the composite deliberately cannot fill.
   — the folder as an installation, and why foundations are not deleted.
 - [ADR-0023](../adr/0023-installation-naming-and-access.md) — the access
   capabilities and who holds them.
-- `infra/platform/crossplane-xrds/xqueenswoodinstallation-xrd.yml` — the
+- `infra/platform/crossplane-xrds/xmanagementplane-xrd.yml` — the
   fields above, as a schema.
 - `justfiles/gcp.just` — `gcp-plane-manifest` mints a first manifest,
   `gcp-plane-apply` applies a committed one, and
