@@ -517,7 +517,19 @@ spec:
                     - rangeName: services
                       ipCidrRange: 10.62.0.0/20
             patches:
-              - type: CombineFromComposite
+              # Required, here and on every patch below whose source
+              # the XRD defaults rather than the manifest states. A
+              # default is absent for a window: Argo applies the XRD
+              # and this file in one sync, and the new composition can
+              # be selected before the API server serves the
+              # regenerated CRD. A skipped patch then composes a
+              # resource with a hole in it, which the provider may
+              # create and fail to observe -- and no later reconcile
+              # recovers that, because the resource exists and is
+              # wrong.
+              - policy:
+                  fromFieldPath: Required
+                type: CombineFromComposite
                 combine:
                   variables:
                     - fromFieldPath: spec.code
@@ -535,7 +547,9 @@ spec:
                       fmt: "vpc-%s-c-mgmt"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
-              - fromFieldPath: spec.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.region
                 toFieldPath: spec.forProvider.region
 
           # ===================================================================
@@ -607,7 +621,9 @@ spec:
                     string:
                       type: Format
                       fmt: "vpc-%s-c-mgmt"
-              - type: CombineFromComposite
+              - policy:
+                  fromFieldPath: Required
+                type: CombineFromComposite
                 combine:
                   variables:
                     - fromFieldPath: spec.code
@@ -618,7 +634,9 @@ spec:
                 toFieldPath: spec.forProvider.subnetworkRef.name
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
-              - fromFieldPath: spec.zone
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.zone
                 toFieldPath: spec.forProvider.location
               # Workload Identity, so the platform's own service account
               # is assumed by a pod rather than held as a key.
@@ -682,9 +700,17 @@ spec:
                       fmt: "gke-%s-c-mgmt"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
-              - fromFieldPath: spec.zone
+              # location is required on Cluster and optional on
+              # NodePool, so the same absent zone fails the first
+              # loudly and leaves the second holding a pool the
+              # provider can no longer observe.
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.zone
                 toFieldPath: spec.forProvider.location
-              - fromFieldPath: spec.management.machineType
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.machineType
                 toFieldPath: spec.forProvider.nodeConfig.machineType
               # Immutable, so changing it replaces the pool and restarts
               # everything on the cluster. Worth pairing with any other

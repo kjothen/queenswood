@@ -451,7 +451,20 @@ spec:
                   # address, which is what keeps the pool private.
                   privateIpGoogleAccess: true
             patches:
-              - type: CombineFromComposite
+              # Required, here and on every patch below whose source
+              # the XRD defaults rather than the manifest states. A
+              # default is absent for a window: Argo applies the XRD
+              # and this file in one sync, and the new composition can
+              # be selected before the API server serves the
+              # regenerated CRD. A skipped patch then composes a
+              # resource with a hole in it, which the provider may
+              # create and fail to observe -- and no later reconcile
+              # recovers that, because the resource exists and is
+              # wrong. Failing the composite instead is recoverable by
+              # waiting.
+              - policy:
+                  fromFieldPath: Required
+                type: CombineFromComposite
                 combine:
                   variables:
                     - fromFieldPath: spec.code
@@ -464,7 +477,9 @@ spec:
                 toFieldPath: metadata.name
               - fromFieldPath: spec.projectId
                 toFieldPath: spec.forProvider.project
-              - fromFieldPath: spec.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.region
                 toFieldPath: spec.forProvider.region
               - type: CombineFromComposite
                 combine:
@@ -499,7 +514,9 @@ spec:
                   purpose: REGIONAL_MANAGED_PROXY
                   role: ACTIVE
             patches:
-              - type: CombineFromComposite
+              - policy:
+                  fromFieldPath: Required
+                type: CombineFromComposite
                 combine:
                   variables:
                     - fromFieldPath: spec.code
@@ -512,7 +529,9 @@ spec:
                 toFieldPath: metadata.name
               - fromFieldPath: spec.projectId
                 toFieldPath: spec.forProvider.project
-              - fromFieldPath: spec.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.region
                 toFieldPath: spec.forProvider.region
               - type: CombineFromComposite
                 combine:
@@ -742,7 +761,9 @@ spec:
                   string:
                     fmt: "vpc-%s-%s-%s"
                 toFieldPath: spec.forProvider.networkRef.name
-              - type: CombineFromComposite
+              - policy:
+                  fromFieldPath: Required
+                type: CombineFromComposite
                 combine:
                   variables:
                     - fromFieldPath: spec.code
@@ -756,7 +777,13 @@ spec:
               - &cluster-project
                 fromFieldPath: spec.projectId
                 toFieldPath: spec.forProvider.project
+              # The one this rule was learned from. location is required
+              # on Cluster and optional on NodePool, so the same absent
+              # zone failed the first loudly and left the second holding
+              # a pool it could no longer observe.
               - &cluster-zone
+                policy:
+                  fromFieldPath: Required
                 fromFieldPath: spec.zone
                 toFieldPath: spec.forProvider.location
               # Workload Identity, so a pod assumes a service account
@@ -852,9 +879,13 @@ spec:
                 toFieldPath: spec.forProvider.cluster
               - *cluster-project
               - *cluster-zone
-              - fromFieldPath: spec.machineType
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.machineType
                 toFieldPath: spec.forProvider.nodeConfig.machineType
-              - fromFieldPath: spec.state
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.state
                 toFieldPath: spec.forProvider.nodeCount
                 transforms:
                   - type: map
