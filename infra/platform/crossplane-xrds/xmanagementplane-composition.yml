@@ -387,6 +387,45 @@ spec:
                     string:
                       type: Format
                       fmt: "prj-%s-c-mgmt"
+          # Enabling billing on a project is a call the provider makes
+          # from its own project, so the API is enabled here rather than
+          # on whatever it bills. Nothing needed it until an instance
+          # took its account from the installation's EnvironmentConfig,
+          # which is when a 403 naming this project appears against a
+          # resource in another one.
+          - name: management-service-billing
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: cloudbilling.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-billing"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
           - name: management-service-container
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
