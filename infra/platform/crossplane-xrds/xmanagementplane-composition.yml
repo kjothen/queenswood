@@ -16,14 +16,18 @@ spec:
         kind: Resources
         resources:
           # ===================================================================
-          # Nothing composed here carries Delete while the composite is
-          # being replaced. Deleting a managed resource then orphans the
-          # cloud resource rather than destroying it, which is what lets
-          # a composite of the new kind adopt what the old one built.
+          # The durable tier withholds Delete -- the folder, the project,
+          # the cluster and its network, the identities, the secret.
+          # Deleting one of those managed resources orphans the cloud
+          # resource rather than destroying it, which is what lets this
+          # composite be deleted and rebuilt without touching GCP.
           #
-          # The IAM bindings take Delete back once XManagementPlane owns
-          # them. Until then a binding this stops declaring stays where
-          # it is, and revoking one means removing it in GCP too.
+          # The IAM bindings carry Delete, so a binding this stops
+          # declaring is revoked rather than left standing -- including
+          # the ones the access step composes, where a principal removed
+          # from the manifest must lose the access it named. What that
+          # costs is that deleting the composite revokes them all, which
+          # is cheap: whatever replaces it grants them again.
           # ===================================================================
           # The folder is the installation. Everything but Delete: a
           # folder holds every project, and reconciliation must never be
@@ -934,6 +938,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1000,6 +1005,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1051,6 +1057,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1078,6 +1085,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1105,6 +1113,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1132,6 +1141,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1159,6 +1169,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1191,6 +1202,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1231,6 +1243,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1352,6 +1365,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1380,6 +1394,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1412,6 +1427,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1442,6 +1458,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1515,6 +1532,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1550,6 +1568,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1618,6 +1637,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1704,6 +1724,7 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
+                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1808,6 +1829,7 @@ spec:
                 - Create
                 - Update
                 - LateInitialize
+                - Delete
               providerConfigRef:
                 kind: ClusterProviderConfig
                 name: default
