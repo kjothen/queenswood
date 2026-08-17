@@ -131,10 +131,20 @@ One file, and the fields it carries:
 
 - **`code`** — the installation's short name, which every resource name
   derives from. See [cloud-naming](cloud-naming.md).
-- **`region`, `regionCode`, `zone`** — stated rather than left to the
-  XRD's defaults. A name carries the region abbreviation and moving
-  either rebuilds the subnet and the cluster, so a default that changed
-  underneath a live installation would move it silently.
+- **`region`, `regionCode`, `zone`, `management.machineType`** — stated
+  rather than left to the XRD's defaults. A name carries the region
+  abbreviation, and moving the region, the zone or the machine type
+  rebuilds a subnet, a cluster or a node pool, so a default that
+  changed underneath a live installation would move it silently. State
+  the machine type the pool is already running: it is immutable, so a
+  value that merely differs replaces the pool, and the pool being
+  replaced is the one running the Crossplane doing the replacing.
+
+  The general rule is stronger than the silent-move argument, and
+  applies to any field an XRD defaults and a composition patches from.
+  A default is absent until the regenerated CRD arrives, which is a
+  window a composition can reconcile inside. See
+  [crossplane](crossplane.md).
 - **`management.projectId`** — always supplied. A project id is consumed
   permanently and cannot be undeleted into usefulness, so carrying it in
   the file is what stops a rebuilt plane minting a second management
