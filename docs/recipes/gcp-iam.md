@@ -94,6 +94,15 @@ installation is refused rather than silently duplicated.
 Impersonation then fails minutes later, inside whatever is using it,
 as `invalid_rapt` or a denied `getAccessToken`.
 
+The two are further apart than that suggests: `gcloud` does not read
+application-default credentials at all. It authenticates with its own
+login, so pointing ADC at an identity leaves Crossplane impersonating
+it and every `gcloud` command still running as you. Reaching it from
+the command line is `--impersonate-service-account`, which needs
+`iam.serviceAccounts.getAccessToken` on that identity — held by a
+group, so being in the group is what grants it and no amount of
+re-running an ADC login will.
+
 Console recommender insights are worth checking rather than dismissing,
 and are generated on a schedule — they lag a fix by up to a day.
 
@@ -119,6 +128,7 @@ and are generated on a schedule — they lag a fix by up to a day.
   an org policy enforced elsewhere.
 - Assume a role can be granted at the scope its feature acts on.
 - Assume `gcloud auth login` refreshed ADC.
+- Assume ADC impersonation makes `gcloud` act as that identity.
 
 ## References
 
