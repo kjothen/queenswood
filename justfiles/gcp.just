@@ -64,6 +64,25 @@ PLATFORM_ADMIN_GROUP := "grp-gcp-" + CODE + "-platform-admin"
 CLUSTER_ADMIN_GROUP := "grp-gcp-" + CODE + "-cluster-admin"
 SECRETS_ADMIN_GROUP := "grp-gcp-" + CODE + "-secrets-admin"
 
+# Boolean organisation policy constraints gcp-org-setup enforces. This
+# is the list to add to: enforcing is idempotent, so re-running after an
+# addition costs nothing and changes only what is new.
+#
+# Boolean only. A list constraint carries values -- allowed domains,
+# permitted external-IP targets -- and belongs in a recipe that can say
+# what they are.
+#
+# requireOsLogin ties SSH to IAM identities and stops metadata SSH keys
+# working at all, which is also what CIS 4.3 asks for. It means a
+# person reaches a VM as their own directory account holding
+# roles/compute.osLogin, rather than by a key somebody added to project
+# metadata and nobody removed.
+#
+# Not here on purpose, pending a decision against what an instance
+# actually runs: sql.restrictPublicIp, and compute.vmExternalIpAccess,
+# which is a list constraint anyway.
+ORG_CONSTRAINTS := "compute.skipDefaultNetworkCreation compute.disableSerialPortAccess compute.requireOsLogin"
+
 # Print the organisation's primary domain, which is its display name.
 [private]
 _gcp-domain org="":
@@ -300,8 +319,17 @@ gcp-boot-identity org="" billing="":
         --billing-account="$BILLING" >/dev/null
     fi
 
+    # As the caller, who owns this project by having created it. The
+    # identity inside it holds organisation roles and nothing here, so
+    # it cannot enable its own APIs -- the asymmetry that makes this the
+    # only place these belong.
+    #
+    # cloudasset is for auditing the organisation rather than for
+    # building anything: queries are billed to the project they run
+    # from, which is the one the reading identity lives in.
     echo ">>> enabling the APIs the identity needs"
     gcloud services enable --project="$PROJECT" \
+      cloudasset.googleapis.com \
       cloudresourcemanager.googleapis.com \
       cloudbilling.googleapis.com \
       iam.googleapis.com \
@@ -386,6 +414,7 @@ gcp-boot-org-roles org="":
       roles/resourcemanager.folderIamAdmin \
       roles/resourcemanager.projectCreator \
       roles/orgpolicy.policyAdmin \
+      roles/cloudasset.viewer \
       roles/browser ; do
       echo ">>> granting $role on organization $ORG"
       gcloud organizations add-iam-policy-binding "$ORG" \
@@ -437,11 +466,15 @@ gcp-policy-status org="" folder="":
         gcloud auth print-access-token --impersonate-service-account="$SA" \
           2>&1 | head -3 | sed 's/^/  /' >&2
         echo >&2
-        echo "reading these needs orgpolicy.policyViewer, which no" >&2
-        echo "capability carries, or iam.serviceAccounts.getAccessToken" >&2
-        echo "on the identity -- carried by" >&2
-        echo "grp-gcp-{{ CODE }}-platform-admin. Membership grants it and" >&2
-        echo "takes a while to propagate; gcp-adc-boot never will." >&2
+        echo "reading these needs orgpolicy.policyViewer, carried by" >&2
+        echo "{{ SECURITY_REVIEWER_GROUP }} -- which is populated, so" >&2
+        echo "this should need no break-glass. If it does, that binding" >&2
+        echo "has not been applied: run gcp-groups-bind." >&2
+        echo >&2
+        echo "The fallback is impersonating the bootstrap identity," >&2
+        echo "which needs grp-gcp-{{ CODE }}-platform-admin and grants" >&2
+        echo "far more than reading. gcp-adc-boot does not help: gcloud" >&2
+        echo "does not read ADC." >&2
         exit 1
       fi
       AS="$SA"
@@ -502,8 +535,20 @@ gcp-policy-status org="" folder="":
       # unset boolean answers as an empty booleanPolicy, and asking a
       # field projection for a key that is not there returns a
       # separator, which is not empty and reads as a value.
-      if OUT=$(gcloud resource-manager org-policies describe "$c" $SCOPE \
-                 --effective --format=yaml 2>/dev/null); then
+      # Retried: eleven reads in a row against this API returns a
+      # denial for some of them, and a denial that reads as "not set"
+      # about a security control is the wrong way to be wrong.
+      OUT=""
+      OK=0
+      for attempt in 1 2 3; do
+        if OUT=$(gcloud resource-manager org-policies describe "$c" $SCOPE \
+                   --effective --format=yaml 2>/dev/null); then
+          OK=1
+          break
+        fi
+        sleep 2
+      done
+      if [[ "$OK" -eq 1 ]]; then
         case "$OUT" in
           *"enforced: true"*)   STATE="enforced" ;;
           *"enforced: false"*)  STATE="explicitly off" ;;
@@ -518,6 +563,79 @@ gcp-policy-status org="" folder="":
       fi
       printf '  %-52s %s\n' "$c" "$STATE"
     done
+
+# Apply what an organisation needs once: policies, and what audits them.
+gcp-org-setup org="":
+    #!/usr/bin/env zsh
+    set -e
+    ORG=$(just _gcp-org-id "{{ org }}")
+    SA=$(just _gcp-boot-sa)
+
+    # As the caller where the caller can, which is the point of
+    # {{ ORG_ADMIN_GROUP }} holding policyAdmin: reaching the bootstrap
+    # identity instead means standing in a group that can also
+    # impersonate the platform identity, which administers every cluster
+    # in the folder. More power for the same act.
+    #
+    # Reading org policy is the probe. Nothing grants it but policyAdmin
+    # and policyViewer, so being able to read is a fair proxy for being
+    # able to write, and a wrong guess fails loudly on the first enforce
+    # rather than silently.
+    if ! gcloud resource-manager org-policies list --organization="$ORG" \
+           --format='value(constraint)' >/dev/null 2>&1; then
+      TOKEN=""
+      for attempt in 1 2 3; do
+        TOKEN=$(gcloud auth print-access-token \
+                  --impersonate-service-account="$SA" 2>/dev/null || true)
+        if [[ -n "$TOKEN" ]]; then break; fi
+        sleep 3
+      done
+      if [[ -z "$TOKEN" ]]; then
+        echo "cannot set organisation policy as you, and cannot" >&2
+        echo "impersonate $SA." >&2
+        echo >&2
+        echo "join {{ ORG_ADMIN_GROUP }} for the task -- it carries" >&2
+        echo "policyAdmin -- then leave. Membership takes a while to" >&2
+        echo "propagate after being granted." >&2
+        exit 1
+      fi
+      export CLOUDSDK_AUTH_ACCESS_TOKEN="$TOKEN"
+    fi
+
+    # At the organisation rather than the folder. Every folder inherits
+    # it, including installations that do not exist yet, and a folder
+    # inside an organisation somebody else owns is their act rather than
+    # ours.
+    echo ">>> organisation $ORG"
+    for c in {{ ORG_CONSTRAINTS }}; do
+      echo ">>> enforcing $c"
+      gcloud resource-manager org-policies enable-enforce "$c" \
+        --organization="$ORG"
+    done
+
+    echo
+    echo ">>> what is in force now: just gcp-policy-status"
+
+# Scan the organisation against CIS, with the accepted findings muted.
+gcp-scan org="" framework="cis_5.0_gcp":
+    #!/usr/bin/env zsh
+    set -e
+    ORG=$(just _gcp-org-id "{{ org }}")
+
+    # Reading needs securityReviewer and cloudasset.viewer at the
+    # organisation, both carried by {{ SECURITY_REVIEWER_GROUP }},
+    # which is populated: auditing who holds what must never require
+    # the power to change it.
+    #
+    # Authentication is ADC rather than gcloud's own login, so a scan
+    # runs as whatever ADC impersonates -- gcp-adc-boot points it at the
+    # bootstrap identity, which is not you and needs a group you should
+    # not be standing in.
+    echo ">>> scanning organisation $ORG against {{ framework }}"
+    prowler gcp \
+      --organization-id "$ORG" \
+      --compliance "{{ framework }}" \
+      --mutelist-file infra/security/prowler-mutelist.yaml
 
 # Show the bootstrap identity, its rights, and who may impersonate it.
 gcp-boot-status org="":
@@ -570,6 +688,14 @@ gcp-groups-bind org="":
     ORG=$(just _gcp-org-id "{{ org }}")
     DOMAIN=$(just _gcp-domain "{{ org }}")
 
+    # cloudasset.viewer beside securityReviewer, because a scanner
+    # enumerates before it reads: without it, auditing the organisation
+    # means naming every project by hand, which is wrong the moment an
+    # instance creates one. It reads the asset inventory -- what exists
+    # -- rather than the resources themselves, so it is a smaller grant
+    # than the roles/viewer a scanner also wants, and that one is still
+    # an open question rather than an omission.
+    #
     # browser on the platform-viewer group is the one place an
     # installation group is bound at the organisation. Hierarchy metadata
     # only, and the tooling cannot reach a folder without first resolving
@@ -579,8 +705,11 @@ gcp-groups-bind org="":
     MISSING=0
     for spec in \
       "{{ ORG_ADMIN_GROUP }}:roles/resourcemanager.organizationAdmin" \
+      "{{ ORG_ADMIN_GROUP }}:roles/orgpolicy.policyAdmin" \
       "{{ FOLDER_ADMIN_GROUP }}:roles/resourcemanager.folderAdmin" \
       "{{ SECURITY_REVIEWER_GROUP }}:roles/iam.securityReviewer" \
+      "{{ SECURITY_REVIEWER_GROUP }}:roles/cloudasset.viewer" \
+      "{{ SECURITY_REVIEWER_GROUP }}:roles/orgpolicy.policyViewer" \
       "{{ BILLING_ADMIN_GROUP }}:" \
       "{{ PLATFORM_VIEWER_GROUP }}:roles/browser" \
       "{{ PLATFORM_ADMIN_GROUP }}:" \
@@ -598,11 +727,27 @@ gcp-groups-bind org="":
       # No Cloud Identity lookup first: IAM validates the principal
       # itself and says so plainly, while every read of the groups API
       # wants a quota project there is no project to provide.
+      #
+      # Retried, because membership of the group that permits this is
+      # resolved per request and flaps for a while after it is granted:
+      # a binding can be refused between two that succeed. Reporting
+      # what GCP said rather than guessing at the cause, since the same
+      # failure shape covers a group that does not exist, a role that
+      # cannot be granted here, and a permission that will be there in
+      # a minute.
       echo ">>> binding $ROLE to $EMAIL on organization $ORG"
-      if ! gcloud organizations add-iam-policy-binding "$ORG" \
-             --member="group:${EMAIL}" --role="$ROLE" \
-             --condition=None >/dev/null; then
-        echo "    failed -- check the group exists with exactly that address" >&2
+      BOUND=0
+      for attempt in 1 2 3; do
+        if ERR=$(gcloud organizations add-iam-policy-binding "$ORG" \
+                   --member="group:${EMAIL}" --role="$ROLE" \
+                   --condition=None 2>&1 >/dev/null); then
+          BOUND=1
+          break
+        fi
+        sleep 5
+      done
+      if [[ "$BOUND" -ne 1 ]]; then
+        printf '%s\n' "$ERR" | head -2 | sed 's/^/    /' >&2
         MISSING=1
       fi
     done

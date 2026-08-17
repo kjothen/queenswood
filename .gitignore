@@ -101,3 +101,7 @@ infra/helm/xp-mp/charts/*.tgz
 .claude/skills/tessl__*
 .agents/
 .github/skills/
+
+# Scanner output. prowler writes a run's JSON, CSV and HTML here every
+# time, and a scan result is a moment rather than a fact about the repo.
+output/

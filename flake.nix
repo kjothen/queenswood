@@ -86,10 +86,7 @@
           src = pkgs.fetchurl {
             url = "https://github.com/protocolbuffers/protobuf/releases/download/v${protocVersion}/protoc-${protocVersion}-osx-${protocArch}.zip";
             sha256 =
-              if pkgs.stdenv.isAarch64 then
-                versions.protoc.sha256.aarch64
-              else
-                versions.protoc.sha256.x86_64;
+              if pkgs.stdenv.isAarch64 then versions.protoc.sha256.aarch64 else versions.protoc.sha256.x86_64;
           };
           sourceRoot = ".";
           nativeBuildInputs = [ pkgs.unzip ];
@@ -166,6 +163,7 @@
             pkgs.openssl
             protocBinary
             protocGenClojure
+            pkgs.prowler
             pkgs.semgrep
             tessl
             pkgs.trivy
