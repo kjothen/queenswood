@@ -59,8 +59,8 @@ composes today:
   `roles/container.defaultNodeServiceAccount` and nothing else
 - `qw01-n-test`, a zonal cluster with Workload Identity and the Gateway
   API on, writing a kubeconfig to a Secret beside itself
-- `np-primary` under it, the one resource `state` governs today: three
-  nodes at `up`, none at `down`
+- `np-qw01-n-test-primary` under it, the one resource `state` governs
+  today: three nodes at `up`, none at `down`
 
 `state` and the cluster arrived together, because a field naming a
 desired state has nothing to govern until something can be stopped. The

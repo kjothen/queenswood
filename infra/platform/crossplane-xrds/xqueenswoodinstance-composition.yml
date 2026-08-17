@@ -786,10 +786,17 @@ spec:
           # count needs a templating step to arrive, and there is
           # nothing running here yet to size one against.
           #
-          # Fully managed with the cluster it belongs to, and named
-          # np-primary in GCP rather than np-default: GKE creates its
-          # own default-pool on every cluster, and a name echoing it
-          # leaves a reader guessing whose is whose.
+          # Fully managed with the cluster it belongs to. It carries the
+          # environment even though its cluster already settles it: GCP
+          # scopes a pool's name to its parent, so every cluster may
+          # hold an np-primary, where the composed resources for every
+          # instance in an installation share one namespace. Naming it
+          # for the cluster in GCP and for the namespace in Kubernetes
+          # would be two names for one thing, so it is one name in both.
+          #
+          # primary rather than default: GKE creates its own
+          # default-pool on every cluster, and a name echoing it leaves
+          # a reader guessing whose is whose.
           # ===================================================================
           - name: instance-nodes
             base:
@@ -797,12 +804,6 @@ spec:
               kind: NodePool
               metadata:
                 namespace: crossplane-system
-                # A node pool's GCP name is scoped by its cluster, so
-                # it is not unique in a namespace holding every
-                # instance's resources, and this is the one place the
-                # Kubernetes name and the cloud name diverge.
-                annotations:
-                  crossplane.io/external-name: np-primary
               spec:
                 managementPolicies:
                   - Observe
