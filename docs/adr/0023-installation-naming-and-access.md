@@ -102,6 +102,14 @@ it would mean two names for one thing, which is the cost that section
 exists to refuse. The scope is repeated, and the length is what it
 buys.
 
+The length is worse than a character count implies, and the first
+instance is the evidence. GKE truncates a node name to its own budget
+rather than to the documented sixty-three, so
+`np-qw01-n-test-primary` reaches the nodes as `np-qw01-n-test-primar`
+— the pool's name no longer spells the pool. That is accepted here and
+is the argument to weigh against a longer environment label, which is
+what the remaining budget is spent on.
+
 This applies to new installations. `qw01` keeps `gke-qw01-c-mgmt` and
 `np-qw01-c-mgmt`, the names it was built with, because the alternative
 is destroying a working cluster to improve a string. That is the right
