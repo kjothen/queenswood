@@ -482,9 +482,20 @@ project from the key-creation ban and for `HMACKey` alongside it. Left
 out: the exemption needs a role granted only at the organisation, which
 [the durable tier](#the-key-ban-and-the-proxy-that-answers-it)
 takes as unavailable and designs around, and the other org policy in
-play — `skipDefaultNetworkCreation` — is already answered by the
-project's own `autoCreateNetwork: false`. A package the composition
-composes nothing from is a provider pod for nothing.
+play — `skipDefaultNetworkCreation` — was thought to be answered by the
+project's own `autoCreateNetwork: false`, and is not: GCP creates the
+default network when the Compute API is enabled rather than when the
+project is created, so a composed project enables its APIs an hour
+later and the flag is satisfied at a moment when there is nothing to
+suppress. Both projects acquired one.
+
+The conclusion survives the correction, for a different reason. A
+`Policy` needs `orgpolicy.policyAdmin`, which is granted at the
+organisation and nowhere else, so the plane cannot hold it without
+being able to weaken any constraint anywhere in that organisation.
+`just gcp-org-setup` does this as a person instead. A package the
+composition composes nothing from is still a provider pod for
+nothing.
 
 ### 2. The platform identity's rights
 

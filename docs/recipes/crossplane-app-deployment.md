@@ -183,14 +183,24 @@ A lien makes retiring a project a deliberate second act — lift it, then
 delete — which is also why one is not applied while an installation is
 still being rebuilt to prove that it can be.
 
-### What is not enforced yet
+### Organisation policy, and why it is not composed
 
-`compute.skipDefaultNetworkCreation` is set by no recipe here and
-composed by nothing, though the bootstrap identity is granted
-`orgpolicy.policyAdmin` to set it with. Where it is not enforced on the
-folder, every project inside is born with a default VPC nobody asked
-for. Ask for it on a folder you are given, and set it on a folder you
-create.
+`just gcp-org-setup` enforces the constraints in `ORG_CONSTRAINTS` at
+the organisation, and `just gcp-policy-status` reports what is in force.
+Neither is composed, and the reason is a scope rather than an omission:
+`orgpolicy.policyAdmin` is granted at the organisation and nowhere else,
+so the management plane cannot hold it without being able to weaken any
+constraint anywhere in that organisation. Where you were given a folder,
+these are the organisation's acts and not yours — ask for them.
+
+`compute.skipDefaultNetworkCreation` is the one to ask for first.
+Without it every project acquires a default VPC with SSH and RDP open
+to the internet, and a composition cannot undo that: the network is
+created when the Compute API is enabled rather than when the project
+is, so `autoCreateNetwork: false` is satisfied at a moment when there is
+nothing to suppress. Crossplane declares presence, so nothing reconciles
+a network away either. The constraint prevents; deleting one that
+already exists is a separate act.
 
 ### Where this stands
 
