@@ -63,6 +63,15 @@ organisation-only, though the policy it sets is applied per project.
 The refusal is a 400 declining the scope, not a permission the caller
 lacks, so no upstream grant fixes it.
 
+Reading them is scoped the same way, and nothing else holds it: no
+capability in [ADR-0023](../adr/0023-installation-naming-and-access.md)
+carries `orgpolicy.policyViewer`, not even the viewer that reads
+everything else, so a person cannot list the constraints binding their
+own installation. `just gcp-policy-status` asks the bootstrap identity
+instead, and is worth running before assuming a constraint is on: the
+management plane's composition says a default network is prevented by
+one, and it was not.
+
 `roles/container.viewer` does not carry `container.pods.getLogs`, and
 the only predefined role that does also grants exec and every write. A
 project custom role with the one permission is the answer where an
@@ -85,8 +94,35 @@ installation is refused rather than silently duplicated.
 Impersonation then fails minutes later, inside whatever is using it,
 as `invalid_rapt` or a denied `getAccessToken`.
 
+The two are further apart than that suggests: `gcloud` does not read
+application-default credentials at all. It authenticates with its own
+login, so pointing ADC at an identity leaves Crossplane impersonating
+it and every `gcloud` command still running as you. Reaching it from
+the command line is `--impersonate-service-account`, which needs
+`iam.serviceAccounts.getAccessToken` on that identity — held by a
+group, so being in the group is what grants it and no amount of
+re-running an ADC login will.
+
 Console recommender insights are worth checking rather than dismissing,
 and are generated on a schedule — they lag a fix by up to a day.
+
+### Two generations of constraint id
+
+An organisation policy constraint may have a legacy id and a newer
+*managed* one carrying a `.managed.` infix, and a new organisation is
+given the managed set enforced by default. Asking the legacy name about
+an organisation that enforces the managed one answers "not set" while
+the protection is fully in place —
+`iam.disableServiceAccountKeyCreation` reads unset here and
+`iam.managed.disableServiceAccountKeyCreation` reads enforced. Check
+both spellings, and read what is *set* at the organisation before
+trusting a constraint-by-constraint report to have asked the right
+question.
+
+The v1 `gcloud resource-manager org-policies` commands read both. The
+v2 `gcloud org-policies` commands need the Organization Policy API
+enabled on a quota project, which an impersonated bootstrap identity
+does not have.
 
 ## Rules
 
@@ -110,6 +146,7 @@ and are generated on a schedule — they lag a fix by up to a day.
   an org policy enforced elsewhere.
 - Assume a role can be granted at the scope its feature acts on.
 - Assume `gcloud auth login` refreshed ADC.
+- Assume ADC impersonation makes `gcloud` act as that identity.
 
 ## References
 
