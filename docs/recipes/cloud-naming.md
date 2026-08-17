@@ -114,7 +114,10 @@ Network:
 - **VPC** — `vpc-qw01-c-mgmt`
 - **subnet** — `sb-qw01-c-mgmt-euw2`. Regional, so the region is
   abbreviated and carried: GCP publishes no short form, so the
-  installation manifest states it.
+  installation manifest states it. A second subnet in the same place
+  takes what it is for before the region —
+  `sb-qw01-n-test-proxy-euw2` — since the region alone no longer tells
+  the two apart.
 - **firewall rule** — `fw-qw01-c-mgmt-<direction>-<action>-<target>`
 - **route** — `rt-qw01-c-mgmt-<destination>`
 - **Cloud Router** — `cr-qw01-c-mgmt-euw2`

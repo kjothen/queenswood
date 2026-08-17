@@ -68,6 +68,30 @@ spec:
                     What this environment is for, within its tier:
                     test, uat, prod. Follows env in every name the
                     composition builds.
+                region:
+                  type: string
+                  default: europe-west2
+                  description: |
+                    Where this environment runs. Defaulted so an
+                    existing manifest keeps validating, and stated in
+                    every manifest regardless: a name carries the
+                    region abbreviation and moving it rebuilds the
+                    subnet and the cluster, so a default that changed
+                    underneath a live instance would move it silently.
+
+                    Per instance rather than per installation for the
+                    same reason. An installation-wide default would
+                    edit every environment at once, and the plane's
+                    region has no authority over an environment's --
+                    what the plane reconciles is API calls, which are
+                    not regional.
+                regionCode:
+                  type: string
+                  default: euw2
+                  description: |
+                    The region, abbreviated, as it appears in the name
+                    of anything regional. GCP publishes no short form,
+                    so the manifest states it and nothing derives it.
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
