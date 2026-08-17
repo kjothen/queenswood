@@ -41,6 +41,31 @@ records how the pivot was done, and that is deliberate: it is what
 happened, not what to do. The kind and the group are the only things
 that changed.
 
+**The first instance exists, and runs nothing yet.** `XQueenswoodInstance`
+in `queenswood.repldriven.com`, decided by
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) and
+declared by `qw01/test.yml` beside the plane's own manifest. What it
+composes today:
+
+- `prj-qw01-n-test-xxxxxx`, in `fldr-qw01`, billed from the
+  installation's `EnvironmentConfig` rather than from anything the
+  manifest states
+- five `ProjectService`s — compute, container, iam, cloudresourcemanager,
+  serviceusage
+- `vpc-qw01-n-test`, `sb-qw01-n-test-euw2` (10.10.0.0/16, with the pods
+  and services ranges GKE allocates from) and
+  `sb-qw01-n-test-proxy-euw2` (REGIONAL_MANAGED_PROXY)
+
+Nothing costs anything yet. The next step is the cluster, its node pool
+and its node identity, which is where `state: up | down` earns a field
+to govern and where the bill starts. `XPlatform`'s twenty-four
+resources are the port list for everything after that — CloudSQL, the
+apex address and DNS, the certificate — and
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) says all
+of it folds into this one kind, with the DNS **zone** the exception: it
+is unrecreatable on any useful timescale and belongs to something
+durable rather than to an instance that comes and goes.
+
 Read "How the machinery fits together" below before touching the
 composition. It is the hour that does not need spending twice.
 
@@ -1617,6 +1642,31 @@ otherwise, and says why: a composite is a unit of replacement, so
 declaring the instances inside the plane's own composite puts every
 environment's project, cluster and database in the blast radius of a
 plane rebuild.
+
+**Where it got to.** The project, its APIs and its network are
+composed and reconciling; the cluster is next, and with it the `state`
+field, which has nothing to govern until something can be stopped. Four
+things wait rather than block:
+
+- **A lien on the instance project.** Deferred deliberately while the
+  shape is still changing — a lien makes every teardown two acts, which
+  is the point of one and the wrong trade today. Nothing composes one:
+  the installed provider offers no `Lien` kind, so it is a recipe when
+  it comes.
+- **`XPlatform`, `XQueenswoodApex` and `XQueenswoodCertificate`** are
+  loaded on the plane with no composites of their kinds. Deleting them
+  is a file deletion, and what is useful in them folds into this kind.
+- **`ProjectMetadataItem` for `enable-oslogin`**, and
+  `ProjectIAMAuditConfig` for data-access logs. Both are composed
+  resources rather than scripts, both close a real CIS finding, and the
+  second carries a standing log bill worth sizing first. See
+  [security-scanning](../recipes/security-scanning.md).
+- **Flow logs on both subnets**, which is `logConfig` on `Subnetwork`
+  and the same cost question one level up.
+
+The instance's own composition is the lever for all four: it is what
+every future environment inherits, so a fix there is a fix for projects
+that do not exist yet.
 
 **Draining.** The `Usage`-gated export Jobs, which
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
