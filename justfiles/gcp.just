@@ -616,6 +616,27 @@ gcp-org-setup org="":
     echo
     echo ">>> what is in force now: just gcp-policy-status"
 
+# Scan the organisation against CIS, with the accepted findings muted.
+gcp-scan org="" framework="cis_5.0_gcp":
+    #!/usr/bin/env zsh
+    set -e
+    ORG=$(just _gcp-org-id "{{ org }}")
+
+    # Reading needs securityReviewer and cloudasset.viewer at the
+    # organisation, both carried by {{ SECURITY_REVIEWER_GROUP }},
+    # which is populated: auditing who holds what must never require
+    # the power to change it.
+    #
+    # Authentication is ADC rather than gcloud's own login, so a scan
+    # runs as whatever ADC impersonates -- gcp-adc-boot points it at the
+    # bootstrap identity, which is not you and needs a group you should
+    # not be standing in.
+    echo ">>> scanning organisation $ORG against {{ framework }}"
+    prowler gcp \
+      --organization-id "$ORG" \
+      --compliance "{{ framework }}" \
+      --mutelist-file infra/security/prowler-mutelist.yaml
+
 # Show the bootstrap identity, its rights, and who may impersonate it.
 gcp-boot-status org="":
     #!/usr/bin/env zsh

@@ -173,6 +173,10 @@ those in full before non-trivial work on their topic.
 - **GCP IAM for automation** — Workload Identity's two halves, node
   identities, rights held by accident, role scopes. See
   [recipes/gcp-iam.md](docs/recipes/gcp-iam.md).
+- **Security scanning** — how the organisation is scanned, which
+  findings are accepted and why, and the difference between a muted
+  finding and a deferred one. See
+  [recipes/security-scanning.md](docs/recipes/security-scanning.md).
 - **Cloud naming** — the installation code, the prefix/code/env/label
   rule and its exceptions, the inventory of every kind and a worked
   example of one installation. See

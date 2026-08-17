@@ -1,0 +1,53 @@
+# Findings accepted deliberately, with the reasoning in
+# docs/recipes/security-scanning.md. A muted finding is a decision
+# somebody made, not a check somebody switched off: each entry names the
+# resources it covers rather than the check, so the same check still
+# fails for anything else.
+#
+# Account is a GCP project id and Region a location; "*" is every one.
+Mutelist:
+  Accounts:
+    "*":
+      Checks:
+        # CIS 1.6 — service accounts with administrative privileges.
+        #
+        # Both are automation identities holding admin by design. The
+        # platform identity is what reconciles the installation, and
+        # administering every cluster in the folder is its purpose; the
+        # bootstrap identity creates the management project and is
+        # discarded from the path afterwards. Neither is held by a
+        # person, neither has a key, and who may impersonate them is
+        # itself group-bound and break-glass.
+        #
+        # Matched by name, so a third service account that acquires
+        # admin still fails this check — which is the point.
+        "iam_sa_no_administrative_privileges":
+          Regions:
+            - "*"
+          Resources:
+            - "^sa-[a-z0-9]{4}-platform@"
+            - "^sa-[a-z0-9]{4}-boot@"
+          Description: >-
+            The platform and bootstrap identities hold admin by design.
+            See docs/recipes/security-scanning.md.
+
+        # CIS 2.14 — Cloud Asset Inventory enabled.
+        #
+        # The capability is already org-wide: Google collects asset
+        # metadata for every resource whether or not any project has the
+        # API on, and querying it needs the API enabled on one project —
+        # the caller — plus cloudasset.viewer at the organisation. Both
+        # are in place.
+        #
+        # The check tests a per-project API enablement that changes
+        # nothing about what is collected or what can be seen. Enabling
+        # it everywhere would alter this report and nothing else.
+        "iam_cloud_asset_inventory_enabled":
+          Regions:
+            - "*"
+          Resources:
+            - "*"
+          Description: >-
+            Asset inventory is enabled org-wide from the seed project.
+            Per-project enablement is a no-op for the capability.
+            See docs/recipes/security-scanning.md.
