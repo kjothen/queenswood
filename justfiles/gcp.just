@@ -411,36 +411,41 @@ gcp-policy-status org="" folder="":
     fi
     FOLDER="${FOLDER#folders/}"
 
-    # Whichever credential can read, tried in order. A person may hold
-    # policyViewer directly; otherwise the bootstrap identity holds
-    # policyAdmin and someone in the platform-admin group can reach it.
+    # One token for the whole run, not one per read. Minting is a
+    # separate call that can fail on its own -- while a group membership
+    # is propagating it fails intermittently -- and a dozen mints turn
+    # that into a report where some rows are wrong and none of them says
+    # so.
     #
-    # Not ADC. gcloud authenticates with its own login and does not
-    # read application-default credentials, so gcp-adc-boot leaves
+    # Not ADC either: gcloud authenticates with its own login and never
+    # reads application-default credentials, so gcp-adc-boot leaves
     # Crossplane impersonating the bootstrap identity and gcloud still
     # being you.
-    IMP=""
+    TOKEN=""
     AS="you"
     if ! gcloud resource-manager org-policies list --organization="$ORG" \
            --format='value(constraint)' >/dev/null 2>&1; then
-      IMP="--impersonate-service-account=$SA"
-      AS="$SA"
-      if ! gcloud resource-manager org-policies list --organization="$ORG" \
-             $IMP --format='value(constraint)' >/dev/null 2>&1; then
-        echo "cannot read organisation policies as you or as $SA" >&2
-        echo >&2
-        echo "what GCP said:" >&2
-        gcloud resource-manager org-policies list --organization="$ORG" \
-          $IMP --format='value(constraint)' 2>&1 | head -4 | sed 's/^/  /' >&2
+      for attempt in 1 2 3; do
+        TOKEN=$(gcloud auth print-access-token \
+                  --impersonate-service-account="$SA" 2>/dev/null || true)
+        if [[ -n "$TOKEN" ]]; then break; fi
+        sleep 3
+      done
+      if [[ -z "$TOKEN" ]]; then
+        echo "cannot read organisation policies as you, and cannot" >&2
+        echo "impersonate $SA. What GCP said:" >&2
+        gcloud auth print-access-token --impersonate-service-account="$SA" \
+          2>&1 | head -3 | sed 's/^/  /' >&2
         echo >&2
         echo "reading these needs orgpolicy.policyViewer, which no" >&2
-        echo "capability carries, or impersonation of $SA, which needs" >&2
-        echo "iam.serviceAccounts.getAccessToken on it -- held by" >&2
-        echo "grp-gcp-{{ CODE }}-platform-admin. Being in the group is" >&2
-        echo "what grants it; gcp-adc-boot does not, because gcloud" >&2
-        echo "does not read ADC." >&2
+        echo "capability carries, or iam.serviceAccounts.getAccessToken" >&2
+        echo "on the identity -- carried by" >&2
+        echo "grp-gcp-{{ CODE }}-platform-admin. Membership grants it and" >&2
+        echo "takes a while to propagate; gcp-adc-boot never will." >&2
         exit 1
       fi
+      AS="$SA"
+      export CLOUDSDK_AUTH_ACCESS_TOKEN="$TOKEN"
     fi
     echo "read as $AS"
     echo
@@ -448,7 +453,7 @@ gcp-policy-status org="" folder="":
     echo "organisation $ORG"
     echo "policies set here:"
     OUT=$(gcloud resource-manager org-policies list --organization="$ORG" \
-            $IMP --format='value(constraint)' 2>/dev/null || true)
+            --format='value(constraint)' 2>/dev/null || true)
     printf '%s\n' "${OUT:-  none}" | sed 's/^/  /'
 
     if [[ -n "$FOLDER" ]]; then
@@ -456,16 +461,17 @@ gcp-policy-status org="" folder="":
       echo "folder $FOLDER"
       echo "policies set here:"
       if OUT=$(gcloud resource-manager org-policies list --folder="$FOLDER" \
-                 $IMP --format='value(constraint)' 2>/dev/null); then
+                 --format='value(constraint)' 2>/dev/null); then
         printf '%s\n' "${OUT:-  none}" | sed 's/^/  /'
       else
         echo "  not readable"
       fi
     fi
 
-    # What is actually in force where an installation's projects live,
-    # which a set-here listing does not answer: a constraint enforced at
-    # the organisation and unset at the folder still binds.
+    # What is in force, which neither listing above answers. A
+    # constraint set at the organisation and unset at the folder still
+    # binds -- and GCP enforces some by default, which are in force
+    # while set nowhere at all.
     #
     # The list is the constraints this project has an opinion about, not
     # GCP's. Anything absent from it is unexamined rather than judged
@@ -474,42 +480,44 @@ gcp-policy-status org="" folder="":
     echo "in force on ${FOLDER:-the organisation}, constraint by constraint:"
     SCOPE="--organization=$ORG"
     if [[ -n "$FOLDER" ]]; then SCOPE="--folder=$FOLDER"; fi
+    #
+    # Both spellings where both exist. GCP has two generations of
+    # constraint id and the newer one carries a .managed. infix: asking
+    # the legacy name about an organisation that enforces the managed
+    # one answers "not set" while the protection is fully in place,
+    # which is the most dangerous wrong answer this recipe could give.
     for c in \
       compute.skipDefaultNetworkCreation \
       compute.disableSerialPortAccess \
       compute.requireOsLogin \
       compute.vmExternalIpAccess \
       iam.disableServiceAccountKeyCreation \
+      iam.managed.disableServiceAccountKeyCreation \
+      iam.disableServiceAccountKeyUpload \
       iam.automaticIamGrantsForDefaultServiceAccounts \
       iam.allowedPolicyMemberDomains \
       sql.restrictPublicIp \
       storage.uniformBucketLevelAccess ; do
-      # A read that fails and a constraint that is unset both produce
-      # nothing to print, and they mean opposite things -- so the exit
-      # status decides which is reported, never the emptiness.
+      # Matched against the document rather than a projection of it: an
+      # unset boolean answers as an empty booleanPolicy, and asking a
+      # field projection for a key that is not there returns a
+      # separator, which is not empty and reads as a value.
       if OUT=$(gcloud resource-manager org-policies describe "$c" $SCOPE \
-                 --effective $IMP \
-                 --format='value(booleanPolicy.enforced,listPolicy.allValues)' \
-                 2>/dev/null); then
+                 --effective --format=yaml 2>/dev/null); then
         case "$OUT" in
-          True*)   STATE="enforced" ;;
-          False*)  STATE="explicitly off" ;;
-          *ALLOW*) STATE="list: allow all" ;;
-          *DENY*)  STATE="list: deny all" ;;
-          "")      STATE="not set" ;;
-          *)       STATE="set: $OUT" ;;
+          *"enforced: true"*)   STATE="enforced" ;;
+          *"enforced: false"*)  STATE="explicitly off" ;;
+          *"allValues: ALLOW"*) STATE="list: allow all" ;;
+          *"allValues: DENY"*)  STATE="list: deny all" ;;
+          *allowedValues*)      STATE="list: some allowed" ;;
+          *deniedValues*)       STATE="list: some denied" ;;
+          *)                    STATE="not set" ;;
         esac
       else
         STATE="NOT READABLE"
       fi
       printf '  %-52s %s\n' "$c" "$STATE"
     done
-
-    echo
-    echo ">>> iam.disableServiceAccountKeyCreation is the check on the"
-    echo ">>> reading itself: it is enforced, and gcp-backup-hmac-create"
-    echo ">>> needs an exemption from it. If it says anything else here,"
-    echo ">>> distrust the rest of this output."
 
 # Show the bootstrap identity, its rights, and who may impersonate it.
 gcp-boot-status org="":

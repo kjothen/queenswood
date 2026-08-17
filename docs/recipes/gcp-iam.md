@@ -106,6 +106,24 @@ re-running an ADC login will.
 Console recommender insights are worth checking rather than dismissing,
 and are generated on a schedule — they lag a fix by up to a day.
 
+### Two generations of constraint id
+
+An organisation policy constraint may have a legacy id and a newer
+*managed* one carrying a `.managed.` infix, and a new organisation is
+given the managed set enforced by default. Asking the legacy name about
+an organisation that enforces the managed one answers "not set" while
+the protection is fully in place —
+`iam.disableServiceAccountKeyCreation` reads unset here and
+`iam.managed.disableServiceAccountKeyCreation` reads enforced. Check
+both spellings, and read what is *set* at the organisation before
+trusting a constraint-by-constraint report to have asked the right
+question.
+
+The v1 `gcloud resource-manager org-policies` commands read both. The
+v2 `gcloud org-policies` commands need the Organization Policy API
+enabled on a quota project, which an impersonated bootstrap identity
+does not have.
+
 ## Rules
 
 **MUST:**
