@@ -694,11 +694,11 @@ gcp-plane-up:
     YAML
 
     kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xqueenswoodinstallation-xrd.yml
+      -f infra/platform/crossplane-xrds/xmanagementplane-xrd.yml
     kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
-      xrd/xqueenswoodinstallations.platform.queenswood.repldriven.com
+      xrd/xmanagementplanes.platform.repldriven.com
     kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xqueenswoodinstallation-composition.yml
+      -f infra/platform/crossplane-xrds/xmanagementplane-composition.yml
 
     echo
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
@@ -806,8 +806,8 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
     # the cluster -- so a default that changed underneath a live
     # installation would move it silently.
     cat <<YAML
-    apiVersion: platform.queenswood.repldriven.com/v1alpha1
-    kind: XQueenswoodInstallation
+    apiVersion: platform.repldriven.com/v1alpha1
+    kind: XManagementPlane
     metadata:
       name: {{ CODE }}
       namespace: crossplane-system
@@ -882,7 +882,7 @@ gcp-plane-apply billing="":
     echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \
-      xqueenswoodinstallation/{{ CODE }} || true
+      xmanagementplane/{{ CODE }} || true
     just gcp-plane-status
 
 # Report the composite and the folder it made.
@@ -890,7 +890,7 @@ gcp-plane-status:
     #!/usr/bin/env zsh
     set -e
     kubectl --context {{ BOOT_CTX }} -n crossplane-system get \
-      xqueenswoodinstallation {{ CODE }} -o yaml 2>/dev/null \
+      xmanagementplane {{ CODE }} -o yaml 2>/dev/null \
       | grep -E 'folderId|folderName|type: (Ready|Synced)|status: "(True|False)"|reason:' \
       || echo "no composite applied yet"
     echo

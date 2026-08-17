@@ -33,6 +33,14 @@ Read that, then verify against the live account rather than against
 this line, because a sentence naming a step is the first thing here to
 go stale.
 
+**The API was renamed after the pivot.** The composite is
+`XManagementPlane` in `platform.repldriven.com`, and `qw01` was
+re-adopted under it without a single GCP resource being touched. The
+narrative below still says `XQueenswoodInstallation` wherever it
+records how the pivot was done, and that is deliberate: it is what
+happened, not what to do. The kind and the group are the only things
+that changed.
+
 Read "How the machinery fits together" below before touching the
 composition. It is the hour that does not need spending twice.
 

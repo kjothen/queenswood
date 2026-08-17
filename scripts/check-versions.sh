@@ -139,10 +139,10 @@ crossplane=$(awk '/^  - name: crossplane$/ {f = 1; next}
 echo
 echo "Pinned copies of Crossplane $crossplane, against $xpchart:"
 
-check "installation composition (crossplane chart)" "$crossplane" \
+check "management plane composition (crossplane chart)" "$crossplane" \
   "$(awk '/name: crossplane$/ {f = 1; next}
           f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' \
-       infra/platform/crossplane-xrds/xqueenswoodinstallation-composition.yml)"
+       infra/platform/crossplane-xrds/xmanagementplane-composition.yml)"
 
 # Argo is the same duplication for the same reason, minus the handover:
 # Renovate sees the chart's dependency and not the Composition, so the two
@@ -153,10 +153,10 @@ argocd=$(awk '/^  - name: argo-cd$/ {f = 1; next}
 echo
 echo "Pinned copies of Argo CD $argocd, against $xpchart:"
 
-check "installation composition (argo-cd chart)" "$argocd" \
+check "management plane composition (argo-cd chart)" "$argocd" \
   "$(awk '/name: argo-cd$/ {f = 1; next}
           f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' \
-       infra/platform/crossplane-xrds/xqueenswoodinstallation-composition.yml)"
+       infra/platform/crossplane-xrds/xmanagementplane-composition.yml)"
 
 if [ "$fail" -ne 0 ]; then
   cat <<EOF

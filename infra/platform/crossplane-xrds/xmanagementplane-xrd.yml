@@ -17,6 +17,17 @@ spec:
       schema:
         openAPIV3Schema:
           type: object
+          description: |
+            A Crossplane control plane and the folder it governs: a
+            management project, a cluster, the identities that run it,
+            and Crossplane and Argo installed on top. Nothing
+            bank-shaped -- what runs on the plane afterwards is another
+            XRD's business, and Queenswood is one such thing rather
+            than the reason this exists.
+
+            The four-character code names the installation, which is
+            the folder; this kind builds the plane inside it. See
+            ADR-0022 and ADR-0023.
           properties:
             spec:
               type: object
@@ -165,9 +176,9 @@ spec:
                         targetRevision: main
                       description: |
                         Where the management plane reconciles its own
-                        configuration from -- the provider packages, the
-                        installation API, and the runtime and provider
-                        configurations underneath them.
+                        configuration from -- the provider packages, this
+                        API, and the runtime and provider configurations
+                        underneath them.
 
                         Defaulted to this project, and meant to be set
                         by anyone running a fork. The composition
