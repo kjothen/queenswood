@@ -368,6 +368,162 @@ spec:
                   string:
                     fmt: "prj-%s-%s-%s"
                 toFieldPath: spec.forProvider.projectRef.name
+          # ===================================================================
+          # The network this environment runs in. One VPC per instance,
+          # in the instance's own project, so two environments share
+          # nothing and neither can reach the other by accident.
+          #
+          # The ranges are identical in every instance, which is
+          # deliberate while the VPCs are isolated and would have to
+          # change the day two of them peer -- or one peers with the
+          # plane, whose subnet is 10.60.0.0/16 and so does not collide
+          # with these.
+          #
+          # Delete is withheld, as it is on the plane's. ADR-0022 lists
+          # what an instance may fully manage -- clusters, databases,
+          # addresses, certificates -- and a network is not among them:
+          # GCP refuses to delete one while a cluster sits in it, so the
+          # deletion stalls rather than tidies. An instance going down
+          # stops its cluster; retiring one for good is deliberate,
+          # like retiring its project.
+          #
+          # Network and Subnetwork take a project id rather than a ref,
+          # so it comes from the manifest, which always carries it.
+          # ===================================================================
+          - name: instance-vpc
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Network
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  autoCreateSubnetworks: false
+                  routingMode: REGIONAL
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: metadata.name
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          # The subnet the nodes sit in, with the two secondary ranges
+          # GKE wants: pods and services are allocated from them rather
+          # than from the primary range, and naming them here is what
+          # lets the cluster ask for them by name.
+          - name: instance-subnet
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Subnetwork
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  ipCidrRange: 10.10.0.0/16
+                  secondaryIpRange:
+                    - rangeName: pods
+                      ipCidrRange: 10.20.0.0/16
+                    - rangeName: services
+                      ipCidrRange: 10.30.0.0/20
+                  # Lets a node reach a Google API without a public
+                  # address, which is what keeps the pool private.
+                  privateIpGoogleAccess: true
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.regionCode
+                  strategy: string
+                  string:
+                    fmt: "sb-%s-%s-%s-%s"
+                toFieldPath: metadata.name
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: spec.forProvider.networkRef.name
+          # Where a regional load balancer puts its proxies. Its own
+          # subnet because GCP requires one per region reserved for the
+          # purpose, and it holds no instances of ours.
+          - name: instance-subnet-proxy
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: Subnetwork
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  ipCidrRange: 10.40.0.0/24
+                  purpose: REGIONAL_MANAGED_PROXY
+                  role: ACTIVE
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.regionCode
+                  strategy: string
+                  string:
+                    fmt: "sb-%s-%s-%s-proxy-%s"
+                toFieldPath: metadata.name
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+              - fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: spec.forProvider.networkRef.name
     - step: auto-ready
       functionRef:
         name: function-auto-ready
