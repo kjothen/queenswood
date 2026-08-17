@@ -1,0 +1,108 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xqueenswoodinstance.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: queenswood.repldriven.com/v1alpha1
+    kind: XQueenswoodInstance
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # ===================================================================
+          # The project, and for now nothing else. It withholds Delete
+          # and is meant to be liened: an instance project is the
+          # protected tier under ADR-0022, because down is a stopped
+          # environment rather than a deleted one, and because a project
+          # id is spent whether or not the project survives.
+          #
+          # What goes down with an instance -- the cluster, the
+          # database, the addresses -- is fully managed and composed
+          # here later. Nothing whose loss is unrecoverable belongs in
+          # this project at all: the backups and the encryption key live
+          # in the management project, one bucket per installation.
+          # ===================================================================
+          - name: instance-project
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: Project
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  # No default VPC. The org policy says the same thing,
+                  # and the network an instance uses is composed here.
+                  autoCreateNetwork: false
+                  # Provider-side, and already the default.
+                  deletionPolicy: PREVENT
+            patches:
+              # prj-<code>-<env>-<label>, without the id's suffix: the
+              # Kubernetes name is the one another resource spells, and
+              # the suffix belongs to the globally-unique id alone.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "prj-%s-%s-%s"
+                toFieldPath: metadata.name
+              # Adoption only, and skipped when absent, so a first run
+              # creates and a rebuild takes over what is already there.
+              - fromFieldPath: spec.adopt
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.projectId
+              # Derived first, then overridden: a later patch wins when
+              # its source is set and is skipped when it is absent, so
+              # this is how a field gets a default it cannot state.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "prj-%s-%s-%s"
+                toFieldPath: spec.forProvider.name
+              - fromFieldPath: spec.displayName
+                toFieldPath: spec.forProvider.name
+              - fromFieldPath: spec.billingAccountId
+                toFieldPath: spec.forProvider.billingAccount
+              # Names the folder the plane composed, by the name the
+              # naming rule fixes. A managed-resource reference rather
+              # than anything reaching into the plane's composite:
+              # Crossplane resolves it and orders the two itself, and
+              # neither composite knows the other exists.
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.folderIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "fldr-%s"
+              # The prefixed id lands in the external-name annotation
+              # before it appears anywhere in status.atProvider.
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.annotations[crossplane.io/external-name]
+                toFieldPath: status.projectId
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready

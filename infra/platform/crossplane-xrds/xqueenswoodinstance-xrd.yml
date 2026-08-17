@@ -1,0 +1,122 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xqueenswoodinstances.queenswood.repldriven.com
+spec:
+  scope: Namespaced
+  group: queenswood.repldriven.com
+  names:
+    kind: XQueenswoodInstance
+    plural: xqueenswoodinstances
+  defaultCompositionRef:
+    name: xqueenswoodinstance.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            One environment of the bank inside an installation: its own
+            project, and in time the network, cluster, database and
+            workloads that run in it.
+
+            Its own composite rather than a field on the plane's,
+            because a composite is a unit of replacement and rebuilding
+            a control plane should not reach a production database. See
+            ADR-0024. The plane still reconciles this -- it is what
+            reconciles everything -- and the group says who owns the
+            kind rather than who runs it.
+
+            The installation is the folder, named by code; this is one
+            environment inside it.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - env
+                - label
+                - projectId
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code -- the same
+                    string the plane's manifest carries. Every name
+                    derives from it, and it is how this instance finds
+                    the folder it belongs in without being told the
+                    numeric id. See ADR-0023.
+                env:
+                  type: string
+                  pattern: '^[dnp]$'
+                  description: |
+                    One letter: d dev, n nonprod, p prod. Not b or c --
+                    those are the bootstrap and common tiers, which no
+                    instance occupies.
+
+                    A test environment is nonprod with a label saying
+                    so. Adding a letter means amending cloud-naming
+                    first, which asks for a paragraph rather than a
+                    pull request.
+                label:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,12}$'
+                  description: |
+                    What this environment is for, within its tier:
+                    test, uat, prod. Follows env in every name the
+                    composition builds.
+                projectId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    The project's id, generated once and then carried
+                    here. A project id is consumed permanently and
+                    cannot be undeleted into usefulness, so a composite
+                    that invented one on every reconcile would strand
+                    the last.
+
+                    prj-<code>-<env>-<label>-<suffix>, the suffix six
+                    hex characters because a project id is globally
+                    unique.
+                adopt:
+                  type: string
+                  pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    An existing project to take over, written
+                    projects/<id> -- the prefixed form Crossplane
+                    records as the external name.
+
+                    Separate from projectId because creation and
+                    adoption cannot share a field: GCP answers
+                    permission denied, never not found, for a project
+                    id you do not own, so an external name set before
+                    the project exists makes the first observation fail
+                    and creation never follows.
+                displayName:
+                  type: string
+                  description: |
+                    What the project is called for humans. Defaults to
+                    its id without the suffix.
+                billingAccountId:
+                  type: string
+                  description: |
+                    The billing account to charge. Absent leaves the
+                    project unbilled, which is valid and which almost
+                    nothing then works on.
+
+                    The platform identity holds billing.user on the
+                    account rather than the composition granting it:
+                    an account sits above the folder, so the grant is
+                    made once by an administrator of it. See
+                    gcp-platform-billing-role.
+            status:
+              type: object
+              properties:
+                projectId:
+                  type: string
+                  description: |
+                    The project as Crossplane records it,
+                    projects/<id>. Read back rather than committed.
