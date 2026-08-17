@@ -395,6 +395,45 @@ gcp-boot-org-roles org="":
     echo
     echo ">>> $SA can now create the folder"
 
+# Stop GCP putting a default network in this folder's projects.
+gcp-folder-skip-default-network folder="":
+    #!/usr/bin/env zsh
+    set -e
+    SA=$(just _gcp-boot-sa)
+
+    # Supplied first, discovered only where it was not: discovery fails
+    # where an argument would have worked, and a folder handed to us has
+    # whatever display name its organisation chose.
+    FOLDER="{{ folder }}"
+    if [[ -z "$FOLDER" ]]; then
+      FOLDER=$(gcloud resource-manager folders list \
+                 --organization="$(just _gcp-org-id)" \
+                 --filter="displayName=fldr-{{ CODE }}" \
+                 --format='value(name)' 2>/dev/null | head -1 || true)
+    fi
+    FOLDER="${FOLDER#folders/}"
+    if [[ -z "$FOLDER" ]]; then
+      echo "no folder fldr-{{ CODE }}; pass its id" >&2
+      exit 1
+    fi
+
+    # As the bootstrap identity, because orgpolicy.policyAdmin is
+    # granted at the organisation and nowhere else -- a folder binding
+    # is refused with "not supported for this resource" -- and the
+    # platform identity deliberately does not hold it. Nothing the
+    # management plane reconciles can set this, which is why it is a
+    # recipe rather than a composed Policy.
+    echo ">>> enforcing compute.skipDefaultNetworkCreation on folders/$FOLDER"
+    gcloud resource-manager org-policies enable-enforce \
+      compute.skipDefaultNetworkCreation \
+      --folder="$FOLDER" \
+      --impersonate-service-account="$SA"
+
+    echo
+    echo ">>> takes effect for projects created under this folder from"
+    echo ">>> now on. A project that already has a default network keeps"
+    echo ">>> it: the constraint prevents, it does not remove."
+
 # Show the bootstrap identity, its rights, and who may impersonate it.
 gcp-boot-status org="":
     #!/usr/bin/env zsh

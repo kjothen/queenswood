@@ -119,6 +119,13 @@ With no Google Cloud at all yet, start with
 3. `just gcp-boot-org-roles`, as an organisation admin — the roles only
    an admin can grant. Where you were given a folder these are held on
    that folder instead, and granted by whoever owns it.
+   `just gcp-folder-skip-default-network` follows once the folder
+   exists, and is the same kind of act: `orgpolicy.policyAdmin` is
+   granted at the organisation and nowhere else, so the plane can never
+   set it and a folder inside an organisation you do not own may leave
+   it unreachable. Without it every project in the folder acquires a
+   default network with SSH and RDP open to the internet, the moment it
+   enables the Compute API.
 4. `just gcp-adc-boot`, then `just gcp-plane-up` — a throwaway kind
    cluster running Crossplane and the GCP providers, authenticating from
    ADC that impersonates the bootstrap identity. No key exists, and
