@@ -7,6 +7,11 @@ Accepted. Supersedes the management-plane half of
 [ADR-0016](0016-crossplane-over-terraform.md), which chose Crossplane
 but assumed the plane running it is a local kind cluster.
 
+Extended by
+[ADR-0024](0024-instances-are-their-own-composites.md), which says
+where the environment composite named below actually lives, and what
+the management plane's relationship to it is.
+
 Revised once the foundation was first built. Three things this originally
 got wrong: a folder is an installation boundary rather than a singleton,
 the seed project exists only where you are your own platform team, and

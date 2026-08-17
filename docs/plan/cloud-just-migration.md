@@ -1591,14 +1591,21 @@ generated once by a recipe and must outlive every cluster. Deciding it
 before the first instance is what stops a credential landing in a
 manifest by default.
 
-**An instance.** `spec.instances` joins the XRD, and the instance
-composite carries `state: up | draining | down`. Project, network,
+**An instance.** An `XQueenswoodInstance` per environment, its own
+composite carrying `state: up | draining | down`. Project, network,
 cluster, CloudSQL, and — where it declares a `domain` — a static
 address, a DNS zone and a certificate. This is where `gcp-up` and
 `gcp-down` stop being scripts and become a field, and it is the step
 that proves the installation. The workloads on that cluster are
 `Release` resources of `provider-helm`, which is what the existing
 `queenswood-platform` composites already do.
+
+This paragraph originally said `spec.instances` joins the plane's XRD.
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) decides
+otherwise, and says why: a composite is a unit of replacement, so
+declaring the instances inside the plane's own composite puts every
+environment's project, cluster and database in the blast radius of a
+plane rebuild.
 
 **Draining.** The `Usage`-gated export Jobs, which
 [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)

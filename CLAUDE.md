@@ -146,6 +146,10 @@ those in full before non-trivial work on their topic.
   layout, one management plane on GKE, foundations protected rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **The plane and the instances on it** — what a management plane is
+  for, why an instance is its own composite rather than a field on the
+  plane's, the kind and the group, and what `down` leaves standing. See
+  [ADR-0024](docs/adr/0024-instances-are-their-own-composites.md).
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See
