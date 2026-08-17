@@ -16,18 +16,29 @@ spec:
         kind: Resources
         resources:
           # ===================================================================
-          # The durable tier withholds Delete -- the folder, the project,
-          # the cluster and its network, the identities, the secret.
-          # Deleting one of those managed resources orphans the cloud
-          # resource rather than destroying it, which is what lets this
-          # composite be deleted and rebuilt without touching GCP.
+          # Delete follows what drives a resource, not what kind it is.
           #
-          # The IAM bindings carry Delete, so a binding this stops
-          # declaring is revoked rather than left standing -- including
-          # the ones the access step composes, where a principal removed
-          # from the manifest must lose the access it named. What that
-          # costs is that deleting the composite revokes them all, which
-          # is cheap: whatever replaces it grants them again.
+          # Nothing composed here carries it. All of this is the plane's
+          # own scaffolding -- the folder and project it lives in, the
+          # cluster and its network, the identities, and the bindings
+          # that let those identities act. Deleting one orphans the
+          # cloud resource rather than destroying it, which is what let
+          # this composite adopt what the last one built, and what lets
+          # the next one do the same.
+          #
+          # The bindings are the sharp case. They include the Workload
+          # Identity binding Crossplane authenticates with and the
+          # folder roles it acts under, so deleting them takes away the
+          # means of putting them back, halfway through doing it.
+          #
+          # What that costs: a role dropped from this file is not
+          # revoked. The managed resource goes and the GCP binding
+          # stays, so narrowing what an identity may do means removing
+          # the binding in GCP as well.
+          #
+          # The access step is the other way round -- its bindings come
+          # from the manifest, so they carry Delete and a principal
+          # removed from the access mapping loses what it named.
           # ===================================================================
           # The folder is the installation. Everything but Delete: a
           # folder holds every project, and reconciliation must never be
@@ -938,7 +949,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1005,7 +1015,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1057,7 +1066,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1085,7 +1093,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1113,7 +1120,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1141,7 +1147,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1169,7 +1174,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1202,7 +1206,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1243,7 +1246,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1365,7 +1367,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1394,7 +1395,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1427,7 +1427,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1458,7 +1457,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1532,7 +1530,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1568,7 +1565,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1637,7 +1633,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1724,7 +1719,6 @@ spec:
                   - Create
                   - Update
                   - LateInitialize
-                  - Delete
                 providerConfigRef:
                   kind: ClusterProviderConfig
                   name: default
@@ -1824,6 +1818,9 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
             spec:
+              # With Delete, unlike everything the step above composes:
+              # a principal dropped from the access mapping has to lose
+              # the binding in GCP, not just the resource naming it.
               managementPolicies:
                 - Observe
                 - Create
