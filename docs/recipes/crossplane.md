@@ -28,6 +28,19 @@ makes an optional manifest field work, and what turns an unapplied XRD
 into an empty value nothing complains about. Where absence is a
 mistake rather than a meaning, set `policy.fromFieldPath: Required`.
 
+A field the XRD defaults is absent too, for a window. Argo applies an
+XRD and a Composition in one sync, and the new composition can be
+selected before the API server serves the regenerated CRD, so the
+default has not been applied yet and a patch reading it is skipped.
+What that costs depends on the target rather than on the source. A
+field the provider's CRD requires makes the apply fail, which retries a
+moment later and heals. An optional one composes a resource with a hole
+in it, and the provider may then fail to observe what it created — a
+state no later reconcile recovers, because the resource already exists
+and is wrong. So `Required` belongs on every patch whose source the
+XRD defaults, and stating the value in the manifest closes the window
+for one composite without closing it for the next.
+
 A `string` `Format` transform is `fmt.Sprintf`. Given an input it does
 not interpolate, it appends `%!(EXTRA string=…)` to the result. A
 constant belongs in `base`.
