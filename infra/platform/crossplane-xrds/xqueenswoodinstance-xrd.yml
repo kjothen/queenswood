@@ -147,6 +147,37 @@ spec:
                     Stated in every manifest for the same reason region
                     is, even though no name carries it: moving it
                     rebuilds the cluster.
+                access:
+                  type: object
+                  default: {}
+                  description: |
+                    Who may look at this environment. Per instance
+                    rather than inherited from the plane, because the
+                    plane's access mapping is on its own composite and
+                    neither composite reaches into the other -- and
+                    because a nonprod environment and a production one
+                    should not have to share an answer.
+                  properties:
+                    platformViewer:
+                      type: array
+                      description: |
+                        Principals granted the pod-log-reader role in
+                        this project, as whole IAM member strings.
+
+                        The role exists because no predefined one fits:
+                        container.viewer does not carry
+                        container.pods.getLogs, and container.developer
+                        does but also grants exec, port-forward and
+                        every write. The plane composes the same role
+                        for its own project; an instance's clusters are
+                        in a different one, so reading a log there
+                        meant joining clusterAdmin until now.
+
+                        Empty binds nothing, which is what an
+                        installation with no named viewers wants.
+                      items:
+                        type: string
+                        pattern: '^(user|group|serviceAccount|domain):.+$'
                 network:
                   type: object
                   default: {}

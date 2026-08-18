@@ -189,6 +189,10 @@ spec:
   region: "europe-west2"
   regionCode: "euw2"
   zone: "europe-west2-a"
+  access:
+    # Granted the pod-log-reader role in this project. Empty binds
+    # nothing, and reading a log then means joining clusterAdmin.
+    platformViewer: ["group:grp-gcp-<code>-platform-viewer@<your-domain>"]
   network:
     podsCidr: "10.20.0.0/16"
     proxyCidr: "10.40.0.0/24"
