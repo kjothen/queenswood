@@ -1499,7 +1499,17 @@ spec:
                       namespace: argocd
                       labels:
                         argocd.argoproj.io/secret-type: cluster
-                    stringData: {}
+                    # data rather than stringData, and the difference
+                    # is not cosmetic. stringData is write-only: the
+                    # API server folds it into data and drops it, so
+                    # the provider has nothing to compare and cannot
+                    # see a value it failed to write. The first apply
+                    # here happened while the CA was still absent, the
+                    # config key was never written, and the Object
+                    # reported Ready for half an hour with a
+                    # registration Argo could not verify a certificate
+                    # against.
+                    data: {}
             patches:
               - type: CombineFromComposite
                 combine:
@@ -1533,24 +1543,37 @@ spec:
                   strategy: string
                   string:
                     fmt: "%s-%s-%s"
-                toFieldPath: spec.forProvider.manifest.stringData.name
+                toFieldPath: spec.forProvider.manifest.data.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Convert
+                      convert: ToBase64
               - fromFieldPath: status.clusterEndpoint
-                toFieldPath: spec.forProvider.manifest.stringData.server
+                toFieldPath: spec.forProvider.manifest.data.server
                 transforms:
                   - type: string
                     string:
                       type: Format
                       fmt: "https://%s"
+                  - type: string
+                    string:
+                      type: Convert
+                      convert: ToBase64
               # One string, because config is JSON inside a Secret
               # value. caData is the cluster's, and the exec block is
               # what replaces a stored token.
               - fromFieldPath: status.clusterCa
-                toFieldPath: spec.forProvider.manifest.stringData.config
+                toFieldPath: spec.forProvider.manifest.data.config
                 transforms:
                   - type: string
                     string:
                       type: Format
                       fmt: '{"execProviderConfig":{"apiVersion":"client.authentication.k8s.io/v1beta1","command":"argocd-k8s-auth","args":["gcp"]},"tlsClientConfig":{"insecure":false,"caData":"%s"}}'
+                  - type: string
+                    string:
+                      type: Convert
+                      convert: ToBase64
     - step: nodes
       functionRef:
         name: function-go-templating
