@@ -152,6 +152,20 @@ Compute and data:
   longer spells the pool's, which is a real cost of repeating the scope
   and worth knowing before choosing a longer label
 - **CloudSQL instance** — `sql-qw01-<env>-<label>`
+- **database inside one** — `sql-qw01-<env>-<label>-<name>`, so
+  `sql-qw01-n-test-keycloak`. A database name is scoped to its instance
+  in GCP and to a namespace in Kubernetes, the same split a node pool
+  has, so the longer name wins in both
+- **database user** — the exception the annotation exists for. Postgres
+  wants an IAM user named for the service account's address with
+  `.gserviceaccount.com` removed, which carries an `@` and is not a
+  name Kubernetes can express, so `crossplane.io/external-name` holds
+  it and the Kubernetes name is `sql-qw01-<env>-<label>-user`
+- **private services access range** — `addr-qw01-<env>-<label>-psa`,
+  following the static address prefix. Global rather than regional, so
+  no region qualifier
+- **service networking peering** — `psa-qw01-<env>-<label>`, one per
+  VPC and named for what it grants rather than for either end
 - **bucket** — `bkt-qw01-<label>`
 - **secret** — `sec-qw01-<env>-<label>`
 

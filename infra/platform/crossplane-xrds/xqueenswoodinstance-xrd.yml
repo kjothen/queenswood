@@ -19,8 +19,8 @@ spec:
           type: object
           description: |
             One environment of the bank inside an installation: its own
-            project, network and cluster, and in time the database and
-            the workloads that run on it.
+            project, network, cluster and database, and in time the
+            workloads that run on it.
 
             Its own composite rather than a field on the plane's,
             because a composite is a unit of replacement and rebuilding
@@ -146,6 +146,16 @@ spec:
 
                     The floor for the bank rather than a measured
                     answer: nothing runs on this yet.
+                databaseTier:
+                  type: string
+                  default: db-custom-1-3840
+                  description: |
+                    What the database runs on. One vCPU and 3840MB, the
+                    smallest shape ENTERPRISE accepts -- ENTERPRISE_PLUS
+                    refuses a custom shape entirely.
+
+                    Sized for Keycloak, which is all the database holds.
+                    The bank's own records are in FoundationDB.
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
@@ -200,6 +210,12 @@ spec:
                   description: |
                     The project as Crossplane records it,
                     projects/<id>. Read back rather than committed.
+                databaseConnectionName:
+                  type: string
+                  description: |
+                    project:region:instance, which is what a Cloud SQL
+                    client is pointed at rather than an address. Read
+                    back rather than committed.
                 clusterEndpoint:
                   type: string
                   description: |
