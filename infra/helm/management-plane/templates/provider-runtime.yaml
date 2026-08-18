@@ -21,3 +21,59 @@ spec:
         # Without this a token minted for this account is
         # exchangeable for nothing.
         iam.gke.io/gcp-service-account: sa-{{ .Values.code }}-platform@{{ .Values.managementProjectId }}.iam.gserviceaccount.com
+---
+{{- /*
+  provider-kubernetes writes objects on this cluster, so it needs no GCP
+  identity at all -- its authority is Kubernetes RBAC, granted below.
+  The service account is pinned for the same reason the GCP one is: a
+  binding has to name something, and a generated name matches nothing.
+
+  Wave 0: a provider Deployment takes whatever service account exists
+  when it starts.
+*/}}
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: crossplane-provider-kubernetes
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  serviceAccountTemplate:
+    metadata:
+      name: crossplane-provider-kubernetes
+---
+{{- /*
+  What it may write, and nothing more. Argo registers an external
+  cluster as a Secret in its own namespace, so that is the only thing
+  this provider composes today and the only thing it is granted.
+
+  A Role rather than a ClusterRole: widening this later should be a
+  visible edit rather than something already permitted.
+*/}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crossplane-provider-kubernetes
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crossplane-provider-kubernetes
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crossplane-provider-kubernetes
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-provider-kubernetes
+    namespace: crossplane-system

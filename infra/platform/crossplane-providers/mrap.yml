@@ -27,6 +27,8 @@ spec:
     # peering that consumes it.
     - globaladdresses.compute.gcp.m.upbound.io
     - connections.servicenetworking.gcp.m.upbound.io
+    # Kubernetes objects that belong to no cloud provider.
+    - objects.kubernetes.m.crossplane.io
     - databaseinstances.sql.gcp.m.upbound.io
     - databases.sql.gcp.m.upbound.io
     - users.sql.gcp.m.upbound.io
