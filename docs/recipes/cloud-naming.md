@@ -143,9 +143,14 @@ Compute and data:
   where the composed resources for every instance in an installation
   share one namespace. The short form is only available on one side, so
   taking it would mean two names for one thing. The cost is visible
-  wherever a node is named — GKE builds node names from the cluster and
-  the pool, so `gke-qw01-n-test-np-qw01-n-test-primary-d5a1cdac-mx0x`,
-  fifty-two of a permitted sixty-three
+  wherever a node is named, and larger than the sixty-three character
+  limit suggests: GKE builds a node name from the cluster and the pool
+  and truncates to its own budget, which the repeated scope exceeds. The
+  nodes came up as
+  `gke-qw01-n-test-np-qw01-n-test-primar-9e7207bb-7rqg`, fifty-one
+  characters with the pool's last letter dropped. So a node name no
+  longer spells the pool's, which is a real cost of repeating the scope
+  and worth knowing before choosing a longer label
 - **CloudSQL instance** — `sql-qw01-<env>-<label>`
 - **bucket** — `bkt-qw01-<label>`
 - **secret** — `sec-qw01-<env>-<label>`
