@@ -1353,10 +1353,17 @@ spec:
     # the two -- a map transform must name every key it may see, so a
     # state patch always overwrites a count patch or is overwritten by it.
     #
-    # Fields are read directly rather than through dig, deliberately. dig
-    # substitutes a default for a missing value and would compose a pool
-    # with a hole in it; direct access fails the step, which is the same
-    # loud failure policy.fromFieldPath Required buys everywhere else.
+    # Every field is checked before it is used. A Go template renders a
+    # missing map key as the string "<no value>" rather than failing, so
+    # reading one directly is not the loud failure policy.fromFieldPath
+    # Required buys in patch-and-transform -- it is a silent one that
+    # composes a resource carrying that string. Two of these fields are
+    # numeric and Kubernetes rejects the type, which is what surfaced it;
+    # a string field would have reached GCP.
+    #
+    # The absent case is real rather than theoretical: the composition
+    # can be selected before the API server serves a regenerated CRD, and
+    # the observed composite then has no spec.cluster at all.
     #
     # The composition-resource-name is what identifies this to Crossplane,
     # so it stays instance-nodes and the existing pool is matched rather
@@ -1372,10 +1379,21 @@ spec:
         inline:
           template: |
             {{- $xr := .observed.composite.resource }}
+            {{- $cluster := $xr.spec.cluster | default dict }}
+            {{- range $f := list "machineType" "nodeCount" "diskSize" "diskType" }}
+            {{- if not (hasKey $cluster $f) }}
+            {{- fail (printf "spec.cluster.%s is absent" $f) }}
+            {{- end }}
+            {{- end }}
+            {{- range $f := list "code" "env" "label" "state" "zone" "projectId" }}
+            {{- if not (hasKey $xr.spec $f) }}
+            {{- fail (printf "spec.%s is absent" $f) }}
+            {{- end }}
+            {{- end }}
             {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
             {{- $count := 0 }}
             {{- if eq $xr.spec.state "up" }}
-            {{- $count = $xr.spec.cluster.nodeCount }}
+            {{- $count = $cluster.nodeCount }}
             {{- end }}
             apiVersion: container.gcp.m.upbound.io/v1beta1
             kind: NodePool
@@ -1398,11 +1416,11 @@ spec:
                 cluster: {{ $name }}
                 location: {{ $xr.spec.zone }}
                 project: {{ $xr.spec.projectId }}
-                nodeCount: {{ $count }}
+                nodeCount: {{ $count | int }}
                 nodeConfig:
-                  machineType: {{ $xr.spec.cluster.machineType }}
-                  diskSizeGb: {{ $xr.spec.cluster.diskSize }}
-                  diskType: {{ $xr.spec.cluster.diskType }}
+                  machineType: {{ $cluster.machineType }}
+                  diskSizeGb: {{ $cluster.diskSize | int }}
+                  diskType: {{ $cluster.diskType }}
                   serviceAccount: sa-{{ $name }}-nodes@{{ $xr.spec.projectId }}.iam.gserviceaccount.com
                   oauthScopes:
                     - https://www.googleapis.com/auth/cloud-platform
