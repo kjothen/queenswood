@@ -41,6 +41,19 @@ and is wrong. So `Required` belongs on every patch whose source the
 XRD defaults, and stating the value in the manifest closes the window
 for one composite without closing it for the next.
 
+Some values are only legal on a resource that already exists, and a
+composition has no way to withhold one. A patch always writes
+something: a map transform must name every key it may see, and
+`patch-and-transform` cannot express "not this field, this time". So a
+field whose value is a *transition* rather than a *state* — Cloud SQL's
+`activationPolicy: NEVER`, which stops a database and cannot create one
+stopped — makes the first reconcile fail rather than the field simply
+not applying. Reading observed state in a templating step does not
+rescue it either, because the resource would still have to be created
+in the legal state and moved afterwards, which is the same behaviour
+with a better error. Say so in the XRD instead, where whoever writes
+the manifest is looking.
+
 A `string` `Format` transform is `fmt.Sprintf`. Given an input it does
 not interpolate, it appends `%!(EXTRA string=…)` to the result. A
 constant belongs in `base`.
@@ -155,6 +168,9 @@ the same way: `no matches for kind`.
 **MUST NOT:**
 
 - Patch a field the composition sets and expect it to hold.
+- Expect a composition to withhold a field. A patch always writes
+  something, so a value only legal on a resource that already exists
+  fails the first reconcile rather than being skipped.
 - Compose a cluster-scoped kind from a namespaced composite.
 - Delete a composite to tidy up. It deletes what it composes, subject
   to each resource's `managementPolicies`.
