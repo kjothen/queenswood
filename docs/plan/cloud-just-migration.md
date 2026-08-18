@@ -41,43 +41,76 @@ records how the pivot was done, and that is deliberate: it is what
 happened, not what to do. The kind and the group are the only things
 that changed.
 
-**The first instance exists, and runs nothing yet.** `XQueenswoodInstance`
-in `queenswood.repldriven.com`, decided by
+**The first instance exists, and the bank is deployed onto it.**
+`XQueenswoodInstance` in `queenswood.repldriven.com`, decided by
 [ADR-0024](../adr/0024-instances-are-their-own-composites.md) and
 declared by `qw01/test.yml` beside the plane's own manifest. What it
-composes today:
+composes:
 
 - `prj-qw01-n-test-xxxxxx`, in `fldr-qw01`, billed from the
-  installation's `EnvironmentConfig` rather than from anything the
-  manifest states
-- five `ProjectService`s — compute, container, iam, cloudresourcemanager,
-  serviceusage
-- `vpc-qw01-n-test`, `sb-qw01-n-test-euw2` (10.10.0.0/16, with the pods
-  and services ranges GKE allocates from) and
-  `sb-qw01-n-test-proxy-euw2` (REGIONAL_MANAGED_PROXY)
-- `sa-qw01-n-test-nodes`, holding
-  `roles/container.defaultNodeServiceAccount` and nothing else
-- `qw01-n-test`, a zonal cluster with Workload Identity and the Gateway
-  API on, writing a kubeconfig to a Secret beside itself
-- `np-qw01-n-test-primary` under it, the one resource `state` governs
-  today: three nodes at `up`, none at `down`
+  installation's `EnvironmentConfig`
+- seven `ProjectService`s — compute, container, iam,
+  cloudresourcemanager, serviceusage, sqladmin, servicenetworking
+- `vpc-qw01-n-test` and two subnets, plus the private services access
+  pair: a `GlobalAddress` range this VPC lends Google and the
+  `Connection` peering that consumes it
+- `qw01-n-test`, a zonal cluster, and `np-qw01-n-test-primary` under it
+- `sa-qw01-n-test-nodes` and `sa-qw01-n-test-sql`
+- `sql-qw01-n-test`, a Postgres instance with a private address and no
+  public one, and a `CLOUD_IAM_SERVICE_ACCOUNT` user
+- the Secret registering this cluster with Argo, and a
+  `rl_pod_log_reader` custom role bound to whoever the manifest names
 
-`state` and the cluster arrived together, because a field naming a
-desired state has nothing to govern until something can be stopped. The
-cluster and the pool are the first things here fully managed with
-`Delete`: they are the disposable tier
-[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
-describes, where the project, the network and the identities around
-them are not, and that line is what lets `down` be a word in a file
-rather than a teardown.
+**Nothing in the design holds a database password, because none
+exists.** `cloudsql.iam_authentication` is on and the database user is
+the workload's service account, so a client presents a token from the
+metadata server and Cloud SQL checks IAM. `sslMode` is
+`ENCRYPTED_ONLY`: private IP settles who can reach the instance, not
+whether what they send is readable, and those are different properties.
+The instance is created `up` and stopped afterwards — Cloud SQL refuses
+to create one already stopped.
 
-They are also where the bill starts. `XPlatform`'s twenty-four
-resources are the port list for everything after that — CloudSQL, the
-apex address and DNS, the certificate — and
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md) says all
-of it folds into this one kind, with the DNS **zone** the exception: it
-is unrecreatable on any useful timescale and belongs to something
-durable rather than to an instance that comes and goes.
+**`state: up | down` is proven in both directions.** Down took four
+minutes to drain three nodes; up refilled in one. Everything survived —
+project, network, identities, cluster, and the pool itself stayed
+`Ready`, so nothing pages because an environment is deliberately off.
+Coming back, the pool and cluster were the same objects and the API
+server kept its address. The nodes are new, which is the one thing
+inside the boundary that does not survive, and the reason nothing
+stateful may sit on a node's disk.
+
+**Workloads arrive through Argo, not Crossplane.** Argo has its own
+identity, `sa-qw01-c-argo`, bound by Workload Identity to both the
+application controller and the server, and holding
+`roles/container.admin` on each instance project it must deploy to. It
+reaches the cluster through a composed Secret carrying an endpoint, a
+CA and an `execProviderConfig` — a token minted at call time, so no
+credential for cluster access exists anywhere, including in
+`installations`. `qw01/test-app.yml` is a multi-source `Application`:
+the chart from this repository, the values from `installations`, so no
+environment identifier is ever committed here.
+
+**Where the deployment got to.** FoundationDB is fully replicated
+(`RECONCILED`, `AVAILABLE`, `FULLREPLICATION`), Kafka and Jaeger run,
+and the migrator Job completed. The five services sit at `Init:1/2`:
+past `wait-for-fdb-cluster`, waiting on `wait-for-bootstrap`.
+
+**And it is blocked on Keycloak, which is not optional.** The bootstrap
+Job's `sync-admin-client-key` initContainer registers the admin
+client's public key *on Keycloak*, and retries forever against a
+Service that does not exist. So the Job never completes, so no service
+starts, and the console crash-loops for the same reason. Keycloak is
+two further charts — `infra/helm/keycloak-operator` and
+`infra/helm/queenswood-keycloak` — which the retired
+`queenswood-platform` chart used to wrap alongside this one. They are a
+hard dependency of the deployment rather than a follow-on to it.
+
+`XPlatform`'s resources were the port list, and what is left of it is
+the apex address, its DNS record and the certificate — with the DNS
+**zone** the open question, since it is unrecreatable on any useful
+timescale. That question is now reopened rather than settled: it was
+blocked on a zone not belonging to a disposable instance, and an
+instance project is no longer disposable.
 
 Read "How the machinery fits together" below before touching the
 composition. It is the hour that does not need spending twice.
@@ -1667,42 +1700,62 @@ declaring the instances inside the plane's own composite puts every
 environment's project, cluster and database in the blast radius of a
 plane rebuild.
 
-**Where it got to.** The project, its APIs, its network, its node
-identity and its cluster are composed, and `state: up | down` came with
-the cluster, because until then it had nothing to govern. What is left
-of the port list is CloudSQL, the apex address, its DNS record and the
-certificate, and then the workloads — which is where the choice
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md) leaves
-open, between composing `Release` resources directly and composing an
-Argo `Application` per instance, has to be made.
+**Where it got to.** The instance is complete as infrastructure and
+the bank is deployed onto it, blocked only on Keycloak — see
+[picking this up cold](#picking-this-up-cold) for the state and the
+reason. `state` governs the node pool and, since CloudSQL arrived, that
+database's `activationPolicy` too.
 
-`state` governs the node pool and only the node pool. CloudSQL's
-`activationPolicy` is the second thing it takes, and it can only be
-written against a database that exists.
+**What to do next, in order.** Keycloak first, because nothing else
+starts without it: `keycloak-operator` and `queenswood-keycloak` as two
+more Applications in `installations/qw01/`, sequenced with
+`argocd.argoproj.io/sync-wave` so the operator's CRDs exist before a
+`Keycloak` resource names them. `queenswood-keycloak` is where the
+passwordless database is exercised for the first time — the retired
+chart passed a username and password, which is exactly what IAM
+authentication replaces — and it is what finally makes the Kubernetes
+service account name a fact, so the Workload Identity binding
+deliberately left out of the instance composition can be written
+against something real rather than guessed.
 
-**And it has been round-tripped.** Both directions were run against
-`qw01-n-test` while the cluster was empty, which is the cheapest that
-test will ever be. `down` reached the composite about thirty seconds
-after Argo saw the merge and the patch fired in the same tick; GKE then
-took four minutes to drain three nodes. `up` refilled in one. Draining
-is the slow leg, so a maintenance window is budgeted from that end
-rather than from the resume.
+After that: the apex address, DNS record and certificate, which need
+the zone question answered first. Whether an instance composes
+`Release` resources or an `Application` per workload,
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) left
+open, and the Argo path has now answered it in practice.
 
-What survived is the point rather than what stopped. The project, the
-API enablements, the network, the identity and the cluster all stayed
-`Ready`, and so did the composite and the pool itself — a pool at zero
-is a healthy pool, so nothing watching an environment pages because it
-is deliberately off. Asking the cluster for its nodes returned "no
-resources found" rather than an error, which is a stopped environment
-answering rather than a deleted one failing to.
+**What is not yet true, and should not be assumed.** There is no
+external-secrets operator on an instance cluster, so a workload needing
+a real credential has nowhere to read one — which the FDB backup
+encryption key will need. `image.tag` is `latest`, which is the wrong
+tag for an environment: a mutable tag means two nodes can run different
+code and a rollback has nothing to return to, and the build publishes
+no versioned tag to use instead. The gateway is disabled, so nothing is
+reachable from outside the cluster.
 
-Coming back, the pool and cluster were the same objects and the API
-server kept the same address. That is what makes `down` a stop rather
-than a fast teardown: a kubeconfig held anywhere outside the cluster
-still points at something. The nodes themselves are new — the pool
-refills rather than resuming its VMs — which is the one thing inside
-the boundary that does not survive, and is why nothing stateful may
-live on a node's disk.
+**Three traps this cost a day to learn**, all of one family — a
+resource reporting `Ready` while being wrong:
+
+- A **`ForceNew` change is refused, not performed.** Changing an IAM
+  binding's role rewrote `spec` and left `atProvider` on the old value;
+  `Ready` stayed `Available` and only `LastAsyncOperation` said
+  `AsyncUpdateFailure`. The managed resource has to be deleted.
+- **`stringData` is write-only.** The API server folds it into `data`
+  and drops it, so provider-kubernetes cannot see a value it failed to
+  write. A registration Secret sat for half an hour missing the key
+  that mattered, reporting `Ready`. Use `data` with a `ToBase64`
+  convert, where a written value is read back.
+- **A bad image tag wedges a cluster.** Deployments applied with a tag
+  that does not exist leave ReplicaSets that can never become `Ready`,
+  a rollout that will never retire them, and their CPU requests held
+  forever — which starved FoundationDB of the capacity it needed to
+  schedule, so nothing could progress in either direction.
+
+Sizing, measured rather than guessed: three `e2-standard-2` nodes give
+about 5.8 CPU and 19GB allocatable, and the full chart with
+FoundationDB sits near 78% of that once the stale ReplicaSets are gone.
+Worth revisiting against real usage rather than declared requests once
+Keycloak lets everything start.
 
 Four things wait rather than block:
 
