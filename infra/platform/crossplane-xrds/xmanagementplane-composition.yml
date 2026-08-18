@@ -460,6 +460,89 @@ spec:
                       type: Format
                       fmt: "prj-%s-c-mgmt"
           # ===================================================================
+          # Two APIs the plane enables for itself but never calls
+          # against itself. GCP checks an API against the project the
+          # caller belongs to as well as the project the resource
+          # belongs to, and every call an instance provokes is made by
+          # the platform identity, which lives here. So an instance
+          # enabling sqladmin in its own project is necessary and not
+          # sufficient: without these, the provider is refused before it
+          # reaches the instance at all, and the 403 names the
+          # management project rather than the one being built.
+          #
+          # The rule generalises: every API any composite calls is
+          # enabled here too. compute, container, iam, resourcemanager
+          # and serviceusage were already, because the plane builds
+          # itself out of them, which is why this only surfaced when an
+          # instance reached for a kind the plane had never used.
+          # ===================================================================
+          - name: management-service-servicenetworking
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: servicenetworking.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-servicenetworking"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          - name: management-service-sqladmin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: sqladmin.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "svc-%s-c-sqladmin"
+              - fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.projectRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "prj-%s-c-mgmt"
+          # ===================================================================
           # Network for the management cluster. Nothing else lives here,
           # so one subnet with the two secondary ranges GKE needs.
           # Network and Subnetwork take a project id rather than a ref,

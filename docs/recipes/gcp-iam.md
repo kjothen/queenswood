@@ -124,6 +124,26 @@ v2 `gcloud org-policies` commands need the Organization Policy API
 enabled on a quota project, which an impersonated bootstrap identity
 does not have.
 
+### An API is checked against the caller's project too
+
+Enabling an API in the project a resource lives in is necessary and not
+sufficient. GCP also checks it against the project the *calling
+identity* belongs to, so a control plane that composes a kind on
+someone else's behalf needs that API enabled where the plane's identity
+lives, not only where the resource lands.
+
+The 403 says so, and it is easy to misread: it names a project number
+rather than an id, and the number is the caller's. Two consecutive
+failures on one resource can name two different projects — the target
+while its own enablement propagates, then the caller — and they look
+identical apart from the digits. Resolve the number before believing
+the message, from `status.atProvider.number` on the `Project`.
+
+It surfaces late because a plane usually calls only the APIs it built
+itself out of, which are enabled by definition. The first composite
+that reaches for a kind the plane has never used is where it appears.
+
+
 ## Rules
 
 **MUST:**
