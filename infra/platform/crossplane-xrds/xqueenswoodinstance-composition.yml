@@ -904,6 +904,510 @@ spec:
                   string:
                     fmt: "sa-%s-%s-%s-nodes@%s.iam.gserviceaccount.com"
                 toFieldPath: spec.forProvider.nodeConfig.serviceAccount
+          # ===================================================================
+          # Two more APIs, arriving with the database rather than ahead
+          # of it. servicenetworking is what private services access is
+          # built on, and is enabled for the peering rather than for
+          # Cloud SQL itself.
+          # ===================================================================
+          - name: instance-service-sqladmin
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: sqladmin.googleapis.com
+                  # Leaving an API on when the resource goes is the
+                  # safe direction: disabling one takes every resource
+                  # in the project that depends on it.
+                  disableOnDestroy: false
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "svc-%s-%s-%s-sqladmin"
+                toFieldPath: metadata.name
+              - &api-project
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "prj-%s-%s-%s"
+                toFieldPath: spec.forProvider.projectRef.name
+          - name: instance-service-servicenetworking
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: servicenetworking.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "svc-%s-%s-%s-servicenetworking"
+                toFieldPath: metadata.name
+              - *api-project
+          # ===================================================================
+          # Private services access: the range this VPC lends to Google,
+          # and the peering that consumes it. A Cloud SQL instance with
+          # a private address lives in Google's own project and reaches
+          # this VPC across that peering, which is why a database needs
+          # two network resources before it needs a database.
+          #
+          # Global rather than regional, and prefixLength rather than a
+          # stated range: Google allocates from the VPC's space, and a
+          # literal here would have to avoid every subnet this instance
+          # will ever have.
+          #
+          # Delete is withheld from both. Tearing down a peering strands
+          # every private-IP service behind it, and the range cannot be
+          # reclaimed while the peering holds it.
+          # ===================================================================
+          - name: instance-psa-range
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: GlobalAddress
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  purpose: VPC_PEERING
+                  addressType: INTERNAL
+                  prefixLength: 16
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "addr-%s-%s-%s-psa"
+                toFieldPath: metadata.name
+              - &vpc-ref
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: spec.forProvider.networkRef.name
+              - &instance-project
+                fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          - name: instance-psa-connection
+            base:
+              apiVersion: servicenetworking.gcp.m.upbound.io/v1beta1
+              kind: Connection
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: servicenetworking.googleapis.com
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "psa-%s-%s-%s"
+                toFieldPath: metadata.name
+              - *vpc-ref
+              # By value rather than by reference: the range's name is
+              # this composition's own, so it is as deterministic as a
+              # ref would be, and a list element takes an index either
+              # way.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "addr-%s-%s-%s-psa"
+                toFieldPath: spec.forProvider.reservedPeeringRanges[0]
+          # ===================================================================
+          # The database. Private address only: ipv4Enabled false and a
+          # privateNetworkRef into this instance's VPC, reachable across
+          # the peering above and from nowhere on the internet. That is
+          # also what makes sql.restrictPublicIp enforceable, which the
+          # organisation's policy set leaves off pending an instance
+          # that could satisfy it.
+          #
+          # Delete is withheld and deletionProtection is on, which is
+          # the one place this composition deliberately holds two locks.
+          # A cluster is protected by its declaration alone, because
+          # rebuilding one loses nothing; a database is the resource
+          # where a teardown failing halfway is the better outcome. See
+          # ADR-0022 on the lien mattering more than the policy.
+          #
+          # state governs activationPolicy, which is the second thing it
+          # has ever governed. NEVER stops the instance and keeps its
+          # storage: down is a stopped database rather than a dropped
+          # one, and nothing is restored on the way back up.
+          # ===================================================================
+          - name: instance-sql
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: DatabaseInstance
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  databaseVersion: POSTGRES_18
+                  deletionProtection: true
+                  settings:
+                    edition: ENTERPRISE
+                    diskSize: 10
+                    diskType: PD_HDD
+                    diskAutoresize: true
+                    deletionProtectionEnabled: true
+                    backupConfiguration:
+                      enabled: true
+                      pointInTimeRecoveryEnabled: false
+                    ipConfiguration:
+                      ipv4Enabled: false
+                    # No password exists on this instance. Every user is
+                    # an IAM principal, authenticated by a token from the
+                    # metadata server, which is what this flag turns on.
+                    databaseFlags:
+                      - name: cloudsql.iam_authentication
+                        value: "on"
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s"
+                toFieldPath: metadata.name
+              - *instance-project
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.databaseTier
+                toFieldPath: spec.forProvider.settings.tier
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.state
+                toFieldPath: spec.forProvider.settings.activationPolicy
+                transforms:
+                  - type: map
+                    map:
+                      up: ALWAYS
+                      down: NEVER
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: spec.forProvider.settings.ipConfiguration.privateNetworkRef.name
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.connectionName
+                toFieldPath: status.databaseConnectionName
+          # Keycloak's own database. Named for the instance as well as
+          # for what it holds: a database name is scoped to its Cloud
+          # SQL instance in GCP and to a namespace in Kubernetes, the
+          # same split a node pool has, and the longer name wins in both
+          # rather than the annotation holding a second one.
+          - name: instance-sql-database
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: Database
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s-keycloak"
+                toFieldPath: metadata.name
+              - *instance-project
+              - &sql-instance-ref
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s"
+                toFieldPath: spec.forProvider.instanceRef.name
+          # ===================================================================
+          # The identity that reaches the database, and the database
+          # user that is that identity. No password is composed here
+          # because none exists: with cloudsql.iam_authentication on and
+          # a CLOUD_IAM_SERVICE_ACCOUNT user, the client presents a
+          # token from the metadata server and Cloud SQL checks IAM. The
+          # provider says the same thing -- passwordSecretRef is
+          # required for Postgres "unless type is set to ...
+          # CLOUD_IAM_SERVICE_ACCOUNT".
+          #
+          # That is why an instance still composes no secret store. What
+          # would have needed one is a database password, and there is
+          # not one to keep.
+          # ===================================================================
+          - name: instance-sql-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood database client
+                  description: Reaches this environment's database as itself
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql"
+                toFieldPath: metadata.name
+              - *instance-project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql"
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+          # The one place a composed name has to diverge, and the reason
+          # ADR-0023 allows the annotation at all: Postgres wants an IAM
+          # user named for the service account's address with the
+          # .gserviceaccount.com suffix removed, which carries an @ and
+          # so is not a name Kubernetes can express. User has no name
+          # field either -- the external name is the user name.
+          - name: instance-sql-user
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: User
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  type: CLOUD_IAM_SERVICE_ACCOUNT
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s-user"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql@%s.iam"
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - *instance-project
+              - *sql-instance-ref
+          # cloudsql.client authorises the connection, instanceUser
+          # authorises logging in as an IAM principal once connected.
+          # Both are needed and neither implies the other.
+          - name: instance-sql-role-client
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.client
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-client"
+                toFieldPath: metadata.name
+              - *instance-project
+              - &sql-member
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-%s-%s-sql@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          - name: instance-sql-role-instance-user
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.instanceUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-instance-user"
+                toFieldPath: metadata.name
+              - *instance-project
+              - *sql-member
+          # Nothing binds this identity to a Kubernetes service account
+          # yet, and that is deliberate rather than missing. Workload
+          # Identity has two halves and the GCP one has to name a
+          # namespace and a service account that the workload actually
+          # creates; guessing them composes a binding that matches
+          # nothing, which is what gcp-iam warns against. It arrives
+          # with the workload, whose own shape ADR-0024 leaves open.
     - step: auto-ready
       functionRef:
         name: function-auto-ready
