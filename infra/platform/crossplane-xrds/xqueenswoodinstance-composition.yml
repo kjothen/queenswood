@@ -1391,10 +1391,27 @@ spec:
           # time and every grant sits where that environment is
           # declared.
           #
-          # container.developer, not container.admin: it reaches
-          # Kubernetes objects inside this project's clusters and
-          # cannot create or delete a cluster. Argo deploys what runs;
-          # the platform identity owns what it runs on.
+          # container.admin rather than container.developer, and the
+          # reason is not ambition. container.developer reaches
+          # ordinary Kubernetes objects -- Deployments, Services,
+          # Secrets, CRDs all applied under it -- and cannot create
+          # Roles, RoleBindings, ClusterRoles or ClusterRoleBindings.
+          # Any chart shipping an operator ships RBAC, so a GitOps
+          # deployer that cannot write RBAC cannot deploy one at all.
+          # The FoundationDB operator is what proved it: every RBAC
+          # object failed, its service account was left with no
+          # permissions, and it crash-looped while everything around it
+          # applied cleanly.
+          #
+          # The cost is honest: this also lets Argo create and delete
+          # clusters in this project. The narrower shape is
+          # container.clusterViewer here plus a Kubernetes
+          # ClusterRoleBinding on the cluster itself, which moves the
+          # authority into RBAC where it is reviewable in git -- and
+          # needs something able to write RBAC on an instance cluster
+          # before it can be built, which is the machinery this defers.
+          # Worth doing before a production instance; not worth
+          # blocking the first deployment on.
           #
           # The account is spelled rather than referenced. It belongs to
           # the plane's composite, and neither composite reaches into
@@ -1418,7 +1435,7 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  role: roles/container.developer
+                  role: roles/container.admin
             patches:
               - type: CombineFromComposite
                 combine:
@@ -1428,7 +1445,7 @@ spec:
                     - fromFieldPath: spec.label
                   strategy: string
                   string:
-                    fmt: "%s-%s-%s-argo-container-developer"
+                    fmt: "%s-%s-%s-argo-container-admin"
                 toFieldPath: metadata.name
               - *instance-project
               # From the installation's shared config rather than
@@ -1574,6 +1591,56 @@ spec:
                     string:
                       type: Convert
                       convert: ToBase64
+          # ===================================================================
+          # Reading a pod's log in this project, and nothing else. The
+          # plane composes the same role for its own project and binds
+          # its platformViewer to it; an instance's clusters are in a
+          # different project, so until now reading a log from one meant
+          # joining clusterAdmin -- a break-glass capability spent on
+          # routine debugging, which is how break-glass stops meaning
+          # anything.
+          #
+          # A project custom role rather than a predefined one because
+          # none fits, and rather than an organisation one because that
+          # needs rights an installation in somebody else's
+          # organisation will not have. It can only be granted on its
+          # own project, which is why the instance composes its own
+          # rather than reusing the plane's.
+          # ===================================================================
+          - name: instance-pod-log-reader-role
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMCustomRole
+              metadata:
+                namespace: crossplane-system
+                annotations:
+                  crossplane.io/external-name: rl_pod_log_reader
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  title: Pod log reader
+                  description: Reads container logs through the Kubernetes API, and changes nothing
+                  permissions:
+                    - container.pods.getLogs
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-rl-pod-log-reader"
+                toFieldPath: metadata.name
+              - *instance-project
     - step: nodes
       functionRef:
         name: function-go-templating
@@ -1631,6 +1698,52 @@ spec:
                     - https://www.googleapis.com/auth/cloud-platform
                   workloadMetadataConfig:
                     mode: GKE_METADATA
+    # =======================================================================
+    # One binding per principal, which patch-and-transform cannot
+    # express: it composes a fixed set of resources and has no way to
+    # say "none" for an empty list. So this mirrors the plane's own
+    # access step rather than inventing a second shape.
+    #
+    # Nothing is emitted where no viewers are named, which is an
+    # installation that has not decided yet rather than one that has
+    # decided nobody.
+    # =======================================================================
+    - step: access
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
+            {{- $project := $xr.spec.projectId }}
+            {{- $viewers := dig "access" "platformViewer" (list) $xr.spec }}
+            {{- range $i, $member := $viewers }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectIAMMember
+            metadata:
+              name: {{ $name }}-pod-log-reader-{{ $i }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-pod-log-reader-{{ $i }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project }}
+                role: projects/{{ $project }}/roles/rl_pod_log_reader
+                member: {{ $member | quote }}
+            {{- end }}
     - step: auto-ready
       functionRef:
         name: function-auto-ready
