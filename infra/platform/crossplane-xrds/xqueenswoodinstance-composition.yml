@@ -1045,6 +1045,19 @@ spec:
                     deletionProtectionEnabled: true
                     ipConfiguration:
                       ipv4Enabled: false
+                      # Cloud SQL defaults to accepting unencrypted
+                      # connections, and private IP does not change
+                      # that: it settles who can reach the instance,
+                      # not whether what they send is readable. Stated
+                      # rather than defaulted, because the default is
+                      # the permissive one.
+                      #
+                      # ENCRYPTED_ONLY rather than
+                      # TRUSTED_CLIENT_CERTIFICATE_REQUIRED: the client
+                      # is authenticated by IAM already, and requiring
+                      # a client certificate as well would put a second
+                      # credential in a design that currently has none.
+                      sslMode: ENCRYPTED_ONLY
                     # No password exists on this instance. Every user is
                     # an IAM principal, authenticated by a token from the
                     # metadata server, which is what this flag turns on.

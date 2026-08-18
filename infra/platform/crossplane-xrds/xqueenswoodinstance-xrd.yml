@@ -89,6 +89,18 @@ spec:
                     database rather than deleting it, because the
                     project is durable and keeps what it holds.
 
+                    An instance is created up and stopped afterwards.
+                    Cloud SQL refuses to create an instance already
+                    stopped -- 400 invalidOperation, "This operation is
+                    not valid for this instance" -- so a manifest that
+                    says down before the database exists composes an
+                    instance that never finishes. Nothing here can work
+                    around it: even a templating step that withheld the
+                    field until the instance existed would still have
+                    created it running and then stopped it, so the
+                    behaviour would be the same and only the error
+                    would be kinder.
+
                     draining is not here. ADR-0024 says an instance may
                     ship with up and down before the ordered teardown is
                     trustworthy, and its precondition -- an unattended
