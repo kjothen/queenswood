@@ -64,6 +64,19 @@ spec:
   runtimeConfigRef:
     name: crossplane-provider-gcp
 ---
+# Private services access, which is what gives Cloud SQL a private
+# address: the peering between an instance's VPC and Google's service
+# producer network. One kind, Connection, and it is the whole reason
+# this family is installed.
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: provider-gcp-servicenetworking
+spec:
+  package: xpkg.upbound.io/upbound/provider-gcp-servicenetworking:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-gcp
+---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
