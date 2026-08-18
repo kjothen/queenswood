@@ -1371,3 +1371,71 @@ gcp-mgmt-cluster-ctx project="":
     echo ">>> fetching credentials needs only container.viewer, which you"
     echo ">>> hold. Calling the API needs container.admin: join"
     echo ">>> grp-gcp-{{ CODE }}-cluster-admin for the task, and leave."
+
+# Print an instance project's id, discovered by prefix.
+[private]
+_gcp-instance-project env label:
+    #!/usr/bin/env zsh
+    set -e
+    # By id prefix, as the management project is, and for the same
+    # reason: the suffix is random and nothing labels the project.
+    # Not silenced -- an expired session exits non-zero with empty
+    # stdout, which would read as "no such instance" for one that
+    # plainly exists.
+    if ! OUT=$(gcloud projects list \
+                 --filter="projectId ~ ^prj-{{ CODE }}-{{ env }}-{{ label }}-" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    ID=$(printf '%s\n' "$OUT" | head -1)
+    if [[ -z "$ID" ]]; then
+      echo "no project for instance {{ CODE }}-{{ env }}-{{ label }}" >&2
+      exit 1
+    fi
+    printf '%s\n' "$ID"
+
+# Add a kubectl context for an instance cluster, named for the cluster.
+gcp-instance-cluster-ctx env label project="":
+    #!/usr/bin/env zsh
+    set -e
+    # The cluster carries no kind prefix, so the context is the
+    # cluster's own name -- there is nothing to shorten, where the
+    # management context shortens gke-{{ CODE }}-c-mgmt.
+    CLUSTER="{{ CODE }}-{{ env }}-{{ label }}"
+
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      PROJECT=$(just _gcp-instance-project "{{ env }}" "{{ label }}")
+    fi
+
+    # Read from the cluster rather than stated here, so this cannot
+    # drift from the zone the instance manifest chose.
+    ZONE=$(gcloud container clusters list --project="$PROJECT" \
+             --filter="name=$CLUSTER" --format='value(location)' | head -1)
+    if [[ -z "$ZONE" ]]; then
+      echo "no cluster $CLUSTER in $PROJECT" >&2
+      exit 1
+    fi
+
+    # get-credentials makes its context current, which silently
+    # retargets a shell that was working against the plane. Captured
+    # and put back: this recipe adds a context, it does not choose one.
+    WAS=$(kubectl config current-context 2>/dev/null || true)
+
+    gcloud container clusters get-credentials "$CLUSTER" \
+      --zone="$ZONE" --project="$PROJECT"
+    kubectl config rename-context \
+      "gke_${PROJECT}_${ZONE}_${CLUSTER}" "$CLUSTER" >/dev/null 2>&1 || true
+
+    if [[ -n "$WAS" && "$WAS" != "gke_${PROJECT}_${ZONE}_${CLUSTER}" ]]; then
+      kubectl config use-context "$WAS" >/dev/null
+    fi
+
+    echo
+    echo ">>> context $CLUSTER -> $CLUSTER in $PROJECT ($ZONE)"
+    echo ">>> still on ${WAS:-none}; use --context $CLUSTER"
+    echo ">>> fetching credentials needs only container.viewer, which you"
+    echo ">>> hold. Calling the API needs container.admin: join"
+    echo ">>> grp-gcp-{{ CODE }}-cluster-admin for the task, and leave."
