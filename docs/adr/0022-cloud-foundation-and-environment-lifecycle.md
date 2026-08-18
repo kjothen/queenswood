@@ -59,7 +59,9 @@ Inside it:
 - A **management project** — the hub — running one GKE cluster with
   Crossplane and Argo CD. Never torn down.
 - One **project per instance** — dev, test, prod, or whatever the
-  installer chooses — each disposable.
+  installer chooses. Durable, and holding that instance's own data:
+  what an instance stops is its compute, not its project. See
+  [ADR-0024](0024-instances-are-their-own-composites.md).
 
 There may be as many folders as the installer wants: one holding
 everything, one for non-production and another for production, one per
@@ -142,7 +144,7 @@ destination, and manual rather than automatic sync for prod. A
 separate prod plane is a second instance of the same configuration if
 a compliance argument later demands one, not a re-architecture.
 
-### Foundations are observed and liened; only the disposable tier is deleted
+### Foundations are observed and liened; only what rebuilds is deleted
 
 The tier model in
 [cloud-deployment](../recipes/cloud-deployment.md) extends up to the
@@ -159,8 +161,14 @@ projects themselves:
   `folderCreator` and `folderIamAdmin` precisely so that it cannot.
   Deleting one means joining `grp-gcp-folder-admin@` deliberately. GCP also
   refuses to delete a folder that still holds projects.
-- Instance clusters, CloudSQL instances, addresses and certificates are
-  fully managed, `Delete` included.
+- Instance clusters, addresses and certificates are fully managed,
+  `Delete` included: each rebuilds from its own declaration and carries
+  nothing that cannot be rebuilt with it.
+- CloudSQL is not among them, and was when this was written. A database
+  holds state, and `down` stops it with `activationPolicy: NEVER`
+  rather than deleting it, so it belongs with the protected tier. The
+  original list read "disposable", which described a generation where
+  `down` destroyed the project. It no longer does.
 
 The liens matter more than the policies. A deletion policy is a
 convention a later edit can quietly undo; a lien lives in GCP and
@@ -177,7 +185,9 @@ Crossplane reconciles toward a desired state and has no notion of
 
 An environment composite carries `state: up | draining | down`, and the
 Composition maps `down` onto a stopped environment — GKE node pools at
-zero, CloudSQL `activationPolicy: NEVER`, disposable resources absent.
+zero, CloudSQL `activationPolicy: NEVER`, purely rebuildable resources
+absent. Data is not among what stops: an instance's project is durable
+and keeps it.
 Bringing an environment down becomes a one-word change reconciled like
 any other, rather than a shell script sequencing deletions. The same
 trick as `fdb.restore.version`: name the target and let reconciliation
