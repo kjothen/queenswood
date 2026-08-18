@@ -39,3 +39,19 @@ metadata:
 spec:
   credentials:
     source: InjectedIdentity
+---
+{{- /*
+  InjectedIdentity, as the others are: the provider writes to the
+  cluster it runs on, using its own service account and the RBAC bound
+  to it. No kubeconfig and no credential.
+*/}}
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: ClusterProviderConfig
+metadata:
+  name: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  credentials:
+    source: InjectedIdentity
