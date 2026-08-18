@@ -254,6 +254,7 @@ metadata:
     installation: <code>
 data:
   billingAccountId: "<billing-account-id>"
+  argoServiceAccount: "sa-<code>-c-argo@prj-<code>-c-mgmt-xxxxxx.iam.gserviceaccount.com"
 ```
 
 The label is what selects it: a composition matches `installation`
@@ -263,7 +264,11 @@ composes it — a namespaced composite may not compose a cluster-scoped
 kind — and Argo applies it from this directory like everything else.
 
 What belongs here is a fact identical across every instance that carries
-no naming or ordering consequence. A billing account qualifies.
+no naming or ordering consequence. A billing account qualifies, and so
+does Argo's own address: an instance grants Argo access to its project,
+which needs the account's full email — the code is on the instance and
+the management project is not, and a combine cannot mix a composite
+field with an environment one.
 **Region does not**: it is baked into resource names, so an
 installation-wide default would silently want to rebuild every
 instance's subnet and cluster when edited, which is the hazard the
