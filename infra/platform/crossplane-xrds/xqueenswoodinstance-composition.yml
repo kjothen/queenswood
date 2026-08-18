@@ -818,6 +818,9 @@ spec:
               - type: ToCompositeFieldPath
                 fromFieldPath: status.atProvider.endpoint
                 toFieldPath: status.clusterEndpoint
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.masterAuth.clusterCaCertificate
+                toFieldPath: status.clusterCa
           # ===================================================================
           # Two more APIs, arriving with the database rather than ahead
           # of it. servicenetworking is what private services access is
@@ -1446,6 +1449,108 @@ spec:
                     string:
                       type: Format
                       fmt: "serviceAccount:%s"
+          # ===================================================================
+          # How Argo reaches this cluster. Argo registers an external
+          # cluster as a Secret in its own namespace, and everything in
+          # it is either public or a name: the API endpoint, the
+          # cluster's certificate authority, and a command.
+          #
+          # No credential, which is the point. execProviderConfig makes
+          # Argo run argocd-k8s-auth at call time, minting a token from
+          # the identity its own pod holds through Workload Identity. So
+          # nothing here is secret, nothing is stored, and nothing has
+          # to be rotated.
+          #
+          # Composed rather than committed beside the manifest because
+          # the endpoint and the certificate belong to the cluster
+          # rather than to a manifest: copied, they go stale the day it
+          # is rebuilt, and Argo would then point at nothing quietly.
+          #
+          # Both arrive through the composite's status, because a patch
+          # reads from the composite and these are facts the cluster
+          # reports. They are absent until it exists, so these patches
+          # are not Required -- absence here means "no cluster yet"
+          # rather than a mistake, and the next reconcile fills them.
+          # ===================================================================
+          - name: instance-argo-cluster
+            base:
+              apiVersion: kubernetes.m.crossplane.io/v1alpha1
+              kind: Object
+              metadata:
+                namespace: crossplane-system
+              spec:
+                # Delete included: a registration for a cluster that is
+                # gone should go with it, and it carries nothing that
+                # cannot be rebuilt from the cluster itself.
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - Delete
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  manifest:
+                    apiVersion: v1
+                    kind: Secret
+                    metadata:
+                      namespace: argocd
+                      labels:
+                        argocd.argoproj.io/secret-type: cluster
+                    stringData: {}
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-argo-cluster"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s"
+                toFieldPath: spec.forProvider.manifest.metadata.name
+              # The name Argo shows, and the name an Application targets
+              # by. The cluster's own, so an Application names what the
+              # console and the Cloud Console both call it.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s"
+                toFieldPath: spec.forProvider.manifest.stringData.name
+              - fromFieldPath: status.clusterEndpoint
+                toFieldPath: spec.forProvider.manifest.stringData.server
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "https://%s"
+              # One string, because config is JSON inside a Secret
+              # value. caData is the cluster's, and the exec block is
+              # what replaces a stored token.
+              - fromFieldPath: status.clusterCa
+                toFieldPath: spec.forProvider.manifest.stringData.config
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: '{"execProviderConfig":{"apiVersion":"client.authentication.k8s.io/v1beta1","command":"argocd-k8s-auth","args":["gcp"]},"tlsClientConfig":{"insecure":false,"caData":"%s"}}'
     - step: nodes
       functionRef:
         name: function-go-templating

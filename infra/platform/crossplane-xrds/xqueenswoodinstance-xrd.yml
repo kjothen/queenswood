@@ -367,6 +367,18 @@ spec:
                     project:region:instance, which is what a Cloud SQL
                     client is pointed at rather than an address. Read
                     back rather than committed.
+                clusterCa:
+                  type: string
+                  description: |
+                    The cluster's certificate authority, base64 as GKE
+                    records it. Read back rather than committed, and
+                    public rather than secret -- it is what a client
+                    checks the API server against, not anything that
+                    authenticates one.
+
+                    Here because Argo's registration needs it and a
+                    patch reads from the composite, so it travels up
+                    from the cluster and back down to the Secret.
                 clusterEndpoint:
                   type: string
                   description: |
