@@ -1667,8 +1667,33 @@ Argo `Application` per instance, has to be made.
 
 `state` governs the node pool and only the node pool. CloudSQL's
 `activationPolicy` is the second thing it takes, and it can only be
-written against a database that exists. Four things wait rather than
-block:
+written against a database that exists.
+
+**And it has been round-tripped.** Both directions were run against
+`qw01-n-test` while the cluster was empty, which is the cheapest that
+test will ever be. `down` reached the composite about thirty seconds
+after Argo saw the merge and the patch fired in the same tick; GKE then
+took four minutes to drain three nodes. `up` refilled in one. Draining
+is the slow leg, so a maintenance window is budgeted from that end
+rather than from the resume.
+
+What survived is the point rather than what stopped. The project, the
+API enablements, the network, the identity and the cluster all stayed
+`Ready`, and so did the composite and the pool itself — a pool at zero
+is a healthy pool, so nothing watching an environment pages because it
+is deliberately off. Asking the cluster for its nodes returned "no
+resources found" rather than an error, which is a stopped environment
+answering rather than a deleted one failing to.
+
+Coming back, the pool and cluster were the same objects and the API
+server kept the same address. That is what makes `down` a stop rather
+than a fast teardown: a kubeconfig held anywhere outside the cluster
+still points at something. The nodes themselves are new — the pool
+refills rather than resuming its VMs — which is the one thing inside
+the boundary that does not survive, and is why nothing stateful may
+live on a node's disk.
+
+Four things wait rather than block:
 
 - **A lien on the instance project.** Deferred deliberately while the
   shape is still changing — a lien makes every teardown two acts, which
