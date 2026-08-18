@@ -130,10 +130,10 @@ cluster holds a credential at all.
 One file, and the fields it carries. `management.*` says which project
 and where its configuration comes from, which a plane needs because it
 composes a folder and a project and `createFolder.*` is the other half
-of that pair. Everything describing the cluster it builds is flat, and
-an instance — which composes one project and no folder — has nothing to
-disambiguate, so its manifest is flat throughout and spells the shared
-fields identically.
+of that pair. Everything describing the cluster it builds is flat,
+because a plane has one cluster and nothing else with a size — where an
+instance groups, since `diskSize` there could be a node's or a
+database's.
 
 - **`code`** — the installation's short name, which every resource name
   derives from. See [cloud-naming](cloud-naming.md).
@@ -168,7 +168,79 @@ fields identically.
   Instances get theirs from the installation's shared facts instead.
 - **`access`** — below.
 
+### An instance manifest
+
+One file per instance, beside the plane's. Every field below is stated
+at what the XRD already defaults to, so this is both a worked example
+and the answer to "what can I change".
+
+```yaml
+apiVersion: queenswood.repldriven.com/v1alpha1
+kind: XQueenswoodInstance
+metadata:
+  name: qw01-n-test
+  namespace: crossplane-system
+spec:
+  code: "qw01"
+  env: "n"
+  label: "test"
+  projectId: "prj-qw01-n-test-xxxxxx"
+  state: "up"
+  region: "europe-west2"
+  regionCode: "euw2"
+  zone: "europe-west2-a"
+  network:
+    podsCidr: "10.20.0.0/16"
+    proxyCidr: "10.40.0.0/24"
+    psaPrefixLength: 16
+    servicesCidr: "10.30.0.0/20"
+    subnetCidr: "10.10.0.0/16"
+  cluster:
+    diskSize: 50
+    diskType: "pd-standard"
+    machineType: "e2-standard-2"
+    nodeCount: 3
+    releaseChannel: "REGULAR"
+  keycloak:
+    database:
+      availabilityType: "ZONAL"
+      backupEnabled: true
+      diskSize: 10
+      diskType: "PD_HDD"
+      edition: "ENTERPRISE"
+      pointInTimeRecovery: false
+      tier: "db-custom-1-3840"
+      version: "POSTGRES_18"
+```
+
+`code`, `env`, `label` and `projectId` are the only required fields;
+everything else defaults. State them anyway, for the reason
+[crossplane](crossplane.md) gives — a defaulted field is absent for as
+long as a regenerated CRD takes to arrive, and a manifest that states
+its values does not care.
+
+`adopt`, `displayName` and `billingAccountId` are omitted rather than
+defaulted. The first takes over an existing project, the second names
+it for humans, and the third overrides the installation's billing
+account for this instance alone.
+
+**Grouped where a name would otherwise be ambiguous.** `diskSize` on an
+instance could mean a node's or the database's, so both group; the
+plane has one cluster and nothing else with a size, so its
+`machineType` stays flat. `keycloak.database` rather than `database`
+because FoundationDB is the bank's own store and will want a section of
+its own — neither should get to be "the database".
+
+**What is not here is deliberate.** The composition keeps
+`ipv4Enabled: false`, `sslMode: ENCRYPTED_ONLY`,
+`cloudsql.iam_authentication`, `GKE_METADATA`, `removeDefaultNodePool`
+and the deletion protections as literals. Those are not choices an
+environment makes differently; they are the properties the ADRs argue
+for, and a field that can be set to the wrong value is a way to lose
+them in a file reviewed as configuration rather than as architecture.
+
 ### The installation's shared facts
+
 
 A second file in the same directory, holding what is true of the whole
 installation rather than of one composite:

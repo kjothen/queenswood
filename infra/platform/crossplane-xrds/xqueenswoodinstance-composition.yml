@@ -441,12 +441,13 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  ipCidrRange: 10.10.0.0/16
+                  # The ranges are patched from the manifest. Only the
+                  # secondary range *names* are literal: the cluster
+                  # asks for pods and services by name, so they are
+                  # wiring rather than configuration.
                   secondaryIpRange:
                     - rangeName: pods
-                      ipCidrRange: 10.20.0.0/16
                     - rangeName: services
-                      ipCidrRange: 10.30.0.0/20
                   # Lets a node reach a Google API without a public
                   # address, which is what keeps the pool private.
                   privateIpGoogleAccess: true
@@ -481,6 +482,18 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.region
                 toFieldPath: spec.forProvider.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.subnetCidr
+                toFieldPath: spec.forProvider.ipCidrRange
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.podsCidr
+                toFieldPath: spec.forProvider.secondaryIpRange[0].ipCidrRange
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.servicesCidr
+                toFieldPath: spec.forProvider.secondaryIpRange[1].ipCidrRange
               - type: CombineFromComposite
                 combine:
                   variables:
@@ -510,7 +523,6 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  ipCidrRange: 10.40.0.0/24
                   purpose: REGIONAL_MANAGED_PROXY
                   role: ACTIVE
             patches:
@@ -533,6 +545,10 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.region
                 toFieldPath: spec.forProvider.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.proxyCidr
+                toFieldPath: spec.forProvider.ipCidrRange
               - type: CombineFromComposite
                 combine:
                   variables:
@@ -706,8 +722,6 @@ spec:
                   # it. A second lock GCP holds outside Crossplane only
                   # makes a declared teardown fail halfway.
                   deletionProtection: false
-                  releaseChannel:
-                    channel: REGULAR
                   ipAllocationPolicy:
                     clusterSecondaryRangeName: pods
                     servicesSecondaryRangeName: services
@@ -787,6 +801,10 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.zone
                 toFieldPath: spec.forProvider.location
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.releaseChannel
+                toFieldPath: spec.forProvider.releaseChannel.channel
               # Workload Identity, so a pod assumes a service account
               # rather than holding a key. Nothing binds to the pool
               # yet; the cluster is where the choice is made available.
@@ -800,110 +818,6 @@ spec:
               - type: ToCompositeFieldPath
                 fromFieldPath: status.atProvider.endpoint
                 toFieldPath: status.clusterEndpoint
-          # ===================================================================
-          # The one pool, and the only place state governs anything
-          # today: up is three nodes, down is none.
-          #
-          # The count is in the map rather than in a field of its own,
-          # and that is a property of patch-and-transform rather than a
-          # preference. A map transform must name every key it may see
-          # or it errors, so a state patch always writes the count --
-          # which means a second patch carrying a manifest's own count
-          # either overwrites the state or is overwritten by it,
-          # depending only on which is written last. A per-instance
-          # count needs a templating step to arrive, and there is
-          # nothing running here yet to size one against.
-          #
-          # Fully managed with the cluster it belongs to. It carries the
-          # environment even though its cluster already settles it: GCP
-          # scopes a pool's name to its parent, so every cluster may
-          # hold an np-primary, where the composed resources for every
-          # instance in an installation share one namespace. Naming it
-          # for the cluster in GCP and for the namespace in Kubernetes
-          # would be two names for one thing, so it is one name in both.
-          #
-          # primary rather than default: GKE creates its own
-          # default-pool on every cluster, and a name echoing it leaves
-          # a reader guessing whose is whose.
-          # ===================================================================
-          - name: instance-nodes
-            base:
-              apiVersion: container.gcp.m.upbound.io/v1beta1
-              kind: NodePool
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - Delete
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  nodeConfig:
-                    diskSizeGb: 50
-                    diskType: pd-standard
-                    oauthScopes:
-                      - https://www.googleapis.com/auth/cloud-platform
-                    workloadMetadataConfig:
-                      mode: GKE_METADATA
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "np-%s-%s-%s-primary"
-                toFieldPath: metadata.name
-              # By value, not clusterRef. The reference extractor reads
-              # a field the provider never fills for Cluster -- there is
-              # no forProvider.name, and atProvider.name stays empty --
-              # so it resolves to nothing forever. The cluster's name is
-              # its external name, which this composition sets, so the
-              # value is as deterministic as the reference would have
-              # been.
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "%s-%s-%s"
-                toFieldPath: spec.forProvider.cluster
-              - *cluster-project
-              - *cluster-zone
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.machineType
-                toFieldPath: spec.forProvider.nodeConfig.machineType
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.state
-                toFieldPath: spec.forProvider.nodeCount
-                transforms:
-                  - type: map
-                    map:
-                      up: 3
-                      down: 0
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                    - fromFieldPath: spec.projectId
-                  strategy: string
-                  string:
-                    fmt: "sa-%s-%s-%s-nodes@%s.iam.gserviceaccount.com"
-                toFieldPath: spec.forProvider.nodeConfig.serviceAccount
           # ===================================================================
           # Two more APIs, arriving with the database rather than ahead
           # of it. servicenetworking is what private services access is
@@ -1017,7 +931,6 @@ spec:
                 forProvider:
                   purpose: VPC_PEERING
                   addressType: INTERNAL
-                  prefixLength: 16
             patches:
               - type: CombineFromComposite
                 combine:
@@ -1029,6 +942,10 @@ spec:
                   string:
                     fmt: "addr-%s-%s-%s-psa"
                 toFieldPath: metadata.name
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.psaPrefixLength
+                toFieldPath: spec.forProvider.prefixLength
               - &vpc-ref
                 type: CombineFromComposite
                 combine:
@@ -1122,17 +1039,10 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  databaseVersion: POSTGRES_18
                   deletionProtection: true
                   settings:
-                    edition: ENTERPRISE
-                    diskSize: 10
-                    diskType: PD_HDD
                     diskAutoresize: true
                     deletionProtectionEnabled: true
-                    backupConfiguration:
-                      enabled: true
-                      pointInTimeRecoveryEnabled: false
                     ipConfiguration:
                       ipv4Enabled: false
                     # No password exists on this instance. Every user is
@@ -1159,8 +1069,36 @@ spec:
                 toFieldPath: spec.forProvider.region
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.databaseTier
+                fromFieldPath: spec.keycloak.database.tier
                 toFieldPath: spec.forProvider.settings.tier
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.keycloak.database.version
+                toFieldPath: spec.forProvider.databaseVersion
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.keycloak.database.edition
+                toFieldPath: spec.forProvider.settings.edition
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.keycloak.database.diskSize
+                toFieldPath: spec.forProvider.settings.diskSize
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.keycloak.database.diskType
+                toFieldPath: spec.forProvider.settings.diskType
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.keycloak.database.availabilityType
+                toFieldPath: spec.forProvider.settings.availabilityType
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.keycloak.database.backupEnabled
+                toFieldPath: spec.forProvider.settings.backupConfiguration.enabled
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.keycloak.database.pointInTimeRecovery
+                toFieldPath: spec.forProvider.settings.backupConfiguration.pointInTimeRecoveryEnabled
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.state
@@ -1408,6 +1346,68 @@ spec:
           # creates; guessing them composes a binding that matches
           # nothing, which is what gcp-iam warns against. It arrives
           # with the workload, whose own shape ADR-0024 leaves open.
+    # =======================================================================
+    # The node pool, composed here rather than by patch-and-transform for
+    # one reason: its count is a manifest value and a state at once. up is
+    # spec.cluster.nodeCount and down is zero, and no patch can combine
+    # the two -- a map transform must name every key it may see, so a
+    # state patch always overwrites a count patch or is overwritten by it.
+    #
+    # Fields are read directly rather than through dig, deliberately. dig
+    # substitutes a default for a missing value and would compose a pool
+    # with a hole in it; direct access fails the step, which is the same
+    # loud failure policy.fromFieldPath Required buys everywhere else.
+    #
+    # The composition-resource-name is what identifies this to Crossplane,
+    # so it stays instance-nodes and the existing pool is matched rather
+    # than rebuilt.
+    # =======================================================================
+    - step: nodes
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
+            {{- $count := 0 }}
+            {{- if eq $xr.spec.state "up" }}
+            {{- $count = $xr.spec.cluster.nodeCount }}
+            {{- end }}
+            apiVersion: container.gcp.m.upbound.io/v1beta1
+            kind: NodePool
+            metadata:
+              name: np-{{ $name }}-primary
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-nodes
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - Delete
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                cluster: {{ $name }}
+                location: {{ $xr.spec.zone }}
+                project: {{ $xr.spec.projectId }}
+                nodeCount: {{ $count }}
+                nodeConfig:
+                  machineType: {{ $xr.spec.cluster.machineType }}
+                  diskSizeGb: {{ $xr.spec.cluster.diskSize }}
+                  diskType: {{ $xr.spec.cluster.diskType }}
+                  serviceAccount: sa-{{ $name }}-nodes@{{ $xr.spec.projectId }}.iam.gserviceaccount.com
+                  oauthScopes:
+                    - https://www.googleapis.com/auth/cloud-platform
+                  workloadMetadataConfig:
+                    mode: GKE_METADATA
     - step: auto-ready
       functionRef:
         name: function-auto-ready

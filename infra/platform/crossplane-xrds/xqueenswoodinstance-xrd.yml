@@ -135,27 +135,166 @@ spec:
                     Stated in every manifest for the same reason region
                     is, even though no name carries it: moving it
                     rebuilds the cluster.
-                machineType:
-                  type: string
-                  default: e2-standard-2
+                network:
+                  type: object
+                  default: {}
                   description: |
-                    What the nodes are. Immutable, so changing it
-                    replaces the pool and restarts everything on the
-                    cluster -- worth pairing with any other change that
-                    also replaces it.
-
-                    The floor for the bank rather than a measured
-                    answer: nothing runs on this yet.
-                databaseTier:
-                  type: string
-                  default: db-custom-1-3840
+                    The ranges this environment occupies. Identical in
+                    every instance by default, which is safe only while
+                    the VPCs are isolated: the day two instances peer,
+                    or one peers with the plane, they collide. A range
+                    is immutable, so moving one rebuilds the subnet and
+                    the cluster -- state them per instance before that
+                    day rather than after it.
+                  properties:
+                    subnetCidr:
+                      type: string
+                      default: 10.10.0.0/16
+                      description: |
+                        Where the nodes sit.
+                    podsCidr:
+                      type: string
+                      default: 10.20.0.0/16
+                      description: |
+                        The secondary range GKE allocates pod addresses
+                        from. Sized for pods rather than nodes: every
+                        pod takes one.
+                    servicesCidr:
+                      type: string
+                      default: 10.30.0.0/20
+                      description: |
+                        The secondary range for ClusterIP services.
+                    proxyCidr:
+                      type: string
+                      default: 10.40.0.0/24
+                      description: |
+                        Where a regional load balancer puts its
+                        proxies. Its own subnet because GCP requires one
+                        per region reserved for the purpose.
+                    psaPrefixLength:
+                      type: integer
+                      default: 16
+                      description: |
+                        How much address space this VPC lends Google for
+                        private services access. Cloud SQL is allocated
+                        from it, and so is anything else reached
+                        privately, so it is sized for the tenants rather
+                        than for the database.
+                cluster:
+                  type: object
+                  default: {}
                   description: |
-                    What the database runs on. One vCPU and 3840MB, the
-                    smallest shape ENTERPRISE accepts -- ENTERPRISE_PLUS
-                    refuses a custom shape entirely.
+                    The shape of the cluster. Grouped rather than flat
+                    because an instance has more than one thing with a
+                    size: diskSize alone would not say whose.
+                  properties:
+                    machineType:
+                      type: string
+                      default: e2-standard-2
+                      description: |
+                        What the nodes are. Immutable, so changing it
+                        replaces the pool and restarts everything on the
+                        cluster.
 
-                    Sized for Keycloak, which is all the database holds.
-                    The bank's own records are in FoundationDB.
+                        The floor for the bank rather than a measured
+                        answer. An empty cluster already requests about
+                        a third of a node's CPU for system daemons, so
+                        the usable share is smaller than the shape
+                        suggests.
+                    nodeCount:
+                      type: integer
+                      default: 3
+                      description: |
+                        How many nodes when the instance is up. down is
+                        zero regardless, which is why this is a count
+                        rather than a desired state.
+                    diskSize:
+                      type: integer
+                      default: 50
+                      description: |
+                        Each node's boot disk, in GB. Nothing durable
+                        belongs on it: a node is replaced rather than
+                        resumed, so anything stateful takes a
+                        PersistentVolume.
+                    diskType:
+                      type: string
+                      default: pd-standard
+                      description: |
+                        Boot disks only, so the cheapest class is
+                        usually right.
+                    releaseChannel:
+                      type: string
+                      default: REGULAR
+                      description: |
+                        Which GKE release channel upgrades this cluster.
+                        RAPID, REGULAR or STABLE.
+                keycloak:
+                  type: object
+                  default: {}
+                  description: |
+                    What Keycloak runs on. Named for what owns it rather
+                    than for the kind: FoundationDB is the bank's own
+                    store and takes a section of its own when it
+                    arrives, and neither should be "the database".
+                  properties:
+                    database:
+                      type: object
+                      default: {}
+                      properties:
+                        tier:
+                          type: string
+                          default: db-custom-1-3840
+                          description: |
+                            One vCPU and 3840MB, the smallest shape
+                            ENTERPRISE accepts -- ENTERPRISE_PLUS
+                            refuses a custom shape entirely.
+                        version:
+                          type: string
+                          default: POSTGRES_18
+                          description: |
+                            Immutable downward: Cloud SQL upgrades a
+                            major version in place and never returns.
+                        edition:
+                          type: string
+                          default: ENTERPRISE
+                          description: |
+                            ENTERPRISE or ENTERPRISE_PLUS. The latter
+                            takes only named machine shapes.
+                        diskSize:
+                          type: integer
+                          default: 10
+                          description: |
+                            In GB, and a floor rather than a ceiling:
+                            diskAutoresize grows it and nothing shrinks
+                            it again.
+                        diskType:
+                          type: string
+                          default: PD_HDD
+                          description: |
+                            PD_HDD or PD_SSD. Keycloak's working set is
+                            small and mostly cached.
+                        availabilityType:
+                          type: string
+                          default: ZONAL
+                          description: |
+                            ZONAL or REGIONAL. REGIONAL keeps a standby
+                            in a second zone and roughly doubles the
+                            cost, and is the difference between an
+                            environment that survives a zone and one
+                            that does not.
+                        backupEnabled:
+                          type: boolean
+                          default: true
+                          description: |
+                            Cloud SQL's own scheduled backup, which is
+                            separate from anything FoundationDB does.
+                        pointInTimeRecovery:
+                          type: boolean
+                          default: false
+                          description: |
+                            Write-ahead log retention, so a restore can
+                            name a moment rather than a backup. Costs
+                            storage continuously.
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
