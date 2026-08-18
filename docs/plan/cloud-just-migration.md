@@ -1700,42 +1700,62 @@ declaring the instances inside the plane's own composite puts every
 environment's project, cluster and database in the blast radius of a
 plane rebuild.
 
-**Where it got to.** The project, its APIs, its network, its node
-identity and its cluster are composed, and `state: up | down` came with
-the cluster, because until then it had nothing to govern. What is left
-of the port list is CloudSQL, the apex address, its DNS record and the
-certificate, and then the workloads — which is where the choice
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md) leaves
-open, between composing `Release` resources directly and composing an
-Argo `Application` per instance, has to be made.
+**Where it got to.** The instance is complete as infrastructure and
+the bank is deployed onto it, blocked only on Keycloak — see
+[picking this up cold](#picking-this-up-cold) for the state and the
+reason. `state` governs the node pool and, since CloudSQL arrived, that
+database's `activationPolicy` too.
 
-`state` governs the node pool and only the node pool. CloudSQL's
-`activationPolicy` is the second thing it takes, and it can only be
-written against a database that exists.
+**What to do next, in order.** Keycloak first, because nothing else
+starts without it: `keycloak-operator` and `queenswood-keycloak` as two
+more Applications in `installations/qw01/`, sequenced with
+`argocd.argoproj.io/sync-wave` so the operator's CRDs exist before a
+`Keycloak` resource names them. `queenswood-keycloak` is where the
+passwordless database is exercised for the first time — the retired
+chart passed a username and password, which is exactly what IAM
+authentication replaces — and it is what finally makes the Kubernetes
+service account name a fact, so the Workload Identity binding
+deliberately left out of the instance composition can be written
+against something real rather than guessed.
 
-**And it has been round-tripped.** Both directions were run against
-`qw01-n-test` while the cluster was empty, which is the cheapest that
-test will ever be. `down` reached the composite about thirty seconds
-after Argo saw the merge and the patch fired in the same tick; GKE then
-took four minutes to drain three nodes. `up` refilled in one. Draining
-is the slow leg, so a maintenance window is budgeted from that end
-rather than from the resume.
+After that: the apex address, DNS record and certificate, which need
+the zone question answered first. Whether an instance composes
+`Release` resources or an `Application` per workload,
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) left
+open, and the Argo path has now answered it in practice.
 
-What survived is the point rather than what stopped. The project, the
-API enablements, the network, the identity and the cluster all stayed
-`Ready`, and so did the composite and the pool itself — a pool at zero
-is a healthy pool, so nothing watching an environment pages because it
-is deliberately off. Asking the cluster for its nodes returned "no
-resources found" rather than an error, which is a stopped environment
-answering rather than a deleted one failing to.
+**What is not yet true, and should not be assumed.** There is no
+external-secrets operator on an instance cluster, so a workload needing
+a real credential has nowhere to read one — which the FDB backup
+encryption key will need. `image.tag` is `latest`, which is the wrong
+tag for an environment: a mutable tag means two nodes can run different
+code and a rollback has nothing to return to, and the build publishes
+no versioned tag to use instead. The gateway is disabled, so nothing is
+reachable from outside the cluster.
 
-Coming back, the pool and cluster were the same objects and the API
-server kept the same address. That is what makes `down` a stop rather
-than a fast teardown: a kubeconfig held anywhere outside the cluster
-still points at something. The nodes themselves are new — the pool
-refills rather than resuming its VMs — which is the one thing inside
-the boundary that does not survive, and is why nothing stateful may
-live on a node's disk.
+**Three traps this cost a day to learn**, all of one family — a
+resource reporting `Ready` while being wrong:
+
+- A **`ForceNew` change is refused, not performed.** Changing an IAM
+  binding's role rewrote `spec` and left `atProvider` on the old value;
+  `Ready` stayed `Available` and only `LastAsyncOperation` said
+  `AsyncUpdateFailure`. The managed resource has to be deleted.
+- **`stringData` is write-only.** The API server folds it into `data`
+  and drops it, so provider-kubernetes cannot see a value it failed to
+  write. A registration Secret sat for half an hour missing the key
+  that mattered, reporting `Ready`. Use `data` with a `ToBase64`
+  convert, where a written value is read back.
+- **A bad image tag wedges a cluster.** Deployments applied with a tag
+  that does not exist leave ReplicaSets that can never become `Ready`,
+  a rollout that will never retire them, and their CPU requests held
+  forever — which starved FoundationDB of the capacity it needed to
+  schedule, so nothing could progress in either direction.
+
+Sizing, measured rather than guessed: three `e2-standard-2` nodes give
+about 5.8 CPU and 19GB allocatable, and the full chart with
+FoundationDB sits near 78% of that once the stale ReplicaSets are gone.
+Worth revisiting against real usage rather than declared requests once
+Keycloak lets everything start.
 
 Four things wait rather than block:
 
