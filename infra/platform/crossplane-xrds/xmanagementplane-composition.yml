@@ -1902,6 +1902,213 @@ spec:
     # the organisation does not provide, one per member per role where it
     # does. Patch-and-transform composes a fixed set.
     # =======================================================================
+          # ===================================================================
+          # Argo's own identity, and the first GCP power Argo has ever
+          # had. Until now it read git and applied to the cluster it
+          # runs on, which needs no cloud identity at all. Reaching an
+          # instance's cluster does.
+          #
+          # What it may do lives on the instance rather than here: the
+          # instance composition grants this account container.developer
+          # on its own project, so Argo's reach grows one project at a
+          # time and each grant is visible where the environment is
+          # declared. container.developer rather than container.admin --
+          # it reaches Kubernetes objects inside a cluster and cannot
+          # create or delete the cluster itself, which stays with the
+          # platform identity.
+          # ===================================================================
+          - name: argo-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood Argo CD
+                  description: Deploys workloads onto instance clusters
+            patches:
+              - &argo-name
+                fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-argo"
+              - &argo-project
+                fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.project
+              - *argo-name
+          # Both halves of Workload Identity, and both Argo components
+          # that need one. The controller applies, so without it nothing
+          # deploys. The server reads for the UI, and a console that
+          # cannot see an instance's resources is how somebody ends up
+          # on the cluster by hand.
+          - name: argo-identity-wi-controller
+            base: &argo-wi-base
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-argo-wi-controller"
+              - &argo-wi-ref
+                fromFieldPath: spec.code
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-argo"
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[argocd/argocd-application-controller]"
+          - name: argo-identity-wi-server
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-argo-wi-server"
+              - *argo-wi-ref
+              - fromFieldPath: spec.management.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[argocd/argocd-server]"
+          # ===================================================================
+          # The Kubernetes half, and the reason it is composed rather
+          # than set in Argo's own chart values: the Release that
+          # installs Argo is Observe here, so only a boot plane can
+          # change it. Annotating the service account is what a running
+          # plane can do about its own Argo, and it is why
+          # provider-kubernetes exists on this plane.
+          #
+          # An annotation the chart does not set, so nothing else claims
+          # the field. Without it a token minted for these accounts is
+          # exchangeable for nothing.
+          # ===================================================================
+          - name: argo-ksa-controller
+            base: &argo-ksa-base
+              apiVersion: kubernetes.m.crossplane.io/v1alpha1
+              kind: Object
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  manifest:
+                    apiVersion: v1
+                    kind: ServiceAccount
+                    metadata:
+                      name: argocd-application-controller
+                      namespace: argocd
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-argo-ksa-controller"
+              - &argo-ksa-annotation
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.management.projectId
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-c-argo@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.manifest.metadata.annotations[iam.gke.io/gcp-service-account]
+          - name: argo-ksa-server
+            base:
+              apiVersion: kubernetes.m.crossplane.io/v1alpha1
+              kind: Object
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  manifest:
+                    apiVersion: v1
+                    kind: ServiceAccount
+                    metadata:
+                      name: argocd-server
+                      namespace: argocd
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "%s-argo-ksa-server"
+              - *argo-ksa-annotation
     - step: access
       functionRef:
         name: function-go-templating

@@ -43,12 +43,15 @@ spec:
       name: crossplane-provider-kubernetes
 ---
 {{- /*
-  What it may write, and nothing more. Argo registers an external
-  cluster as a Secret in its own namespace, so that is the only thing
-  this provider composes today and the only thing it is granted.
+  What it may write, and nothing more, in the one namespace it writes
+  in. Two things today: the Secret registering an instance's cluster
+  with Argo, and the annotation binding Argo's service accounts to a
+  GCP identity -- which is composed rather than set in Argo's chart
+  values because the Release installing Argo is Observe on this plane,
+  so only a boot plane could change them.
 
-  A Role rather than a ClusterRole: widening this later should be a
-  visible edit rather than something already permitted.
+  A Role rather than a ClusterRole: widening this should be a visible
+  edit rather than something already permitted. This is one.
 */}}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -61,6 +64,11 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Annotated, never created or removed: the argo-cd chart owns these
+  # accounts and this only claims a field it does not set.
+  - apiGroups: [""]
+    resources: ["serviceaccounts"]
+    verbs: ["get", "list", "watch", "update", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

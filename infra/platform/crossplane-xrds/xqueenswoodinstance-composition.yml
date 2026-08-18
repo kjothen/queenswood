@@ -1382,6 +1382,70 @@ spec:
     # so it stays instance-nodes and the existing pool is matched rather
     # than rebuilt.
     # =======================================================================
+          # ===================================================================
+          # What Argo may do here. Granted by the instance rather than
+          # by the plane, so Argo's reach grows one environment at a
+          # time and every grant sits where that environment is
+          # declared.
+          #
+          # container.developer, not container.admin: it reaches
+          # Kubernetes objects inside this project's clusters and
+          # cannot create or delete a cluster. Argo deploys what runs;
+          # the platform identity owns what it runs on.
+          #
+          # The account is spelled rather than referenced. It belongs to
+          # the plane's composite, and neither composite reaches into
+          # the other -- the address is derivable from the code and the
+          # management project, which the installation's shared config
+          # carries.
+          # ===================================================================
+          - name: instance-argo-role-container-developer
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/container.developer
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-argo-container-developer"
+                toFieldPath: metadata.name
+              - *instance-project
+              # From the installation's shared config rather than
+              # combined here: the address needs the code, which is on
+              # this composite, and the management project, which is
+              # not -- and a combine cannot mix the two sources. So the
+              # whole address is one shared fact, which is what that
+              # file is for.
+              #
+              # Not Required. The config lives in the other repository,
+              # so a merge here before the key exists there would fail
+              # every instance rather than this one binding.
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: argoServiceAccount
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s"
     - step: nodes
       functionRef:
         name: function-go-templating
