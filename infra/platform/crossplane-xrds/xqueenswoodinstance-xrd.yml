@@ -82,11 +82,12 @@ spec:
                     reconciled like anything else. See ADR-0022.
 
                     down is the node pool at zero. The cluster, the
-                    project, the network and the identities stand; what
-                    stops is everything that runs on a node, which is
-                    where the bill is. In time it also takes CloudSQL to
-                    activationPolicy NEVER and leaves the disposable
-                    tier absent.
+                    project, its data, the network and the identities
+                    stand; what stops is everything that runs on a node,
+                    which is where the bill is. In time it also takes
+                    CloudSQL to activationPolicy NEVER -- stopping the
+                    database rather than deleting it, because the
+                    project is durable and keeps what it holds.
 
                     draining is not here. ADR-0024 says an instance may
                     ship with up and down before the ordered teardown is

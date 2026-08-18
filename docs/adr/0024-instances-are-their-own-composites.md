@@ -102,7 +102,7 @@ Four reasons, in the order they matter:
 `XManagementPlane` in `platform.repldriven.com`.
 
 **Instance**, because ADR-0022 and the cloud-naming rule already use
-that word — one disposable project per instance, discriminated by the
+that word — one project per instance, discriminated by the
 env letter (`d`, `n`, `p`). Not *environment*, which is the word
 `QUEENSWOOD_ENV` owns and which is being retired: reusing it would make
 every sentence ambiguous between the model being replaced and the one
@@ -123,21 +123,45 @@ instance rather than three kinds and the references between them.
 The instance composes its own project, with the protected tier's
 policies from ADR-0022 — `managementPolicies` without `Delete`, and a
 lien — so that `down` is a stopped environment rather than a deleted
-one: node pools at zero, CloudSQL `activationPolicy: NEVER`, the
-disposable tier absent, and the project, its DNS zone and its identities
-still standing.
+one: node pools at zero, CloudSQL `activationPolicy: NEVER`, whatever
+is purely rebuildable absent, and the project, its data, its DNS zone
+and its identities still standing.
 
-This is what makes the disposable tier safe to be disposable. The
-durable things an environment produces do not live in its project at
-all: the FDB backup bucket is `bkt-<code>-backups` in the **management**
-project, one per installation with a prefix per instance, and the
-encryption key and database passwords are Secret Manager entries beside
-it. An instance's project holds nothing whose loss is unrecoverable,
-which is the property that lets `state` be a word in a file.
+**The project is durable, so its data may be too.** This paragraph
+first said the opposite — that an instance's project holds nothing
+whose loss is unrecoverable, and that the FDB backup bucket therefore
+belongs in the management project. That followed from `down` meaning
+destroy, which is the generation this ADR replaces. `down` is now a
+declared state, demonstrated in both directions: the project, network,
+identities and cluster survive it and only the nodes go. A project that
+survives every `down` is not a disposable place to keep data, and
+pushing every environment's buckets and disks into the management
+project makes the one project that runs the control plane into a store
+for everything else.
+
+So an instance's operational state — its database, its persistent
+disks, the buckets its workloads write — lives in the instance's own
+project, with the workload that owns it. This is also what the security
+foundations guide does: a workload's data belongs to the workload's
+project, and what it separates out is keys and secrets, into a
+per-environment `prj-<env>-kms` and `prj-<env>-secrets`.
+
+What still leaves the project leaves on blast radius rather than on
+disposability, and it is a shorter list than before. Cloud SQL needs
+nothing: IAM database authentication makes the workload's service
+account the database user, so no password is created to keep anywhere.
+The FDB backup encryption key is the real case — symmetric key material
+that is not a GCP credential, generated once, and whose loss turns every
+backup into noise — and whoever may operate an instance should not be
+able to destroy it. Where that key lives is deferred until it exists,
+deliberately, because one key is a thin basis for choosing a project
+layout and the guide's answer is waiting when there is a second thing to
+put beside it.
 
 A project id is consumed permanently, so a retired instance's project is
 retired deliberately — by lifting its lien — rather than by reconciling
-it away.
+it away. That matters more now that the project holds data: retiring one
+is the act that loses it.
 
 ### The instance finds the folder by name, not by reference to the plane
 

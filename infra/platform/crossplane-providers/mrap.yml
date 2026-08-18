@@ -23,6 +23,10 @@ spec:
     - subnetworks.compute.gcp.m.upbound.io
     - clusters.container.gcp.m.upbound.io
     - nodepools.container.gcp.m.upbound.io
+    # Private services access for Cloud SQL: a reserved range and the
+    # peering that consumes it.
+    - globaladdresses.compute.gcp.m.upbound.io
+    - connections.servicenetworking.gcp.m.upbound.io
     - databaseinstances.sql.gcp.m.upbound.io
     - databases.sql.gcp.m.upbound.io
     - users.sql.gcp.m.upbound.io

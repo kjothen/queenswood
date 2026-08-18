@@ -1478,12 +1478,21 @@ liens are what make safe.
 
 ## After the pivot
 
-**The durable tier.** `bkt-qw01-backups` in the **management** project,
-not the instance project — today the bucket is `<instance>-backups` and
-dies with the thing it protects, and moving it is the property this
-buys. With it: the per-prefix lifecycle rules from
-`gcp-backup-lifecycle-set` as `lifecycleRule`, and Secret Manager
-entries for the FDB encryption key and database passwords.
+**The durable tier.** This section said the backup bucket belongs in
+the **management** project, because an instance's project was
+disposable and a bucket inside one died with the thing it protects.
+That is no longer the model: ADR-0022 and ADR-0024 now say an
+instance's project is durable and keeps its own data, and `down` was
+demonstrated to leave it standing. So the bucket's home is open again,
+and the argument for moving it out is blast radius — a backup in the
+same project as its primary is reachable by the same compromised
+identity — rather than the project going away.
+
+What travels with it either way: the per-prefix lifecycle rules from
+`gcp-backup-lifecycle-set` as `lifecycleRule`, and somewhere for the
+FDB encryption key. Not database passwords — IAM database
+authentication makes the workload's service account the database user,
+so Cloud SQL creates no password to keep.
 
 How the data reaches that bucket is a redesign rather than a port of
 what exists, and the reason is a permission we should not expect to
@@ -1605,13 +1614,15 @@ backup's, and quiescing has to be coordinated with FDB rather than
 taken underneath it. A second line, once the first one restores.
 
 Two decisions this leaves. **Where the object path carries the
-instance**: one durable bucket per installation means a prefix per
-instance, `<instance>/fdb/continuous/<generation>`, since the lifecycle
-rules already discriminate by prefix and a bucket per instance would put
-the durable tier back inside the disposable one. And **where the proxy
-runs**: in the instance cluster it is disposable with everything else
-and reaches the durable bucket across a project boundary, which is the
-same cross-project binding the design already needs.
+instance**: one bucket per installation means a prefix per instance,
+`<instance>/fdb/continuous/<generation>`, and the lifecycle rules
+already discriminate by prefix. A bucket per instance is no longer
+ruled out by the project being disposable, so this turns on whether the
+backup should sit outside the project it protects at all. And **where
+the proxy runs**: in the instance cluster it is rebuilt with everything
+else there, and reaches the bucket across a project boundary if the
+bucket is outside — which is the cross-project binding the design would
+then need.
 
 **Real secrets, at last.** An instance brings the first actual
 credentials — database passwords and the FDB backup encryption key —

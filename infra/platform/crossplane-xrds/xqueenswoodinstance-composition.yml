@@ -44,17 +44,17 @@ spec:
         kind: Resources
         resources:
           # ===================================================================
-          # The project, and for now nothing else. It withholds Delete
-          # and is meant to be liened: an instance project is the
-          # protected tier under ADR-0022, because down is a stopped
-          # environment rather than a deleted one, and because a project
-          # id is spent whether or not the project survives.
+          # It withholds Delete and is meant to be liened: an instance
+          # project is the protected tier under ADR-0022, because down
+          # is a stopped environment rather than a deleted one, and
+          # because a project id is spent whether or not the project
+          # survives.
           #
-          # What goes down with an instance -- the cluster, the
-          # database, the addresses -- is fully managed and composed
-          # here later. Nothing whose loss is unrecoverable belongs in
-          # this project at all: the backups and the encryption key live
-          # in the management project, one bucket per installation.
+          # The project is durable, so this instance's own data lives
+          # in it -- its database, its disks, the buckets its workloads
+          # write. What is fully managed alongside is only what rebuilds
+          # from its own declaration: the cluster, the addresses, the
+          # certificate. See ADR-0024.
           # ===================================================================
           - name: instance-project
             base:
@@ -553,8 +553,8 @@ spec:
           # metadata server.
           #
           # Delete is withheld. ADR-0024 says down leaves the project,
-          # its DNS zone and its identities standing, so an identity is
-          # not the disposable tier even though the cluster it runs is.
+          # its data, its DNS zone and its identities standing, so an
+          # identity outlives the cluster it runs.
           #
           # The label is in the name where the plane's node identity has
           # only the environment letter: two nonprod instances in one
@@ -668,10 +668,11 @@ spec:
           # still.
           #
           # Fully managed, Delete included, which is what ADR-0022
-          # leaves the disposable tier. Retiring an instance destroys
-          # the cluster and leaves the project, the network and the
-          # identities, which is the line that makes state a word in a
-          # file rather than a teardown.
+          # leaves anything that rebuilds from its own declaration.
+          # Retiring an instance destroys the cluster and leaves the
+          # project, its data, the network and the identities, which is
+          # the line that makes state a word in a file rather than a
+          # teardown.
           #
           # No nodeConfig here on purpose. It only ever configures the
           # default node pool, which removeDefaultNodePool deletes
