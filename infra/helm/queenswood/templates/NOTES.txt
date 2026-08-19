@@ -61,7 +61,7 @@ Then open:
 To watch the platform run for real, use the console's
 Sandbox > Scenarios page and read the spans it produces back in Jaeger.
 {{- end }}
-{{- if .Values.keycloak.dev.enabled }}
+{{- if eq (include "queenswood.keycloakMode" .) "dev" }}
 
 The bundled Keycloak admin console is reachable through the console
 SPA at /keycloak/admin (e.g. http://localhost:8081/keycloak/admin),

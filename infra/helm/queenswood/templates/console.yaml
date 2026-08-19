@@ -42,7 +42,7 @@ spec:
             - name: API_UPSTREAM
               value: {{ tpl .Values.console.apiUpstream . | quote }}
             - name: KEYCLOAK_UPSTREAM
-              value: {{ tpl .Values.console.keycloakUpstream . | quote }}
+              value: {{ default (printf "http://%s:8080" (include "queenswood.keycloakServiceName" .)) (tpl .Values.console.keycloakUpstream .) | quote }}
             # Runtime config the SPA reads via /env.js. The default
             # `keycloakPublicUrl` points at the SPA's own same-origin
             # `/keycloak` path so a bare `helm install` works after

@@ -140,3 +140,149 @@ longer answers the question.
 {{- define "queenswood.fdbRestoreRequested" -}}
 {{- if or .Values.fdb.restore.version .Values.fdb.restore.backupName -}}true{{- end -}}
 {{- end -}}
+
+{{- /*
+Which Keycloak this release talks to.
+
+  dev       the bundled single-pod Keycloak, H2 and start-dev, for kind
+  operator  an instance the Keycloak Operator manages, on `postgres`
+  external  Keycloak lives elsewhere; nothing is rendered for it and
+            baseUrl is supplied
+
+Checked once so an unknown value stops the render rather than falling
+through to whichever branch happens to be last.
+*/ -}}
+{{- define "queenswood.keycloakMode" -}}
+{{- $m := .Values.keycloak.mode -}}
+{{- if not (has $m (list "dev" "operator" "external")) -}}
+{{- fail (printf "keycloak.mode %q is not one of dev, operator, external" $m) -}}
+{{- end -}}
+{{ $m }}
+{{- end -}}
+
+{{- /*
+The Service both modes publish Keycloak on. The operator names it after
+its `Keycloak` resource and the dev Deployment is given the same name,
+so nothing that reaches Keycloak has to know which mode is running.
+*/ -}}
+{{- define "queenswood.keycloakServiceName" -}}
+{{ .Release.Name }}-keycloak-service
+{{- end -}}
+
+{{- /*
+Where this release reaches Keycloak from inside the cluster: bank-api's
+JWKS fetch and admin REST calls, and the bootstrap Job. The dev instance
+serves under /keycloak so the console SPA's same-origin proxy carries a
+consistent prefix; the operator's serves at the root of its Service.
+*/ -}}
+{{- define "queenswood.keycloakBaseUrl" -}}
+{{- if .Values.keycloak.baseUrl -}}
+{{ .Values.keycloak.baseUrl }}
+{{- else if eq (include "queenswood.keycloakMode" .) "dev" -}}
+http://{{ include "queenswood.keycloakServiceName" . }}:8080/keycloak
+{{- else if eq (include "queenswood.keycloakMode" .) "operator" -}}
+http://{{ include "queenswood.keycloakServiceName" . }}:8080
+{{- else -}}
+{{ required "keycloak.baseUrl is required when keycloak.mode is external" .Values.keycloak.baseUrl }}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+Keycloak's published hostname. The subdomain is fixed -- Keycloak is at
+`keycloak.` wherever it runs -- and the domain is supplied, because
+where this installation lives is not the chart's to know.
+*/ -}}
+{{- define "queenswood.keycloakHost" -}}
+{{ .Values.keycloak.host.subdomain }}.{{ required "keycloak.host.domain is required to publish Keycloak on a hostname" .Values.keycloak.host.domain }}
+{{- end -}}
+
+{{- /*
+The issuer: what Keycloak embeds in every token's `iss` claim however
+the request reached it, and therefore the exact string every verifier
+compares against. Derived once here so the instance and the services
+reading its tokens cannot disagree -- which is the whole reason
+Keycloak lives in this chart rather than beside it.
+
+A published hostname is the issuer when there is one, because that is
+what a browser is redirected to; without one, everything that reads a
+token is in this cluster and the Service is. Supplying a domain
+therefore moves the issuer, which is intended -- tokens minted under
+the old one stop verifying.
+*/ -}}
+{{- define "queenswood.keycloakIssuer" -}}
+{{- if .Values.keycloak.issuer -}}
+{{ .Values.keycloak.issuer }}
+{{- else if and (eq (include "queenswood.keycloakMode" .) "operator") .Values.keycloak.host.domain -}}
+https://{{ include "queenswood.keycloakHost" . }}
+{{- else -}}
+{{ include "queenswood.keycloakBaseUrl" . }}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+The Secret holding admin REST credentials for the bootstrap Job's
+signing-key push. The operator mints one for its own instance; the dev
+instance has none and the dev credentials are used instead.
+*/ -}}
+{{- define "queenswood.keycloakAdminSecret" -}}
+{{- if .Values.keycloak.adminSecret.name -}}
+{{ .Values.keycloak.adminSecret.name }}
+{{- else if eq (include "queenswood.keycloakMode" .) "operator" -}}
+{{ .Release.Name }}-keycloak-initial-admin
+{{- end -}}
+{{- end -}}
+
+{{- /*
+Postgres, for whatever in this release wants a relational database.
+Instance-scoped rather than Keycloak's: a Cloud SQL instance hosts many
+databases, and the proxy in front of it is shared by everything that
+reaches one.
+
+  off      no database is provisioned by or for this release
+  local    an in-chart StatefulSet, for kind
+  cloudsql the Cloud SQL Auth Proxy in front of an instance the
+           installation's composite provisioned
+*/ -}}
+{{- define "queenswood.postgresProvider" -}}
+{{- $p := .Values.postgres.provider -}}
+{{- if not (has $p (list "off" "local" "cloudsql")) -}}
+{{- fail (printf "postgres.provider %q is not one of off, local, cloudsql" $p) -}}
+{{- end -}}
+{{ $p }}
+{{- end -}}
+
+{{- define "queenswood.postgresHost" -}}
+{{- $p := include "queenswood.postgresProvider" . -}}
+{{- if eq $p "local" -}}
+{{ .Release.Name }}-postgres
+{{- else if eq $p "cloudsql" -}}
+{{ .Release.Name }}-cloudsql
+{{- else -}}
+{{- fail "postgres.provider is off, so nothing in this release may ask for a database host" -}}
+{{- end -}}
+{{- end -}}
+
+{{- /*
+The database user. Cloud SQL names an IAM service account user after
+the account's address with the `.gserviceaccount.com` suffix removed,
+so it is derived from the one value that also annotates the proxy's
+Kubernetes service account -- the two cannot then name different
+principals, and no password exists on either side.
+*/ -}}
+{{- define "queenswood.postgresUser" -}}
+{{- $p := include "queenswood.postgresProvider" . -}}
+{{- if eq $p "cloudsql" -}}
+{{- $sa := required "postgres.cloudsql.proxy.serviceAccount is required" .Values.postgres.cloudsql.proxy.serviceAccount -}}
+{{- trimSuffix ".gserviceaccount.com" $sa -}}
+{{- else -}}
+{{ .Values.postgres.local.user }}
+{{- end -}}
+{{- end -}}
+
+{{- define "queenswood.keycloakExpectedIssuer" -}}
+{{- default (printf "%s/realms/%s" (include "queenswood.keycloakIssuer" .) .Values.keycloak.realm) .Values.keycloak.expectedIssuer -}}
+{{- end -}}
+
+{{- define "queenswood.keycloakOpsExpectedIssuer" -}}
+{{- default (printf "%s/realms/%s" (include "queenswood.keycloakIssuer" .) .Values.keycloak.opsRealm) .Values.keycloak.opsExpectedIssuer -}}
+{{- end -}}

@@ -2,15 +2,29 @@ apiVersion: v2
 name: queenswood
 description: |
   Queenswood core-banking platform: bank-api, message processors, and
-  HTTP adapters/simulators, on top of Apache Kafka and a
-  FoundationDB cluster managed by the FDB Kubernetes operator.
+  HTTP adapters/simulators, on top of Apache Kafka, a FoundationDB
+  cluster managed by the FDB Kubernetes operator, and Keycloak managed
+  by the Keycloak Operator. Both operators are vendored subcharts and
+  both are optional, so the chart installs whole on kind and defers to
+  whatever a cluster already runs.
 type: application
-version: 0.12.0
+version: 0.13.0
 appVersion: "0.0.0"
 icon: https://avatars.githubusercontent.com/repldriven
 kubeVersion: ">=1.27.0-0"
 
 dependencies:
+  # Vendored from keycloak-k8s-resources as `kubectl kustomize` output
+  # over kubernetes/cluster-wide/ -- see charts/keycloak-operator for
+  # what that buys and the one upstream quirk kept as-is. Same shape as
+  # fdbOperator below: an operator the chart installs, and a resource
+  # of its kind in templates/.
+  - name: keycloak-operator
+    version: "0.1.3"
+    repository: "file://charts/keycloak-operator"
+    alias: keycloakOperator
+    condition: keycloakOperator.enabled
+
   # Vendored from FoundationDB/fdb-kubernetes-operator main@charts/fdb-operator
   # — upstream does not publish a Helm repo, so the chart lives in
   # `charts/fdb-operator/` and is referenced by file:// URL.

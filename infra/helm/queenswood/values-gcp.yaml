@@ -1,0 +1,38 @@
+# What makes this chart a GCP install. Layer it over values.yaml —
+# which names no cloud — and add the installation's own file on top for
+# the identifiers only it knows:
+#
+#   helm install queenswood infra/helm/queenswood \
+#     -f infra/helm/queenswood/values-gcp.yaml \
+#     -f <installation>/values.yml
+#
+# Under Argo those two layers are the Application's `valueFiles`. A
+# second cloud is a sibling of this file and one line changed there,
+# rather than an edit to anything shared.
+#
+# Nothing here carries a value belonging to one installation: those live
+# beside the manifest whose composite provisions what they name.
+
+# The Gateway's address and certificate are Google's kinds.
+gateway:
+  gcp:
+    enabled: true
+
+# The HealthCheckPolicy kind is GKE's, so it is enabled with the rest of
+# GCP rather than in the neutral defaults.
+keycloak:
+  healthCheck:
+    enabled: true
+  # The realm export and its import shell out to `gcloud storage`, so it
+  # is the mechanism that is GCP's here, not just these images. A second
+  # cloud needs those Jobs rewritten rather than re-pointed, which is
+  # why only the images are set from here.
+  realmImport:
+    gcloudImage: google/cloud-sdk:slim
+  realmExport:
+    gcloudImage: google/cloud-sdk:slim
+
+# Cloud SQL, reached through the Auth Proxy. `connectionName` and
+# `serviceAccount` are the installation's, and are set in its own file.
+postgres:
+  provider: cloudsql

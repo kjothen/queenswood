@@ -1,4 +1,4 @@
-{{- if .Values.gateway.healthCheck.enabled }}
+{{- if and (eq (include "queenswood.keycloakMode" .) "operator") .Values.gateway.enabled .Values.keycloak.healthCheck.enabled }}
 # GKE derives a backend health check from the Service behind a
 # Gateway-attached HTTPRoute, and its default probes `/` on the serving
 # port expecting 200. Keycloak answers 302 there, so the backend never
@@ -14,16 +14,14 @@ kind: HealthCheckPolicy
 metadata:
   name: {{ .Release.Name }}-keycloak
   labels:
-    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+    {{- include "queenswood.labels" . | nindent 4 }}
 spec:
   default:
     config:
       type: HTTP
       httpHealthCheck:
-        port: {{ .Values.gateway.healthCheck.port }}
-        requestPath: {{ .Values.gateway.healthCheck.requestPath | quote }}
+        port: {{ .Values.keycloak.healthCheck.port }}
+        requestPath: {{ .Values.keycloak.healthCheck.requestPath | quote }}
   targetRef:
     group: ""
     kind: Service

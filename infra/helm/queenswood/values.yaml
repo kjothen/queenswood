@@ -16,72 +16,112 @@ secrets:
   #   --set secrets.keycloakAdminClientSecret=...
   keycloakAdminClientSecret: ""
 
-# -- Keycloak connection details for server-side calls (bank-api +
-# bootstrap reach the Keycloak Admin REST API to register service
-# accounts; bank-api also validates JWTs via the realm's JWKS). The
-# default baseUrl assumes Keycloak runs in the same namespace via
-# the operator-published Service `queenswood-keycloak-keycloak-
-# service` -- override to an external URL (or an Envoy egress
-# entry) if Keycloak lives elsewhere.
+# -- Keycloak: the identity this bank runs on. Folded into this chart
+# rather than beside it because almost all of it is Queenswood's own --
+# the realms, the console client, the admin client whose signing key
+# the bootstrap Job registers -- and because the issuer has to be one
+# string that both Keycloak and everything verifying its tokens agree
+# on. Two charts made that an agreement between two values files; one
+# chart makes it a derivation. See `_helpers.tpl`.
 keycloak:
-  # Gate bootstrap on the queenswood-keycloak chart's realm import.
-  # Registering the admin signing key before the realm is imported
-  # would be undone by it. Off by default because a standalone install
-  # runs the bundled dev Keycloak, where no such Job exists and the
-  # gate would wait for something that never appears.
-  waitForRealmImport: false
-  # The bundled dev Keycloak runs under the `/keycloak/` path
-  # (KC_HTTP_RELATIVE_PATH) so the SPA's same-origin proxy carries a
-  # consistent prefix and Keycloak's own generated URLs include it.
-  # bank-api's admin REST calls land at this baseUrl too. On GKE the
-  # operator-driven Keycloak runs at the root of its dedicated
-  # hostname, so queenswood-platform overrides this back to "...:8080".
-  baseUrl: "http://queenswood-keycloak-keycloak-service:8080/keycloak"
+  # dev | operator | external -- see queenswood.keycloakMode.
+  mode: dev
+
   realm: queenswood
+  # Second realm hosting Queenswood operator users. Same Keycloak
+  # instance, separate realm. bank-api wires a second identity-provider
+  # pointed at this realm so it still accepts operator JWTs; there is
+  # no operator SPA in this chart any more, so the realm currently has
+  # no first-party browser client.
+  opsRealm: queenswood-ops
   adminClientId: queenswood-admin
   # Public client id the console SPA uses for Authorization
   # Code + PKCE. Must match the `clientId` of the corresponding
   # `clients[]` entry in `files/keycloak-realm.json`.
   consoleClientId: queenswood-console
-  # Second realm hosting Queenswood operator users. Same Keycloak
-  # instance, separate realm. bank-api wires a second identity-provider
-  # pointed at this realm so it still accepts operator JWTs; there is
-  # no operator SPA in this chart any more, so
-  # the realm currently has no first-party browser client.
-  opsRealm: queenswood-ops
-  # Override the iss claim the verifier expects on the ops realm when
-  # base-url is an in-cluster Service URL but Keycloak embeds its
-  # public hostname in tokens. The localhost:8081 default is a legacy
-  # value from the removed operator SPA's same-origin Keycloak proxy;
-  # GKE overrides to the public hostname.
-  opsExpectedIssuer: "http://localhost:8081/keycloak/realms/queenswood-ops"
   # Operator-realm client id retained for the second identity-provider.
   opsClientId: queenswood-app
-  # Override the iss the verifier expects on incoming JWTs. Same
-  # shape as opsExpectedIssuer above: default matches the console
-  # SPA's same-origin Keycloak proxy at `localhost:8081/keycloak`;
-  # GKE overrides to the public hostname.
-  expectedIssuer: "http://localhost:8081/keycloak/realms/queenswood"
-  # -- Bundled dev Keycloak for any standalone install of this chart
-  # (local kind/k3s, the published OCI artifact). Renders a single-
-  # replica Deployment + matching Service + ConfigMap-mounted realm
-  # import. On GKE this is explicitly disabled by queenswood-platform's
-  # Release, because Keycloak is provided there by the operator-driven
-  # queenswood-keycloak chart (its operator-published Service shares
-  # the same `queenswood-keycloak-keycloak-service` name so
-  # `keycloak.baseUrl` resolves either way).
+
+  # All four derived from the mode and the hostname when left empty,
+  # which is how the issuer stays a single string. Set one only to
+  # point at a Keycloak this chart does not run.
+  baseUrl: ""
+  issuer: ""
+  expectedIssuer: ""
+  opsExpectedIssuer: ""
+
+  # Image for whichever Keycloak this chart runs. One value for both
+  # modes: the operator is expected to run the version it manages, so a
+  # second pin here would be a second thing to move in step.
+  image: quay.io/keycloak/keycloak:26.7.0
+
+  # Where Keycloak is published. The subdomain is fixed; the domain is
+  # supplied, because where this installation lives is not the chart's
+  # to know, and supplying it moves the issuer.
+  host:
+    subdomain: keycloak
+    domain: ""
+
+  # The console SPA's deployed origin, added to the `queenswood-console`
+  # client when the realm is imported. A whole URI, and empty adds
+  # nothing -- a realm is imported once and never overwritten, so a
+  # guessed origin is permanent.
+  consoleRedirectUri: ""
+
+  # A HealthCheckPolicy overriding the default `/`-on-the-serving-port
+  # probe, which Keycloak answers 302 to. The kind is GKE's, so this is
+  # off here and on in values-gcp.yaml.
+  healthCheck:
+    enabled: false
+    port: 9000
+    requestPath: /health/ready
+
+  # -- operator mode: the instance the Keycloak Operator manages.
+  instances: 1
+  database:
+    # Which database on `postgres` below. The server is instance-scoped
+    # and Keycloak is one user of it.
+    name: keycloak
+    # Secret holding a `username` key and nothing else. No password
+    # exists: the user is an IAM principal and the connection presents
+    # a token.
+    secretName: queenswood-keycloak-conn
+
+  # In-cluster pods resolve the published hostname to the internal
+  # Service, so the `iss` claim round-trips without leaving the cluster.
+  # Only meaningful once there is a published hostname.
+  coredns:
+    rewrite:
+      enabled: false
+      namespace: kube-system
+      configMapName: coredns-custom
+
+  # Keycloak's files-plaintext vault. Each key is a file in `dir` named
+  # <realm>_<key>, so the queenswood realm's ${vault.google-client-secret}
+  # reads queenswood_google-client-secret. The Secret is created out of
+  # band (`just gcp-keycloak-vault-secret`) and never lives in git.
+  #
+  # The volume is optional, so enabling the vault before the Secret
+  # exists leaves Keycloak running with the expression unresolved rather
+  # than wedging the pod on a missing mount.
+  vault:
+    enabled: false
+    secretName: queenswood-keycloak-vault
+    dir: /opt/keycloak/data/vault
+
+  # -- dev mode: bundled single-pod Keycloak for any standalone install
+  # of this chart (local kind/k3s, the published OCI artifact). Runs
+  # start-dev with an embedded H2 database, under the `/keycloak/` path
+  # so the SPA's same-origin proxy carries a consistent prefix.
   dev:
-    enabled: true
-    image: quay.io/keycloak/keycloak:26.7.0
     # Keycloak's master-realm bootstrap admin. Dev-only credentials.
     adminUser: admin
     adminPassword: admin
 
   # Admin REST credentials the bootstrap Job uses to push the generated
-  # admin client secret into Keycloak. Empty means the bundled dev
-  # Keycloak, whose credentials are the dev.admin* values above; on GKE
-  # queenswood-platform points this at the Secret the Keycloak operator
-  # mints for its own instance.
+  # admin client secret into Keycloak. Derived from the mode when empty:
+  # the operator mints one for its own instance, and the dev instance
+  # has none.
   adminSecret:
     name: ""
     usernameKey: username
@@ -98,10 +138,95 @@ keycloak:
     - operational-processors-service
     - monolith-service
 
-# -- OpenTelemetry collector endpoint (gets passed as OTEL_ENDPOINT env
-# to every service). Empty falls back to the in-chart Jaeger when
-# jaeger.enabled=true, and disables the SDK otherwise. Set explicitly to
-# ship elsewhere.
+  # -- Realm import and export. The application's own Jobs, which
+  # happen to speak Keycloak's Admin API and CLI -- they sit beside the
+  # migrator and bootstrap Jobs for that reason, not in a Keycloak silo.
+  #
+  # `realms` on the import is a target, not a mode. It names the export
+  # this environment's realms should come from
+  # (`keycloak/realms/<YYYY>/<MM>/<DD>/<HHMMSSZ>`, or `LATEST`), recorded
+  # by the export at teardown. Empty imports the committed definitions
+  # instead, which is right for an environment that has never been torn
+  # down and wrong for one that has -- restoring FDB beside a freshly
+  # minted realm duplicates the bank.
+  realmImport:
+    realms: ""
+    bucket: ""
+    project: ""
+    # Made by `just gcp-keycloak-restore-sa-create` -- needs only object
+    # read on the backup bucket. Named for GCP because this Job is: it
+    # shells out to `gcloud storage`. See values-gcp.yaml.
+    gcpServiceAccount: ""
+    # Needs curl and jq: it POSTs the realm to Keycloak's Admin API and
+    # checks the restored user ids over the same API. No kubectl -- the
+    # operator's import CR is not used, so the Job touches no Kubernetes
+    # API at all.
+    toolsImage: alpine/k8s:1.30.14
+    gcloudImage: ""
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+
+  # Scheduled realm export, using Keycloak's own tooling rather than a
+  # database dump -- see templates/job-realm-export.yaml for why.
+  realmExport:
+    enabled: false
+    # Hourly. The export is realm JSON, tens of kilobytes, so frequency
+    # costs little; what it buys is a smaller window of lost realm
+    # changes between a teardown and the export that precedes it.
+    schedule: "0 * * * *"
+    bucket: ""
+    project: ""
+    # Made by `just gcp-keycloak-backup-sa-create` -- needs only object
+    # write on the backup bucket. GCP-named for the same reason as the
+    # import's. See values-gcp.yaml.
+    gcpServiceAccount: ""
+    # Empty means the image the Keycloak instance runs, so the export is
+    # always produced by the version that wrote the data.
+    keycloakImage: ""
+    gcloudImage: ""
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+
+# -- Relational database for whatever in this release wants one.
+# Instance-scoped rather than Keycloak's: a Cloud SQL instance hosts
+# many databases and the proxy in front of it is shared, so a second
+# consumer names another database rather than standing up another proxy.
+#
+#   off | local | cloudsql -- see queenswood.postgresProvider.
+postgres:
+  provider: "off"
+  port: 5432
+  local:
+    image: postgres:18
+    storage: 1Gi
+    user: keycloak
+    # Dev-only default. Anything real uses `cloudsql`, where no
+    # password exists at all.
+    password: keycloak-dev-password
+  cloudsql:
+    proxy:
+      image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.24.1
+      # `<project>:<region>:<instance>` -- surfaced on the CloudSQL
+      # DatabaseInstance MR's `status.atProvider.connectionName`.
+      connectionName: ""
+      # Service account email bound to the Kubernetes account via
+      # Workload Identity, and the database user's name once the
+      # `.gserviceaccount.com` suffix is dropped. The instance
+      # composite grants it `roles/cloudsql.client`,
+      # `roles/cloudsql.instanceUser` and the
+      # `iam.workloadIdentityUser` binding back to that account.
+      serviceAccount: ""
+
 otel:
   endpoint: ""
 
@@ -177,9 +302,9 @@ console:
   replicas: 1
   apiUpstream: "http://{{ .Release.Name }}-api-service:8080"
   # In-cluster Service the nginx `/keycloak/*` reverse-proxies to so
-  # the SPA stays same-origin. Defaults to the bundled dev Keycloak
-  # Service; GKE overrides to the operator-published Service URL.
-  keycloakUpstream: "http://queenswood-keycloak-keycloak-service:8080"
+  # the SPA stays same-origin. Empty means whichever Keycloak this
+  # release runs, which is one Service name in either mode.
+  keycloakUpstream: ""
   # Public URL of the realm endpoint the browser calls. Default is
   # the SPA's own same-origin `/keycloak` path so a bare `helm install`
   # works after one `kubectl port-forward svc/<release>-console
@@ -400,6 +525,12 @@ fdb:
 # total) on first install when only 7.4 is referenced by
 # `fdb.version` above -- the unused 7.1 and 7.3 pulls just slow
 # `helm install` down without anyone ever running them.
+# -- Keycloak Operator, vendored upstream and installed cluster-wide,
+# exactly as fdbOperator below. Needed only in `keycloak.mode: operator`;
+# a cluster that already runs one turns this off.
+keycloakOperator:
+  enabled: false
+
 fdbOperator:
   enabled: true
   nameOverride: fdb-operator

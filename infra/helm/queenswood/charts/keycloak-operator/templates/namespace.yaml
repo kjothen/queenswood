@@ -1,0 +1,10 @@
+# The one resource not vendored from upstream. Its cluster-wide
+# kustomize output names `keycloak-operator` on every resource but
+# ships no Namespace, which is fine for `kubectl apply -k` against a
+# cluster where it exists and not for a chart that has to create it.
+# A namespace of its own rather than the release's: the operator is
+# cluster-wide, and it outlives any one release installed beside it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: keycloak-operator

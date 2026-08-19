@@ -22,7 +22,7 @@ Kubernetes:
 - **Keycloak** with embedded H2 for standalone installs
   (`keycloak.dev.enabled: true` by default). GKE
   deployments turn this off and use the operator-driven
-  `queenswood-keycloak` chart instead.
+  `keycloak.mode: operator` instead.
 
 ## Quick start
 

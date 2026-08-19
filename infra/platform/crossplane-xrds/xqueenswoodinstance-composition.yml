@@ -1355,13 +1355,63 @@ spec:
                 toFieldPath: metadata.name
               - *instance-project
               - *sql-member
-          # Nothing binds this identity to a Kubernetes service account
-          # yet, and that is deliberate rather than missing. Workload
-          # Identity has two halves and the GCP one has to name a
-          # namespace and a service account that the workload actually
-          # creates; guessing them composes a binding that matches
-          # nothing, which is what gcp-iam warns against. It arrives
-          # with the workload, whose own shape ADR-0024 leaves open.
+          # The other half of Workload Identity. The GCP binding has to
+          # name a namespace and a service account the workload really
+          # creates, and both halves have to spell the same pair or
+          # neither reports anything wrong -- so the pair comes from the
+          # manifest, beside the Application that installs the workload,
+          # rather than from a copy kept here.
+          - name: instance-sql-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-wi"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql"
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+              # serviceAccount:<project>.svc.id.goog[<namespace>/<ksa>]
+              - type: CombineFromComposite
+                policy:
+                  fromFieldPath: Required
+                combine:
+                  variables:
+                    - fromFieldPath: spec.projectId
+                    - fromFieldPath: spec.keycloak.database.client.namespace
+                    - fromFieldPath: spec.keycloak.database.client.serviceAccount
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
+                toFieldPath: spec.forProvider.member
     # =======================================================================
     # The node pool, composed here rather than by patch-and-transform for
     # one reason: its count is a manifest value and a state at once. up is

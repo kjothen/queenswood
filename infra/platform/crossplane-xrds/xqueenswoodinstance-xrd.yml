@@ -338,6 +338,31 @@ spec:
                             Write-ahead log retention, so a restore can
                             name a moment rather than a backup. Costs
                             storage continuously.
+                        client:
+                          type: object
+                          default: {}
+                          description: |
+                            The Kubernetes service account that reaches
+                            this database, which the composition binds
+                            to the cloud identity it composes for it.
+                            Kubernetes rather than a cloud's vocabulary
+                            on purpose: every cloud has a mechanism for
+                            trusting one, and none of them agree on what
+                            it is called.
+
+                            Whatever creates that account decides these
+                            two strings, so they belong beside the
+                            Application that installs it rather than in
+                            the composition, which would otherwise hold
+                            a copy that a rename elsewhere makes wrong
+                            without making anything say so.
+                          properties:
+                            namespace:
+                              type: string
+                              default: queenswood
+                            serviceAccount:
+                              type: string
+                              default: queenswood-cloudsql-proxy
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
