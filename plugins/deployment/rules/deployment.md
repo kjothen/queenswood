@@ -121,6 +121,14 @@ field rather than leaving it, a field the composition never set stays
 free for the provider to late-initialise or for a hand patch to hold,
 and two managers declaring one field make it stable. Check
 `metadata.managedFields` before assuming either way.
+Count the live instances of a kind before removing its XRD, reading the
+cluster rather than assuming from the fact that nothing in the
+repository creates one: the XRD owns its CRD, so the kind and every
+composite of it go together, and a Composition outlives the XRD it names
+because nothing links them but a `compositeTypeRef`. Where the
+Application carrying the XRD prunes, deleting the file is the removal;
+where it does not, the plane goes on serving the kind and the edit reads
+as a change that did nothing.
 Withhold `Delete` from `managementPolicies` for anything whose loss is
 unrecoverable: deleting the managed resource then orphans the cloud
 resource rather than destroying it, and deleting a composite destroys

@@ -145,6 +145,28 @@ stopped changing.
 A composed kind whose CRD is not installed on the applying plane fails
 the same way: `no matches for kind`.
 
+### Removal
+
+An XRD owns the CRD it establishes, so deleting the XRD withdraws the
+kind and takes every composite of it with it — and a composite deletes
+what it composes, subject to each resource's `managementPolicies`. So
+the question before removing an XRD is how many instances of its kind
+exist, and the answer has to be read from the cluster rather than
+assumed from the fact that nothing in the repository creates one.
+
+Where the Application carrying the XRD prunes, deleting the file is the
+removal: Argo prunes the XRD, and Crossplane garbage-collects the CRD
+beneath it and the revisions beneath its Composition. Where it does
+not, the file leaves the repository and the plane goes on serving the
+kind, so the removal is a delete against the cluster and the repository
+edit alone reads as a change that did nothing. Which of the two it is
+is a property of the Application, not of the XRD, so it is worth
+reading before assuming either.
+
+A Composition outlives the XRD it names, since nothing links them but a
+`compositeTypeRef`. Delete it alongside, or the plane keeps a
+Composition for a kind it no longer serves.
+
 ## Rules
 
 **MUST:**
@@ -161,6 +183,10 @@ the same way: `no matches for kind`.
   anything. They report different failures.
 - Check `metadata.managedFields` before assuming a hand patch will
   hold, or that a field will survive a patch being removed.
+- Count the live instances of a kind before removing its XRD. The CRD
+  and every composite of it go with the XRD.
+- Delete a Composition alongside the XRD it names. Nothing links them
+  but a `compositeTypeRef`.
 - Withhold `Delete` from `managementPolicies` for anything whose loss
   is not recoverable. Deleting the managed resource then orphans the
   cloud resource rather than destroying it.
