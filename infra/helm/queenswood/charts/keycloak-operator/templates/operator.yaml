@@ -33,7 +33,7 @@ metadata:
     app.kubernetes.io/name: keycloak-operator
     app.kubernetes.io/version: 26.7.0
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -41,7 +41,7 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak-operator
   name: keycloak-operator-role
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups:
   - apps
@@ -330,7 +330,7 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak-operator
   name: keycloak-operator-role-binding
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -338,7 +338,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -347,7 +347,7 @@ metadata:
     app.kubernetes.io/name: keycloak-operator
     app.kubernetes.io/version: 26.7.0
   name: keycloak-operator-view
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -355,7 +355,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -386,7 +386,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -402,7 +402,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -418,7 +418,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -434,7 +434,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: v1
 kind: Service
@@ -448,7 +448,7 @@ metadata:
     app.kubernetes.io/name: keycloak-operator
     app.kubernetes.io/version: 26.7.0
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 spec:
   ports:
   - name: http
@@ -471,7 +471,7 @@ metadata:
     app.kubernetes.io/name: keycloak-operator
     app.kubernetes.io/version: 26.7.0
   name: keycloak-operator
-  namespace: keycloak-operator
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:

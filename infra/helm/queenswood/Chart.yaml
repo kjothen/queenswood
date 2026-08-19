@@ -8,7 +8,7 @@ description: |
   both are optional, so the chart installs whole on kind and defers to
   whatever a cluster already runs.
 type: application
-version: 0.13.1
+version: 0.13.2
 appVersion: "0.0.0"
 icon: https://avatars.githubusercontent.com/repldriven
 kubeVersion: ">=1.27.0-0"
@@ -20,7 +20,7 @@ dependencies:
   # fdbOperator below: an operator the chart installs, and a resource
   # of its kind in templates/.
   - name: keycloak-operator
-    version: "0.1.3"
+    version: "0.1.4"
     repository: "file://charts/keycloak-operator"
     alias: keycloakOperator
     condition: keycloakOperator.enabled

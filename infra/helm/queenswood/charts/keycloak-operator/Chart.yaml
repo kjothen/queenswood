@@ -9,6 +9,15 @@ description: |
   values; it is a subchart of `queenswood`, enabled by
   `keycloakOperator.enabled`, exactly as `fdb-operator` is.
 
+  Deviations from upstream's cluster-wide kustomize output:
+    0. Every `namespace: keycloak-operator` is templated to the release
+       namespace. Cluster-wide means the operator *watches* every
+       namespace, not that it may act in one: pods, statefulsets,
+       services and secrets are granted by a namespaced Role in the
+       operator's own namespace, so an operator installed beside the
+       `Keycloak` resource it manages needs no RBAC change, and one
+       installed elsewhere cannot manage it at all.
+
   Deviations from upstream `kubernetes/kubernetes.yml`:
     1. The namespace-scoped role becomes a ClusterRole so the
        operator can manage Keycloak instances cluster-wide.
@@ -18,5 +27,5 @@ description: |
        some upstream docs mention, is silently treated as a literal
        namespace name and the operator watches nothing.)
 type: application
-version: 0.1.3
+version: 0.1.4
 appVersion: "26.7.0"
