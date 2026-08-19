@@ -1412,6 +1412,189 @@ spec:
                   string:
                     fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
                 toFieldPath: spec.forProvider.member
+          # ===================================================================
+          # The identity that grants the workload its rights inside the
+          # database, which is a separate system from the one that lets it
+          # in. Cloud SQL authenticates an IAM principal; PostgreSQL then
+          # authorises it, and an IAM user is created holding nothing --
+          # since PostgreSQL 15 only a database's owner may create in
+          # public, so the workload connects and cannot make a table.
+          #
+          # Neither Database nor User can express the fix: one has no
+          # owner field, the other no databaseRoles. So a Job calls the
+          # Admin API, and this is what it runs as. Its own identity
+          # rather than the workload's, because the workload has no
+          # business editing the instance's users -- and because granting
+          # scoped rights later means connecting as a superuser that is
+          # not the workload, which this account becomes without anything
+          # here changing.
+          - name: instance-sql-admin-role
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMCustomRole
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  # A custom role rather than cloudsql.admin, which also
+                  # grants deleting the instance and every database on it.
+                  # Underscores because a custom role id takes no hyphens.
+                  roleId: rl_sql_user_admin
+                  title: Cloud SQL user administrator
+                  description: Grants database roles to this instance's users
+                  permissions:
+                    - cloudsql.users.update
+                    - cloudsql.users.list
+                    - cloudsql.instances.get
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-rl-sql-user-admin"
+                toFieldPath: metadata.name
+              - *instance-project
+          - name: instance-sql-admin-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood database grant
+                  description: Grants this instance's database users their roles
+            patches:
+              - &sql-admin-name
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sqladmin"
+                toFieldPath: metadata.name
+              - *instance-project
+              - <<: *sql-admin-name
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+          - name: instance-sql-admin-role-binding
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-user-admin"
+                toFieldPath: metadata.name
+              - *instance-project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "projects/%s/roles/rl_sql_user_admin"
+                toFieldPath: spec.forProvider.role
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-%s-%s-sqladmin@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          - name: instance-sql-admin-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sqladmin-wi"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sqladmin"
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+              - type: CombineFromComposite
+                policy:
+                  fromFieldPath: Required
+                combine:
+                  variables:
+                    - fromFieldPath: spec.projectId
+                    - fromFieldPath: spec.keycloak.database.client.namespace
+                    - fromFieldPath: spec.keycloak.database.client.grantServiceAccount
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
+                toFieldPath: spec.forProvider.member
     # =======================================================================
     # The node pool, composed here rather than by patch-and-transform for
     # one reason: its count is a manifest value and a state at once. up is

@@ -36,3 +36,6 @@ keycloak:
 # `serviceAccount` are the installation's, and are set in its own file.
 postgres:
   provider: cloudsql
+  cloudsql:
+    grant:
+      gcloudImage: google/cloud-sdk:slim

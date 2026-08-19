@@ -363,6 +363,14 @@ spec:
                             serviceAccount:
                               type: string
                               default: queenswood-cloudsql-proxy
+                            grantServiceAccount:
+                              type: string
+                              default: queenswood-sql-grant
+                              description: |
+                                The account the grant Job runs as, which
+                                is not the workload's: giving a database
+                                its user's rights is not something that
+                                user should be able to do.
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'

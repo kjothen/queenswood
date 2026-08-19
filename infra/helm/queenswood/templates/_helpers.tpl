@@ -316,3 +316,14 @@ on a real connection says otherwise.
 {{- define "queenswood.postgresProxyServiceAccount" -}}
 {{ required "postgres.cloudsql.proxy.kubernetesServiceAccount is required" .Values.postgres.cloudsql.proxy.kubernetesServiceAccount }}
 {{- end -}}
+
+{{- /*
+Name of the SQL grant Job, hashed over what it runs for the same reason
+the migrator and bootstrap Jobs are: a pod template is immutable, so a
+Job whose content changes must also change its name or the apply is
+rejected.
+*/ -}}
+{{- define "queenswood.sqlGrantJobName" -}}
+{{- $spec := printf "%s|%s|%s" .Values.postgres.cloudsql.proxy.connectionName (include "queenswood.postgresUser" .) (join "," .Values.postgres.cloudsql.grant.databaseRoles) -}}
+{{- printf "%s-sql-grant-%s" .Release.Name ($spec | sha256sum | trunc 10) -}}
+{{- end -}}
