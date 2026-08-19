@@ -258,7 +258,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "queenswood.labels" . | nindent 8 }}
+        {{- include "queenswood.podLabels" . | nindent 8 }}
         app.kubernetes.io/component: bootstrap
     spec:
       {{- include "queenswood.bootstrapPodSpec" . | nindent 6 }}

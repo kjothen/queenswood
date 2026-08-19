@@ -37,7 +37,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "queenswood.labels" . | nindent 8 }}
+        {{- include "queenswood.podLabels" . | nindent 8 }}
         app.kubernetes.io/component: jaeger
     spec:
       containers:
