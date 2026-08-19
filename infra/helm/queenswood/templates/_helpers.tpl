@@ -237,6 +237,26 @@ https://{{ include "queenswood.keycloakHost" . }}
 {{- end -}}
 
 {{- /*
+The console's deployed origin, as the redirect the console client will
+accept. Derived from the hostname the gateway already publishes the SPA
+on, because the two cannot disagree: Keycloak validates the redirect_uri
+against this list strictly, and a mismatch fails as a login refused with
+`Invalid parameter: redirect_uri` rather than as anything naming a
+hostname.
+
+Empty where the console is not published, which is a console reached
+through a port-forward and already covered by the realm's own localhost
+entries.
+*/ -}}
+{{- define "queenswood.consoleRedirectUri" -}}
+{{- if .Values.keycloak.consoleRedirectUri -}}
+{{ .Values.keycloak.consoleRedirectUri }}
+{{- else if and .Values.gateway.enabled .Values.gateway.consoleHost -}}
+https://{{ .Values.gateway.consoleHost }}/*
+{{- end -}}
+{{- end -}}
+
+{{- /*
 Where the browser reaches Keycloak, which has to be the issuer: the SPA
 compares the `iss` of the token it is given against the authority it
 asked, and a mismatch fails as a login that never completes rather than
