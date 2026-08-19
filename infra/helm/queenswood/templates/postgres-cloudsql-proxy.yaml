@@ -1,0 +1,95 @@
+{{- if eq (include "queenswood.postgresProvider" .) "cloudsql" }}
+# Cloud SQL Auth Proxy fronting the instance the installation's
+# composite provisions. Instance-scoped rather than any one workload's:
+# a Cloud SQL instance hosts many databases, so a second consumer names
+# another database and reaches it through this same Service.
+#
+# The proxy authenticates via Workload Identity -- the Kubernetes
+# service account below is annotated with the GCP identity, and the
+# instance composition binds that identity back to this namespace and
+# name. Clients talk plain Postgres to the Service and hold no
+# credential of any kind.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "queenswood.postgresHost" . }}-proxy
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+  annotations:
+    {{- with .Values.postgres.cloudsql.proxy.serviceAccount }}
+    iam.gke.io/gcp-service-account: {{ . }}
+    {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "queenswood.postgresHost" . }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  ports:
+    - port: {{ .Values.postgres.port }}
+      targetPort: 5432
+      name: postgres
+  selector:
+    app.kubernetes.io/name: {{ include "queenswood.postgresHost" . }}-proxy
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "queenswood.postgresHost" . }}-proxy
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "queenswood.postgresHost" . }}-proxy
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "queenswood.postgresHost" . }}-proxy
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ include "queenswood.postgresHost" . }}-proxy
+      containers:
+        - name: cloud-sql-proxy
+          image: {{ .Values.postgres.cloudsql.proxy.image | quote }}
+          args:
+            - "--address=0.0.0.0"
+            - "--port=5432"
+            # The database user is an IAM principal, so the proxy fetches
+            # an OAuth token and presents it as the password. Keycloak
+            # sends a username and no password at all.
+            - "--auto-iam-authn"
+            # The proxy looks for a public address unless told otherwise,
+            # and the instance composite builds none -- ipv4Enabled is
+            # false, so the only address is the private one reached
+            # across this VPC's peering. Constant rather than a value
+            # because the composition makes it one.
+            - "--private-ip"
+            # Readiness gates the Service, which otherwise routes to a
+            # proxy that has not finished its first Admin API call and
+            # fails whichever connection arrives first.
+            - "--health-check"
+            - "--http-address=0.0.0.0"
+          ports:
+            - containerPort: 5432
+              name: postgres
+            - containerPort: 9090
+              name: health
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: health
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: health
+            periodSeconds: 30
+          securityContext:
+            runAsNonRoot: true
+{{- end }}

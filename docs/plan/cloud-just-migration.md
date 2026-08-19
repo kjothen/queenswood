@@ -95,7 +95,7 @@ environment identifier is ever committed here.
 and the migrator Job completed. The five services sit at `Init:1/2`:
 past `wait-for-fdb-cluster`, waiting on `wait-for-bootstrap`.
 
-**And it is blocked on Keycloak, which is not optional.** The bootstrap
+**It was blocked on Keycloak, which is not optional.** The bootstrap
 Job's `sync-admin-client-key` initContainer registers the admin
 client's public key *on Keycloak*, and retries forever against a
 Service that does not exist. So the Job never completes, so no service
@@ -105,12 +105,116 @@ two further charts — `infra/helm/keycloak-operator` and
 `queenswood-platform` chart used to wrap alongside this one. They are a
 hard dependency of the deployment rather than a follow-on to it.
 
+**Keycloak is now declared, and unproven.** It went in as two more
+Applications first, which was wrong. `keycloak-operator` is a vendored
+subchart of `queenswood` under a condition, exactly as `fdb-operator`
+already was, and what was the `queenswood-keycloak` chart is now that
+chart's `keycloak.mode: operator`. One Application, one values file,
+and `installations/qw01/` back to the three manifests and those two.
+Nothing has run: the instance is `state: down`, so proving it means
+bringing the environment up. What to expect when it goes up is under
+[what to do next](#after-the-pivot).
+
+**The separate chart was a fossil, not a decision.** `queenswood-platform`
+composed three Crossplane `Release` resources, so there were three
+charts; that composite is retired and the shape outlived it. Nothing in
+`queenswood-keycloak` was generically Keycloak's — the realms are the
+bank's own file, the admin client is the one the bootstrap Job registers
+a signing key on, the CoreDNS rewrite exists so the `iss` claim
+round-trips for bank-api, and the HTTPRoute attached to the bank chart's
+own Gateway. The bank chart had a second Keycloak in it already, for
+kind, importing the same two realm files.
+
+**What the fold actually buys is one issuer.** Split across two charts,
+the string Keycloak embeds in `iss` lived in one values file and the two
+strings verifying it lived in another, agreeing by review. They are now
+derived from the mode and the hostname in one helper, so supplying a
+domain moves the issuer and both expectations follow — a coupling that
+was previously three edits and a comment asking the reader to check.
+The Service name went the same way: the dev instance used to hardcode
+the name the other chart's operator would publish.
+
+**And the proxy is not Keycloak's.** A Cloud SQL instance hosts many
+databases — the composite already composes the instance and a
+`keycloak` database on it separately — so the Auth Proxy is
+instance-scoped and shared, `postgres.provider` rather than something
+nested under Keycloak. A second consumer names another database and
+reaches it through the same Service. The realm export and import moved
+the same way, to `job-realm-export.yaml` and `job-realm-import.yaml`
+beside the migrator and bootstrap Jobs: they are the application's own
+work, which happens to speak Keycloak's Admin API.
+
+**And it is the first thing to hold no password.** The chart's external
+mode had a username and a password pinned into a Secret by the retired
+release. It now renders a username alone, derived by dropping
+`.gserviceaccount.com` from the identity the Cloud SQL Auth Proxy runs
+as, and the proxy runs with `--auto-iam-authn` so what reaches the
+database is a token rather than a secret. One value spells the database
+user and the Workload Identity annotation, so the two cannot name
+different principals.
+
+**The composition's half of that binding names nothing of its own.**
+It was left out while the workload's Kubernetes service account was a
+guess, and what closed that gap is `keycloak.database.client` on the
+instance's manifest — the namespace and the account, declared beside
+the Application that installs them rather than copied into a
+composition that a rename elsewhere would make wrong without making
+anything say so. The XRD's fields are Kubernetes' vocabulary, not a
+cloud's, because every cloud has a way of trusting a service account
+and none of them agree on what it is called.
+
+**Where the chart is GCP's, it says so.** `postgres.provider` names
+whose managed database is meant, and anything unimplemented fails the
+render rather than quietly producing GCP's shape under another cloud's
+name — passwordless access is arranged differently everywhere, a proxy
+beside the workload here and a client minting its own token there, so
+the shape cannot be shared. It is unset in `values.yaml`, which names
+no cloud at all: what makes this a GCP install is `values-gcp.yaml`
+layered over it, carrying the proxy, the GKE health-check policy, the
+Gateway's Google kinds and the `gcloud` images. The Application lists
+the two in order, so a second cloud is a sibling file and one line
+changed there. The composition is already `xqueenswoodinstance.gcp`,
+so it is the same move one layer down: a second composition against
+the same XRD, rather than an edit to either.
+
+What that does not make portable is the realm export and its restore,
+which shell out to `gcloud storage`. Only their images moved, because
+a second cloud needs those Jobs rewritten rather than re-pointed —
+said in both files rather than papered over by a rename.
+
 `XPlatform`'s resources were the port list, and what is left of it is
 the apex address, its DNS record and the certificate — with the DNS
 **zone** the open question, since it is unrecreatable on any useful
 timescale. That question is now reopened rather than settled: it was
 blocked on a zone not belonging to a disposable instance, and an
 instance project is no longer disposable.
+
+**And no chart holds a domain.** The domain moved — the old
+`<env>.repldriven.com` gives way to `queenswood.io`, nested for
+non-production and at the apex for production — which is the kind of
+change that finds every place a domain was written down.
+The Keycloak half had one as a default, and derived from it both its
+own hostname and the bank console's. It now takes
+`keycloak.host.domain` with no default and the console's origin whole,
+which is how the bank chart's gateway hostnames already worked. So the
+only thing the chart says about where it lives is the subdomain
+Keycloak occupies.
+
+Where the domain does belong is
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md)'s answer
+already: the apex address, its record and the certificate are the
+instance's composed resources, so the domain is a field on the
+instance's manifest, arriving when there is something to compose from
+it. Declaring it before then buys nothing and costs a copy, because an
+Argo values file cannot read an XR's status — which is the real seam.
+Applications live in `installations` beside the manifest rather than
+being composed by the instance, and
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) left that
+choice open; taking the Argo path is what makes a hostname something
+written once in the manifest and again in each values file that needs
+it. Composing the Applications from the instance is what would collapse
+them, and that is the trade to weigh when the zone question is
+answered, not a defect in either.
 
 Read "How the machinery fits together" below before touching the
 composition. It is the hour that does not need spending twice.
@@ -1574,6 +1678,22 @@ the organisation's key policy has no opinion about, whose blast radius
 is one proxy inside one cluster, and which can be rotated without
 asking anyone.
 
+**The proxy is `s3proxy`, on its `google-cloud-storage-sdk` backend.**
+Its older jclouds backend takes a service account's RSA private key,
+which would swap one banned key for another and gain nothing. The SDK
+backend uses Google's own client and does reach Application Default
+Credentials, so Workload Identity carries it — but it is reached by
+supplying a credential the SDK cannot parse, whose `IOException` lands
+on `getApplicationDefault()`. An empty credential means `NoCredentials`,
+which is for an emulator.
+
+That fallback is deliberate rather than accidental: the call is there on
+purpose. What is not transparent is the condition guarding it, which is
+a parse failure rather than an option saying so. So the value goes in
+with the image tag pinned, and an upstream change making it an explicit
+option is worth proposing — after backups are tested, since testing them
+is what would find anything else wrong with this.
+
 **It also retires a compromise the chart currently documents.** FDB's
 blobstore client has no usable trust store — it statically links
 OpenSSL with an `OPENSSLDIR` absent from the image, so every public
@@ -1706,17 +1826,24 @@ the bank is deployed onto it, blocked only on Keycloak — see
 reason. `state` governs the node pool and, since CloudSQL arrived, that
 database's `activationPolicy` too.
 
-**What to do next, in order.** Keycloak first, because nothing else
-starts without it: `keycloak-operator` and `queenswood-keycloak` as two
-more Applications in `installations/qw01/`, sequenced with
-`argocd.argoproj.io/sync-wave` so the operator's CRDs exist before a
-`Keycloak` resource names them. `queenswood-keycloak` is where the
-passwordless database is exercised for the first time — the retired
-chart passed a username and password, which is exactly what IAM
-authentication replaces — and it is what finally makes the Kubernetes
-service account name a fact, so the Workload Identity binding
-deliberately left out of the instance composition can be written
-against something real rather than guessed.
+**What to do next, in order.** Bring the environment up and watch
+Keycloak, which is declared but has never run. Three things are worth
+watching in order, because each is the first of its kind: the proxy
+reaching Cloud SQL as an IAM principal, which is where a Workload
+Identity binding spelling the wrong pair would surface — and where
+`--private-ip` earns its place, since the proxy looks for a public
+address by default and this instance has none, so the connection it
+would otherwise fail to make is one nothing else in the design can
+make either; the realm
+import, which creates a realm once and never overwrites it, so the
+console redirect URI it bakes in is `console.test.queenswood.io` for
+good unless the Admin API changes it; and the bootstrap Job, which is
+what everything else has been waiting on.
+
+The issuer is the in-cluster Service rather than a public hostname,
+because nothing outside the cluster can reach this instance yet. That
+is a value to revisit when the gateway arrives, not a permanent one —
+tokens minted before it changes stop verifying after.
 
 After that: the apex address, DNS record and certificate, which need
 the zone question answered first. Whether an instance composes
@@ -1727,7 +1854,10 @@ open, and the Argo path has now answered it in practice.
 **What is not yet true, and should not be assumed.** There is no
 external-secrets operator on an instance cluster, so a workload needing
 a real credential has nowhere to read one — which the FDB backup
-encryption key will need. `image.tag` is `latest`, which is the wrong
+encryption key will need. FDB backup stays off until the proxy above is
+built and a restore proven through it: an instance with no data loses
+nothing by waiting, and the HMAC path it would otherwise run on is the
+one being retired. `image.tag` is `latest`, which is the wrong
 tag for an environment: a mutable tag means two nodes can run different
 code and a rollback has nothing to return to, and the build publishes
 no versioned tag to use instead. The gateway is disabled, so nothing is
@@ -1849,7 +1979,10 @@ stays a console step for the same reason, and only its capture changes.
   front of the instances.
 - Whether an S3-to-GCS proxy restores as well as it backs up. The
   design turns on it, and the answer comes from a real restore rather
-  than from the proxy's documentation.
+  than from the proxy's documentation. Its authentication is settled —
+  Application Default Credentials, reached the undocumented way
+  described above — and pinning the image is what keeps it settled until
+  an upstream option replaces the parse failure it depends on.
 
 ## References
 

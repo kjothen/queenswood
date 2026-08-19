@@ -284,10 +284,10 @@ keycloak-admin-login:
     set -euo pipefail
     KCTX=$(just _gke-ctx)
     # The operator mints this from the Keycloak CR's name
-    # (queenswood-keycloak-keycloak), with basic-auth key names -- not a
-    # chart-rendered `queenswood-keycloak` Secret with admin-user /
-    # admin-password, which has never existed.
-    SECRET=queenswood-keycloak-keycloak-initial-admin
+    # (<release>-keycloak), with basic-auth key names -- not a
+    # chart-rendered Secret with admin-user / admin-password, which has
+    # never existed.
+    SECRET=queenswood-keycloak-initial-admin
     user=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret $SECRET \
       -o jsonpath='{.data.username}' 2>/dev/null | base64 -d)
     pass=$(kubectl --context $KCTX -n {{ QUEENSWOOD_ENV }} get secret $SECRET \

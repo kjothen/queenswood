@@ -1,3 +1,4 @@
+{{- if eq (include "queenswood.keycloakMode" .) "operator" }}
 {{- /*
   Realm import, from a backup when one is named and from the chart's
   committed definitions otherwise. One mechanism, not two.
@@ -43,17 +44,18 @@
     this Job against an already-restored realm is quiet rather than
     fatal
 */ -}}
-{{- $realmFiles := dict "queenswood-realm.json" (.Files.Get "files/queenswood-realm.json") "queenswood-ops-realm.json" (.Files.Get "files/queenswood-ops-realm.json") -}}
-{{- $realms := list (.Files.Get "files/queenswood-realm.json" | fromJson).realm (.Files.Get "files/queenswood-ops-realm.json" | fromJson).realm -}}
-{{- $restore := .Values.restore.realms | default "" -}}
+{{- $realm := .Files.Get "files/keycloak-realm.json" -}}
+{{- $opsRealm := .Files.Get "files/keycloak-realm-ops.json" -}}
+{{- /* Keyed by realm name, because the Job reads /chart/<realm>-realm.json */ -}}
+{{- $realmFiles := dict (printf "%s-realm.json" ($realm | fromJson).realm) $realm (printf "%s-realm.json" ($opsRealm | fromJson).realm) $opsRealm -}}
+{{- $realms := list ($realm | fromJson).realm ($opsRealm | fromJson).realm -}}
+{{- $restore := .Values.keycloak.realmImport.realms | default "" -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: {{ .Release.Name }}-realm-source
   labels:
-    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+    {{- include "queenswood.labels" . | nindent 4 }}
 data:
   {{- range $name, $content := $realmFiles }}
   {{ $name }}: |
@@ -65,11 +67,10 @@ kind: ServiceAccount
 metadata:
   name: {{ .Release.Name }}-realm-import
   labels:
-    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+    {{- include "queenswood.labels" . | nindent 4 }}
   annotations:
-    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
     {{- if $restore }}
-    iam.gke.io/gcp-service-account: {{ required "restore.gcpServiceAccount must be set when restore.realms is (just gcp-keycloak-restore-sa-create makes it)" .Values.restore.gcpServiceAccount | quote }}
+    iam.gke.io/gcp-service-account: {{ required "restore.gcpServiceAccount must be set when restore.realms is (just gcp-keycloak-restore-sa-create makes it)" .Values.keycloak.realmImport.gcpServiceAccount | quote }}
     {{- end }}
 ---
 apiVersion: batch/v1
@@ -80,15 +81,13 @@ metadata:
   # same chart and the same backup resolves to the same completed Job.
   name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") | sha256sum | trunc 8 }}
   labels:
-    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
+    {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: keycloak-realm-import
-  annotations:
-    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
 spec:
   backoffLimit: 3
   template:
     metadata:
-      # Deliberately not `queenswood-keycloak.labels`, which carries
+      # Deliberately not `queenswood.labels`, which carries
       # `helm.sh/chart`: the component label is what the queenswood
       # chart's bootstrap Job selects on, and it must not move with a
       # chart version.
@@ -112,7 +111,7 @@ spec:
         # there is deliberately no path from "the backup could not be
         # read" to "import the committed JSON instead".
         - name: fetch-backup
-          image: {{ .Values.restore.gcloudImage | quote }}
+          image: {{ .Values.keycloak.realmImport.gcloudImage | quote }}
           command:
             - sh
             - -c
@@ -140,9 +139,9 @@ spec:
             - name: RESTORE
               value: {{ $restore | quote }}
             - name: PROJECT
-              value: {{ required "restore.project must be set when restore.realms is" .Values.restore.project | quote }}
+              value: {{ required "restore.project must be set when restore.realms is" .Values.keycloak.realmImport.project | quote }}
             - name: BUCKET
-              value: {{ required "restore.bucket must be set when restore.realms is" .Values.restore.bucket | quote }}
+              value: {{ required "restore.bucket must be set when restore.realms is" .Values.keycloak.realmImport.bucket | quote }}
             - name: REALMS
               value: {{ join " " $realms | quote }}
           volumeMounts:
@@ -151,7 +150,7 @@ spec:
       {{- end }}
       containers:
         - name: import
-          image: {{ .Values.restore.toolsImage | quote }}
+          image: {{ .Values.keycloak.realmImport.toolsImage | quote }}
           command:
             - sh
             - -c
@@ -239,16 +238,27 @@ spec:
                 # The console's deployed origin is added here rather
                 # than carried in the realm definition. Keycloak honours
                 # `*` only as a trailing wildcard on the path, so the
-                # host must be literal -- and a literal host in a shared
+                # host must be literal, and a literal host in a shared
                 # file would pin both the environment and the registrar
                 # domain. Applied to whichever source, so a backup taken
                 # against one domain restores into another.
-                jq --arg uri "https://console.$DOMAIN/*" '
-                  .clients = ((.clients // []) | map(
-                    if .clientId == "queenswood-console"
-                    then .redirectUris = (((.redirectUris // []) + [$uri]) | unique)
-                    else . end))
-                ' "$src" > /tmp/$realm.json
+                #
+                # Supplied whole rather than composed from a domain: the
+                # console is another chart's, its hostname is that
+                # chart's to state, and a realm is imported once and
+                # never overwritten -- so a guessed host here is
+                # permanent. Empty adds nothing, which is what a console
+                # with no public origin yet wants.
+                if [ -n "$CONSOLE_REDIRECT_URI" ]; then
+                  jq --arg uri "$CONSOLE_REDIRECT_URI" '
+                    .clients = ((.clients // []) | map(
+                      if .clientId == "queenswood-console"
+                      then .redirectUris = (((.redirectUris // []) + [$uri]) | unique)
+                      else . end))
+                  ' "$src" > /tmp/$realm.json
+                else
+                  cat "$src" > /tmp/$realm.json
+                fi
 
                 # Performed by the running server, so the realm it
                 # creates is the realm it serves -- no second process,
@@ -342,8 +352,8 @@ spec:
               value: {{ .Release.Name | quote }}
             - name: REALMS
               value: {{ join " " $realms | quote }}
-            - name: DOMAIN
-              value: {{ .Values.env.domain | quote }}
+            - name: CONSOLE_REDIRECT_URI
+              value: {{ .Values.keycloak.consoleRedirectUri | quote }}
             - name: KC
               value: "http://{{ .Release.Name }}-keycloak-service:8080"
             - name: ADMIN_USER
@@ -361,7 +371,7 @@ spec:
               mountPath: /chart
             - name: source
               mountPath: /source
-          {{- with .Values.restore.resources }}
+          {{- with .Values.keycloak.realmImport.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
@@ -371,3 +381,4 @@ spec:
             name: {{ .Release.Name }}-realm-source
         - name: source
           emptyDir: {}
+{{- end }}

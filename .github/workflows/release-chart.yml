@@ -1,15 +1,14 @@
 name: Release Chart
 
-# Packages all three deployable Helm charts and publishes them:
-#   - `queenswood`         (app: bank-* services + frontend)
-#   - `queenswood-keycloak` (per-env Keycloak CR + plumbing)
-#   - `keycloak-operator`  (vendored upstream operator + CRDs)
+# Packages the deployable Helm chart and publishes it:
+#   - `queenswood` (app: bank-* services + frontend, Keycloak, and the
+#     FDB and Keycloak operators as vendored subcharts)
 #
-# Each pushes as an OCI artifact `oci://ghcr.io/<owner>/<name>:<version>`.
-# Only `queenswood` also lands on the `latest` GitHub release page (with
-# the quickstart README) — the other two are infra-side and consumed by
-# Crossplane provider-helm `Release` resources templated from
-# queenswood-platform.
+# It pushes as an OCI artifact `oci://ghcr.io/<owner>/<name>:<version>`
+# and lands on the `latest` GitHub release page with the quickstart
+# README. The operator subcharts are no longer published separately:
+# their only consumer was a Crossplane provider-helm `Release`
+# templated from queenswood-platform, which is retired.
 #
 # Manual-only: chart-template patches don't require an image rebuild,
 # so this is decoupled from `release-images.yml`. Run from the
@@ -55,7 +54,7 @@ jobs:
       - name: Resolve subchart deps and package all three charts
         run: |
           mkdir -p release
-          for chart in queenswood queenswood-keycloak keycloak-operator; do
+          for chart in queenswood; do
             if [ -f "infra/helm/$chart/Chart.yaml" ]; then
               # Only `queenswood` has subchart deps today, but
               # `helm dependency update` is a no-op when there are

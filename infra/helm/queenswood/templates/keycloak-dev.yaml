@@ -1,11 +1,11 @@
-{{- if .Values.keycloak.dev.enabled }}
+{{- if eq (include "queenswood.keycloakMode" .) "dev" }}
 {{- /*
   Dev-only Keycloak. Single replica, `start-dev` (embedded H2 DB),
   with the realm JSON from files/keycloak-realm.json imported at
   startup. The Service name matches the default
   `keycloak.baseUrl` so bank-api's existing config resolves
-  without override. Production uses the queenswood-keycloak chart
-  (Crossplane-Released) instead -- guarded by `keycloak.dev.enabled`.
+  without override. `keycloak.mode: operator` runs the
+  operator-managed instance instead, on the same Service name.
 */ -}}
 apiVersion: v1
 kind: ConfigMap
@@ -41,10 +41,9 @@ data:
 apiVersion: v1
 kind: Service
 metadata:
-  # Matches `keycloak.baseUrl` default so bank-api's KEYCLOAK_BASE_URL
-  # resolves without override. On GKE the queenswood-keycloak chart's
-  # operator publishes a Service with this same name.
-  name: queenswood-keycloak-keycloak-service
+  # The same name the operator publishes for its own instance, so
+  # nothing reaching Keycloak has to know which mode is running.
+  name: {{ include "queenswood.keycloakServiceName" . }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
@@ -82,7 +81,7 @@ spec:
     spec:
       containers:
         - name: keycloak
-          image: {{ .Values.keycloak.dev.image | quote }}
+          image: {{ .Values.keycloak.image | quote }}
           imagePullPolicy: IfNotPresent
           args: ["start-dev", "--import-realm"]
           env:
@@ -104,7 +103,7 @@ spec:
             # than its own in-cluster Service name. HOSTNAME_STRICT
             # =false relaxes Keycloak's default requirement that
             # requests match a configured hostname -- safe for the
-            # dev bundle, off in production (queenswood-keycloak
+            # dev bundle, off in operator mode (the
             # sets a fixed hostname there).
             - name: KC_PROXY_HEADERS
               value: "xforwarded"

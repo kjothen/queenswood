@@ -1,3 +1,4 @@
+{{- if eq (include "queenswood.keycloakMode" .) "operator" }}
 # `Keycloak` CR consumed by the operator (installed cluster-wide by
 # the keycloak-operator chart — see queenswood-platform's
 # `templates/keycloak-operator-release.yaml`). The operator
@@ -9,9 +10,7 @@ kind: Keycloak
 metadata:
   name: {{ .Release.Name }}-keycloak
   labels:
-    {{- include "queenswood-keycloak.labels" . | nindent 4 }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "{{ .Values.argocd.syncWave }}"
+    {{- include "queenswood.labels" . | nindent 4 }}
 spec:
   instances: {{ .Values.keycloak.instances }}
   image: {{ .Values.keycloak.image | quote }}
@@ -26,21 +25,23 @@ spec:
   startOptimized: false
   db:
     vendor: postgres
-    host: {{ include "queenswood-keycloak.dbHost" . | quote }}
-    port: {{ include "queenswood-keycloak.dbPort" . }}
-    database: {{ include "queenswood-keycloak.dbName" . | quote }}
+    host: {{ include "queenswood.postgresHost" . | quote }}
+    port: {{ .Values.postgres.port }}
+    database: {{ .Values.keycloak.database.name | quote }}
     usernameSecret:
-      name: {{ include "queenswood-keycloak.dbSecret" . | quote }}
+      name: {{ .Values.keycloak.database.secretName | quote }}
       key: username
+    {{- if eq (include "queenswood.postgresProvider" .) "local" }}
     passwordSecret:
-      name: {{ include "queenswood-keycloak.dbSecret" . | quote }}
+      name: {{ .Values.keycloak.database.secretName | quote }}
       key: password
+    {{- end }}
   hostname:
     # Full URL so Keycloak embeds the same iss in every token
-    # regardless of how it was reached -- see _helpers.tpl. strict:
-    # false keeps the operator from rejecting in-cluster Host
-    # headers that don't match.
-    hostname: {{ include "queenswood-keycloak.hostUrl" . | quote }}
+    # regardless of how it was reached -- see _helpers.tpl for which
+    # URL that is. strict: false keeps the operator from rejecting
+    # in-cluster Host headers that don't match.
+    hostname: {{ include "queenswood.keycloakIssuer" . | quote }}
     strict: false
   http:
     # The gateway terminates TLS; the Keycloak pod itself serves
@@ -48,7 +49,7 @@ spec:
     httpEnabled: true
   proxy:
     headers: xforwarded
-  {{- if .Values.vault.enabled }}
+  {{- if .Values.keycloak.vault.enabled }}
   # `unsupported` is the operator's own name for the escape hatch, not
   # a warning about this usage -- it's the only way to add a volume to
   # the pod it manages.
@@ -58,16 +59,16 @@ spec:
         volumes:
           - name: keycloak-vault
             secret:
-              secretName: {{ .Values.vault.secretName | quote }}
+              secretName: {{ .Values.keycloak.vault.secretName | quote }}
               optional: true
         containers:
           - volumeMounts:
               - name: keycloak-vault
-                mountPath: {{ .Values.vault.dir | quote }}
+                mountPath: {{ .Values.keycloak.vault.dir | quote }}
                 readOnly: true
   {{- end }}
   additionalOptions:
-    {{- if .Values.vault.enabled }}
+    {{- if .Values.keycloak.vault.enabled }}
     # `file`, not `files-plaintext`. The provider is named
     # files-plaintext internally and in the SPI options, but the CLI
     # option takes file or keystore -- anything else fails the server at
@@ -75,14 +76,16 @@ spec:
     - name: vault
       value: file
     - name: vault-dir
-      value: {{ .Values.vault.dir | quote }}
+      value: {{ .Values.keycloak.vault.dir | quote }}
     {{- end }}
-    {{- if eq .Values.postgresql.mode "external" }}
-    # cloud-sql-proxy fronts CloudSQL with a plain-TCP listener on
-    # localhost; auth/encryption terminates at the proxy via
-    # Workload Identity. The Postgres JDBC driver defaults to
-    # sslmode=prefer and crashes on the proxy's SSL handshake
-    # close, so force-disable client-side SSL.
+    {{- if and (ne (include "queenswood.postgresProvider" .) "off") (eq (include "queenswood.postgresProvider" .) "cloudsql") }}
+    # cloud-sql-proxy fronts CloudSQL with a plain-TCP listener;
+    # auth and encryption terminate at the proxy via Workload
+    # Identity. The Postgres JDBC driver defaults to sslmode=prefer
+    # and crashes on the proxy's SSL handshake close, so force-disable
+    # client-side SSL. A provider that has the client reach the
+    # database directly wants the opposite of this.
     - name: db-url-properties
       value: "?sslmode=disable"
     {{- end }}
+{{- end }}

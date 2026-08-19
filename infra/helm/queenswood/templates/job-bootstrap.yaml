@@ -40,7 +40,7 @@ initContainers:
     volumeMounts:
       - name: fdb-cluster-file
         mountPath: /etc/fdb
-  {{- if .Values.keycloak.waitForRealmImport }}
+  {{- if eq (include "queenswood.keycloakMode" .) "operator" }}
   # Block until the realm exists, because the next initContainer
   # registers this release's signing key on it. Import after that
   # and the realm reverts to the key its definition was captured
@@ -53,7 +53,7 @@ initContainers:
   # declarative CR that a restore had to be sequenced against.
   #
   # Selected by label rather than by name. The Job is rendered by
-  # the queenswood-keycloak chart, and its name is content-
+  # job-realm-import.yaml, and its name is content-
   # addressed there -- a name this chart could only re-derive by
   # holding a copy of everything that goes into the hash.
   - name: wait-for-realm-import
@@ -101,23 +101,23 @@ initContainers:
     image: alpine/k8s:1.30.14
     env:
       - name: KC_BASE_URL
-        value: {{ .Values.keycloak.baseUrl | quote }}
+        value: {{ include "queenswood.keycloakBaseUrl" . | quote }}
       - name: KC_CLIENT_ID
         value: {{ .Values.keycloak.adminClientId | quote }}
       - name: KC_REALMS
         value: {{ printf "%s %s" .Values.keycloak.realm .Values.keycloak.opsRealm | quote }}
       - name: KC_CERT_FILE
         value: /etc/queenswood/keycloak/admin-client.crt
-      {{- if .Values.keycloak.adminSecret.name }}
+      {{- if include "queenswood.keycloakAdminSecret" . }}
       - name: KC_ADMIN_USER
         valueFrom:
           secretKeyRef:
-            name: {{ .Values.keycloak.adminSecret.name | quote }}
+            name: {{ include "queenswood.keycloakAdminSecret" . | quote }}
             key: {{ .Values.keycloak.adminSecret.usernameKey | quote }}
       - name: KC_ADMIN_PASSWORD
         valueFrom:
           secretKeyRef:
-            name: {{ .Values.keycloak.adminSecret.name | quote }}
+            name: {{ include "queenswood.keycloakAdminSecret" . | quote }}
             key: {{ .Values.keycloak.adminSecret.passwordKey | quote }}
       {{- else }}
       - name: KC_ADMIN_USER
@@ -205,7 +205,7 @@ containers:
       - name: OTEL_ENDPOINT
         value: {{ include "queenswood.otelEndpoint" . | quote }}
       - name: KEYCLOAK_BASE_URL
-        value: {{ .Values.keycloak.baseUrl | quote }}
+        value: {{ include "queenswood.keycloakBaseUrl" . | quote }}
       - name: KEYCLOAK_REALM
         value: {{ .Values.keycloak.realm | quote }}
       - name: KEYCLOAK_ADMIN_CLIENT_ID

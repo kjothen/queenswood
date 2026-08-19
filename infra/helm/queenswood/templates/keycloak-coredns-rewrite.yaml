@@ -1,0 +1,16 @@
+{{- if and (eq (include "queenswood.keycloakMode" .) "operator") .Values.keycloak.coredns.rewrite.enabled }}
+# CoreDNS rewrite: in-cluster pods resolve `keycloak.<env-domain>` to
+# the internal Service so the JWT `iss` claim that Keycloak issues
+# (which embeds the external hostname) round-trips correctly when
+# the bank-api validates a token without ever leaving the cluster.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.keycloak.coredns.rewrite.configMapName }}
+  namespace: {{ .Values.keycloak.coredns.rewrite.namespace }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+data:
+  queenswood-keycloak-issuer.override: |
+    rewrite name exact {{ include "queenswood.keycloakHost" . }} {{ .Release.Name }}-keycloak-service.{{ .Release.Namespace }}.svc.cluster.local
+{{- end }}

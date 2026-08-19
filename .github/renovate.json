@@ -90,7 +90,7 @@
       ]
     },
     {
-      "description": "The Keycloak Operator is expected to run the same version as the Keycloak it manages, and the two are pinned in different files -- the instance in queenswood-keycloak's values.yaml, the operator in the keycloak-operator chart's vendored templates/operator.yaml. Group them so they move in one PR. That PR only rewrites the operator's image tag: the chart is a vendored copy of upstream's kubernetes.yml, so its ClusterRoles and the CRDs under crds/ must be re-vendored from the matching release tag in the same change, and both Chart.yaml appVersions updated.",
+      "description": "The Keycloak Operator is expected to run the same version as the Keycloak it manages. The instance's image is pinned in the queenswood chart's values.yaml and the operator's in its vendored subchart at charts/keycloak-operator/templates/operator.yaml, so they still move together. That PR only rewrites the operator's image tag: the subchart is a vendored copy of upstream's kustomize output, so its ClusterRoles and the CRDs under crds/ must be re-vendored from the matching release tag in the same change, and both Chart.yaml appVersions updated.",
       "groupName": "keycloak",
       "matchPackageNames": [
         "/^quay\\.io/keycloak//"

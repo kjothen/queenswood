@@ -150,7 +150,7 @@ spec:
             - name: OTEL_ENDPOINT
               value: {{ include "queenswood.otelEndpoint" $ | quote }}
             - name: KEYCLOAK_BASE_URL
-              value: {{ $.Values.keycloak.baseUrl | quote }}
+              value: {{ include "queenswood.keycloakBaseUrl" $ | quote }}
             - name: KEYCLOAK_REALM
               value: {{ $.Values.keycloak.realm | quote }}
             - name: KEYCLOAK_ADMIN_CLIENT_ID
@@ -163,7 +163,7 @@ spec:
             - name: KEYCLOAK_ADMIN_CLIENT_PRIVATE_KEY_FILE
               value: /etc/queenswood/keycloak/admin-client.pem
             {{- end }}
-            {{- with $.Values.keycloak.expectedIssuer }}
+            {{- with include "queenswood.keycloakExpectedIssuer" $ }}
             - name: KEYCLOAK_EXPECTED_ISSUER
               value: {{ . | quote }}
             {{- end }}
@@ -173,7 +173,7 @@ spec:
             # both the org-user realm and the ops realm.
             - name: KEYCLOAK_OPS_REALM
               value: {{ $.Values.keycloak.opsRealm | quote }}
-            {{- with $.Values.keycloak.opsExpectedIssuer }}
+            {{- with include "queenswood.keycloakOpsExpectedIssuer" $ }}
             - name: KEYCLOAK_OPS_EXPECTED_ISSUER
               value: {{ . | quote }}
             {{- end }}
