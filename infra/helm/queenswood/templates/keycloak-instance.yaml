@@ -23,21 +23,6 @@ spec:
   # makes the operator run the build step inside the pod before
   # starting.
   startOptimized: false
-  {{- with .Values.keycloak.features.enabled }}
-  # The operator manages a client through a KeycloakOIDCClient only
-  # where the server offers the API behind it. Without this it declines
-  # rather than damages anything -- "Cannot create/update because the
-  # server does not have client-admin-api:v2 enabled" on the resource,
-  # and the client left exactly as the realm import made it.
-  #
-  # Versioned, and Keycloak deprecates these across releases: its own
-  # startup warns that identity-brokering-api:v1 and twitter-broker:v1
-  # are deprecated while still on by default. Expect this list to need
-  # revisiting at a Keycloak upgrade rather than to hold indefinitely.
-  features:
-    enabled:
-      {{- toYaml . | nindent 6 }}
-  {{- end }}
   db:
     vendor: postgres
     host: {{ include "queenswood.postgresHost" . | quote }}

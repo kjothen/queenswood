@@ -237,8 +237,8 @@ https://{{ include "queenswood.keycloakHost" . }}
 {{- end -}}
 
 {{- /*
-The console's deployed origin, as the redirect the console client will
-accept. Derived from the hostname the gateway already publishes the SPA
+The console's deployed origin, merged into the console client by the
+realm import. Derived from the hostname the gateway already publishes the SPA
 on, because the two cannot disagree: Keycloak validates the redirect_uri
 against this list strictly, and a mismatch fails as a login refused with
 `Invalid parameter: redirect_uri` rather than as anything naming a

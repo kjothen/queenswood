@@ -42,14 +42,6 @@ keycloak:
   # Operator-realm client id retained for the second identity-provider.
   opsClientId: queenswood-app
 
-  # Server features to switch on. client-admin-api:v2 is what backs the
-  # KeycloakOIDCClient resource, without which the operator declines to
-  # manage a client at all. Changing this list rebuilds and restarts
-  # Keycloak.
-  features:
-    enabled:
-      - client-admin-api:v2
-
   # All four derived from the mode and the hostname when left empty,
   # which is how the issuer stays a single string. Set one only to
   # point at a Keycloak this chart does not run.
@@ -75,10 +67,6 @@ keycloak:
   # nothing -- a realm is imported once and never overwritten, so a
   # guessed origin is permanent.
   consoleRedirectUri: ""
-  # Origins the chart does not publish and so cannot derive -- a vanity
-  # domain, a preview deployment, a dev origin kept alongside. Added to
-  # the derived one rather than replacing it.
-  extraConsoleRedirectUris: []
 
   # A HealthCheckPolicy overriding the default `/`-on-the-serving-port
   # probe, which Keycloak answers 302 to. The kind is GKE's, so this is
