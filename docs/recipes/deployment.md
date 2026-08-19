@@ -133,17 +133,27 @@ A `userId` in that line means the user exists and the password does
 not match, which is the whole diagnosis.
 
 This is a rename or a rebuild, not an upgrade — a `helm upgrade` leaves
-the resource in place. Where the database is disposable, resetting it is
-the cheapest fix and leaves the realm rebuilt from the committed JSON.
-The database resource withholds `Delete` deliberately and no identity
-holds `cloudsql.databases.delete`, so the reset goes through Postgres
-rather than the Cloud SQL API: the workload's own IAM user holds
-`cloudsqlsuperuser`, and the proxy runs with `--auto-iam-authn`, so any
-pod in the namespace reaches it as that user. Stop Keycloak first —
-`instances: 0` on the resource — or the schema is in use.
+the resource in place.
 
-Where it is not disposable, the credential has to be reset in place
-instead, and the realm kept.
+**Whether the schema may be reset turns on FoundationDB, not on
+Keycloak.** Resetting it rebuilds the realm from the committed JSON,
+which mints fresh user ids; FDB references the Keycloak subject, so
+records written against the old ids are orphaned and the bank duplicates
+itself on the next login. That is safe only where FDB is being rebuilt
+in the same act, and silently wrong otherwise — see
+[recovery-procedures](recovery-procedures.md), where the same hazard is
+what makes the realm import choose its source before it creates
+anything. Where FDB survives, the realm has to survive with it: restore
+from the export rather than resetting, and reset the credential in
+place.
+
+Where both are going, the reset goes through Postgres rather than the
+Cloud SQL API. The database resource withholds `Delete` deliberately and
+no identity holds `cloudsql.databases.delete`, but the workload's own
+IAM user holds `cloudsqlsuperuser` and the proxy runs with
+`--auto-iam-authn`, so any pod in the namespace reaches the database as
+that user. Stop Keycloak first — `instances: 0` on the resource — or the
+schema is in use.
 
 ### Building images
 
@@ -221,6 +231,9 @@ kind node's containerd, then `helm-install`s the chart.
   operator owns the admin Secret and regenerates the password; the
   database keeps the old admin user, and nothing can administer the
   realm it is still serving.
+- Reset Keycloak's schema while FoundationDB survives. The realm
+  rebuilds from the committed JSON with fresh user ids, and the records
+  referencing the old ones are orphaned silently.
 - Bake environment names (`prod`, `dev`) into resource
   names. Discriminate environments via `values.yaml`
   overrides and env vars; resource names should be
