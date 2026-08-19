@@ -39,7 +39,49 @@ client with a chosen redirect URI, so there is no identity to give the
 job to — which is what makes this a standing right for a person rather
 than something to grant an automation and take away.
 
-### 1. Create the OAuth client
+### 1. Configure the consent screen
+
+The client cannot be created until the project has one, and it asks for
+two email addresses that are not the same kind of thing. The **user
+support** address is shown to users as the contact for questions about
+their consent, so it should be a group rather than a person, and Google
+accepts only an address you own. The **contact** addresses are Google
+notifying you — deprecations, policy changes, verification status — and
+take any address. Neither wants a personal account: these are how an
+installation finds out an API it depends on is going away, and an
+account that leaves takes them with it.
+
+Name the app for what a user is consenting to, and distinguish the
+environment. Each instance is its own project with its own consent
+screen, so without it there are eventually two apps called the same
+thing and nothing on the screen to tell them apart.
+
+**Internal or external is the consequential choice.** Internal admits
+only accounts in the organisation, which makes an environment a
+different sign-in path from the one being shipped. External admits any
+Google account, which is what a product whose users bring their own
+identity needs.
+
+Verification is the usual reason people reach for internal, and for
+these scopes it does not apply: Keycloak's Google provider requests
+`openid profile email` unless the realm sets `defaultScope`, and
+verification is required for sensitive and restricted scopes. An
+external app requesting only these can be published without joining the
+queue.
+
+What external does cost is testing mode, which it starts in:
+
+- Only accounts on the test-user list may sign in, up to a hundred.
+- **Refresh tokens expire after seven days.** A session that should
+  persist drops back to sign-in about weekly, which reads as a bug in
+  the application rather than as a property of the consent screen, and
+  is the single most confusing consequence of leaving an environment in
+  testing mode.
+
+Publishing to production ends both. Do it once the test-user list stops
+being the point.
+
+### 2. Create the OAuth client
 
 There is no API for this. `gcloud iap oauth-clients` creates an
 IAP-scoped client, sets its own redirect URI, and stopped functioning
@@ -59,12 +101,7 @@ refused at setup: Google accepts the client happily and returns
 `redirect_uri_mismatch` at the moment a user has left your site for
 theirs, which is the worst place to discover a typo.
 
-An external consent screen puts the client in Google's verification
-queue; an internal one is limited to the organisation. Which is right
-depends on who signs in, and it is worth settling before the client is
-created rather than after.
-
-### 2. One client per environment
+### 3. One client per environment
 
 Not one shared across them. Revoking or rotating the client a
 development environment uses must not touch the one real customers
@@ -75,7 +112,7 @@ behaviour, different token lifetimes, a different audience.
 The cost of one each is a console visit. The cost of sharing is
 discovering the difference during an incident.
 
-### 3. Put the pair where the realm can reach it
+### 4. Put the pair where the realm can reach it
 
 The realm was imported with a placeholder and cannot be re-imported —
 the operator creates realms and never overwrites them, so a chart
@@ -95,7 +132,7 @@ from the mounted file at token exchange.
 Keycloak reads that mount at startup, so a secret placed after the pod
 started is not seen until it restarts.
 
-### 4. Check
+### 5. Check
 
 Sign in. A failure is legible if you know which half produced it:
 
@@ -116,6 +153,8 @@ Sign in. A failure is legible if you know which half produced it:
 
 **MUST:**
 
+- Configure the consent screen before the client. The client cannot be
+  created without one.
 - Create the OAuth client as a Web application, by hand, in the
   console. No API creates one with a chosen redirect URI.
 - Match the redirect URI to
@@ -138,8 +177,16 @@ Sign in. A failure is legible if you know which half produced it:
 
 **SHOULD:**
 
-- Settle internal against external consent before creating the client,
-  since external means a verification queue.
+- Choose external where users bring their own identity, and read the
+  verification warning against the scopes actually requested rather
+  than as written: `openid profile email` needs none.
+- Publish out of testing mode once the test-user list stops being the
+  point, or refresh tokens keep expiring after seven days and it reads
+  as an application fault.
+- Name the app for the environment as well as the product. Each
+  instance has its own consent screen.
+- Use a group for the user support address, and never a personal
+  account for either address.
 
 ## References
 
