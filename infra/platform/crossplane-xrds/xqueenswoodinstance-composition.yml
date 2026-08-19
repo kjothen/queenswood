@@ -1454,10 +1454,19 @@ spec:
                   # grants deleting the instance and every database on it.
                   title: Cloud SQL user administrator
                   description: Grants database roles to this instance's users
+                  # assign-roles writes through the instance, not just
+                  # the user: cloudsql.users.update alone reads as
+                  # authorised and is refused, and every predefined role
+                  # that can do it carries instances.update too. That is
+                  # the cost of narrowing -- it permits changing the
+                  # instance's settings, though not deleting it or any
+                  # database on it, which cloudsql.admin would.
                   permissions:
                     - cloudsql.users.update
+                    - cloudsql.users.get
                     - cloudsql.users.list
                     - cloudsql.instances.get
+                    - cloudsql.instances.update
             patches:
               - type: CombineFromComposite
                 combine:
