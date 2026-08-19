@@ -226,6 +226,12 @@ postgres:
       # `roles/cloudsql.instanceUser` and the
       # `iam.workloadIdentityUser` binding back to that account.
       serviceAccount: ""
+      # The Kubernetes account the proxy runs as. Stated rather than
+      # derived from the release name, because the instance manifest
+      # names the same pair to bind Workload Identity to it and cannot
+      # know what an Argo Application is called. Both sides spell this
+      # constant or neither reports anything wrong.
+      kubernetesServiceAccount: queenswood-cloudsql-proxy
 
 otel:
   endpoint: ""

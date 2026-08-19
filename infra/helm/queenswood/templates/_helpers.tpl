@@ -303,3 +303,16 @@ principals, and no password exists on either side.
 {{- define "queenswood.keycloakOpsExpectedIssuer" -}}
 {{- default (printf "%s/realms/%s" (include "queenswood.keycloakIssuer" .) .Values.keycloak.opsRealm) .Values.keycloak.opsExpectedIssuer -}}
 {{- end -}}
+
+{{- /*
+The Kubernetes service account the Cloud SQL Auth Proxy runs as, and
+the one name in this chart that another repository has to spell. So it
+is a value rather than a derivation: deriving it from the release name
+means the installation manifest must know what the Argo Application is
+called, which is a coupling nothing checks -- both halves of Workload
+Identity report healthy while naming different accounts, and only a 403
+on a real connection says otherwise.
+*/ -}}
+{{- define "queenswood.postgresProxyServiceAccount" -}}
+{{ required "postgres.cloudsql.proxy.kubernetesServiceAccount is required" .Values.postgres.cloudsql.proxy.kubernetesServiceAccount }}
+{{- end -}}
