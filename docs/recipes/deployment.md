@@ -106,6 +106,45 @@ spawns a fresh one. Old Jobs age out via
 `ttlSecondsAfterFinished: 86400` so completed pods stick
 around for log inspection.
 
+### Keycloak's admin credential lives with the CR, its realm does not
+
+The operator generates an admin password when a `Keycloak` resource is
+created and stores it in a Secret the resource owns. The realm and its
+users live in Postgres, which the resource does not own.
+
+So the two have different lifetimes, and deleting the `Keycloak`
+resource separates them: the Secret goes with it, a new password is
+generated on the way back, and the database still holds the admin user
+with the old one. Keycloak comes up serving the realm perfectly well
+and nothing can administer it. The realm import fails with `could not
+obtain a Keycloak admin token`, the bootstrap Job waits on the import,
+and every service waits on the bootstrap — so one stranded credential
+reads as an instance that will not start.
+
+Keycloak's own log is where it is legible, and it names the user rather
+than the password:
+
+```
+type="LOGIN_ERROR" realmName="master" username="temp-admin"
+error="invalid_user_credentials"
+```
+
+A `userId` in that line means the user exists and the password does
+not match, which is the whole diagnosis.
+
+This is a rename or a rebuild, not an upgrade — a `helm upgrade` leaves
+the resource in place. Where the database is disposable, resetting it is
+the cheapest fix and leaves the realm rebuilt from the committed JSON.
+The database resource withholds `Delete` deliberately and no identity
+holds `cloudsql.databases.delete`, so the reset goes through Postgres
+rather than the Cloud SQL API: the workload's own IAM user holds
+`cloudsqlsuperuser`, and the proxy runs with `--auto-iam-authn`, so any
+pod in the namespace reaches it as that user. Stop Keycloak first —
+`instances: 0` on the resource — or the schema is in use.
+
+Where it is not disposable, the credential has to be reset in place
+instead, and the realm kept.
+
 ### Building images
 
 ```bash
@@ -178,6 +217,10 @@ kind node's containerd, then `helm-install`s the chart.
 
 **MUST NOT:**
 
+- Delete a `Keycloak` resource while its database survives. The
+  operator owns the admin Secret and regenerates the password; the
+  database keeps the old admin user, and nothing can administer the
+  realm it is still serving.
 - Bake environment names (`prod`, `dev`) into resource
   names. Discriminate environments via `values.yaml`
   overrides and env vars; resource names should be
