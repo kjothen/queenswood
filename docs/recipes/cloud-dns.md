@@ -3,25 +3,44 @@
 
 ## Problem
 
-The zone and the records in it are composed, but the things around them
-are not. A public zone cannot be created by an identity that has not
-proved it owns the domain, the delegation that sends the internet to
-that zone is edited wherever the domain was bought, and a signed domain
-has to be unsigned before it can move. None of that has an API the
-plane can reach.
+[cloud-account](cloud-account.md) leaves you with an organisation, and
+it got there through the domain: Cloud Identity verifies one before it
+gives you anything. So by the time there is somewhere to build, the
+domain already carries a `google-site-verification` record placed
+through the registrar, and stands as the organisation's primary domain
+in the Admin console.
 
-This is that half: what a person does, in what order, and what each
-step is waiting on. Where the zone lives and what composes the records
-in it belongs to the composition.
+That is all the DNS the account setup needed, and none of what an
+application needs. The domain is an identity artefact — it proved who
+you are — and nothing is served from it. There is no zone the plane can
+write to, no way for its automation to create one, and the registrar is
+still the authority for the name. The verification already present is
+Cloud Identity's rather than Search Console's, which is why it counts
+for nothing here, and why a domain that is demonstrably verified
+appears in Search Console not at all.
+
+This recipe is the crossing: turning the domain that bought the
+organisation into the one the bank is reached at. The zone and the
+records in it are composed, but everything around them is a person's
+work — proving ownership to a service account, unsigning a domain that
+is signed, and moving the delegation at whoever sold you the name. None
+of it has an API the plane can reach.
+
+Where the zone lives and what composes the records in it belongs to the
+composition, not here.
 
 ## Solution
 
 ### Before you start
 
-- The domain, and an account that can edit its DNS and change its
-  nameservers at the registrar.
-- A Google account for the installation — the operator account, not a
-  personal one.
+You have an organisation, a management project, and a plane running in
+it. The domain is registered and verified for Cloud Identity, and
+serves whatever the registrar has always served — a parked page, or
+nothing.
+
+- An account at the registrar that can edit DNS and change nameservers.
+- The operator account for the installation — the one the organisation
+  is administered with, not a personal one.
 - The email address of the identity the composition runs as.
 - The management project, which is where the zone goes.
 
@@ -71,13 +90,10 @@ explicitly so ownership rests on a record you control.
 Three things about verification are easy to get wrong.
 
 **It belongs to an identity, not to a domain.** A token verifies
-whoever placed it, so a `google-site-verification` record already at the
-apex is no evidence your account owns anything. An empty property list
-is no evidence of the reverse either: Search Console lists properties
-somebody added, and the verification Cloud Identity performs at signup
-is administered from the Admin console and creates no property at all.
-A domain can be verified, primary, and absent from Search Console
-entirely. See [cloud-account](cloud-account.md).
+whoever placed it, so the record the account setup left at the apex is
+no evidence your account owns anything — and the empty property list
+is no evidence of the reverse, for the reason above. Neither tells you
+anything. The owner list is the only thing that does.
 
 **Delegated ownership lapses with the token it hangs off.** An owner may
 add owners, so any verified account unblocks the rest — but an
