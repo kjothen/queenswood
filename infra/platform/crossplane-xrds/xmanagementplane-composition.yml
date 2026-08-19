@@ -2165,8 +2165,13 @@ spec:
                    the list: one removed from the middle would otherwise
                    renumber the rest, and Crossplane would delete and
                    recreate live records. */}}
+            {{- /* A name legal in DNS is not necessarily legal as a
+                   Kubernetes name: the service records worth carrying
+                   are underscore-prefixed, and RFC 1123 permits only
+                   lowercase alphanumerics and hyphens, starting and
+                   ending alphanumeric. */}}
             {{- $slug := printf "%s-%s"
-                  (or ($rname | replace "." "-") "apex")
+                  (or (trimAll "-" (regexReplaceAll "[^a-z0-9]+" ($rname | lower) "-")) "apex")
                   ($record.type | lower) }}
             ---
             apiVersion: dns.gcp.m.upbound.io/v1beta1
