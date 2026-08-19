@@ -334,11 +334,13 @@ console:
   # the SPA stays same-origin. Empty means whichever Keycloak this
   # release runs, which is one Service name in either mode.
   keycloakUpstream: ""
-  # Public URL of the realm endpoint the browser calls. Default is
-  # the SPA's own same-origin `/keycloak` path so a bare `helm install`
-  # works after one `kubectl port-forward svc/<release>-console
-  # 8081:8080`; GKE overrides via queenswood-platform.
-  keycloakPublicUrl: "http://localhost:8081/keycloak"
+  # Public URL of the realm endpoint the browser calls. Empty derives it
+  # from the issuer, so publishing Keycloak moves this with everything
+  # else; without a published hostname it falls back to the SPA's own
+  # same-origin `/keycloak` path, so a bare `helm install` still works
+  # after one `kubectl port-forward svc/<release>-console 8081:8080`.
+  # Set it only to point at a Keycloak this chart does not run.
+  keycloakPublicUrl: ""
   # Optional federated IdP alias. When set (e.g. "google"), the SPA
   # skips Keycloak's own login form and redirects straight to that
   # provider. Empty by default so the realm's login screen renders;

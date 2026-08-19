@@ -10,9 +10,14 @@ metadata:
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
+  # The same parent the chart's other routes attach to. Named from the
+  # release rather than from a value, because `gateway.name` and
+  # `gateway.sectionName` do not exist -- they rendered as null, which
+  # the API server rejects, and one invalid object holds up the sync of
+  # every other one beside it.
   parentRefs:
-    - name: {{ .Values.gateway.name }}
-      sectionName: {{ .Values.gateway.sectionName }}
+    - name: {{ .Release.Name }}-gateway
+      sectionName: https
   hostnames:
     - {{ include "queenswood.keycloakHost" . | quote }}
   rules:

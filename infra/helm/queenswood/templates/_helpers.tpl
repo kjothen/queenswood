@@ -237,6 +237,32 @@ https://{{ include "queenswood.keycloakHost" . }}
 {{- end -}}
 
 {{- /*
+Where the browser reaches Keycloak, which has to be the issuer: the SPA
+compares the `iss` of the token it is given against the authority it
+asked, and a mismatch fails as a login that never completes rather than
+as a configuration error.
+
+Derived for the same reason the issuer is. It was a value nobody set,
+and its default -- a localhost port-forward, correct for a bare
+`helm install` and for nothing else -- is what a published console
+served until something overrode it. Publishing Keycloak now moves this
+with everything else.
+
+Without a domain there is no published hostname, and the browser reaches
+the SPA through a port-forward, so the same-origin proxy path is still
+the only thing it can resolve.
+*/ -}}
+{{- define "queenswood.consoleKeycloakUrl" -}}
+{{- if .Values.console.keycloakPublicUrl -}}
+{{ .Values.console.keycloakPublicUrl }}
+{{- else if and (eq (include "queenswood.keycloakMode" .) "operator") .Values.keycloak.host.domain -}}
+{{ include "queenswood.keycloakIssuer" . }}
+{{- else -}}
+http://localhost:8081/keycloak
+{{- end -}}
+{{- end -}}
+
+{{- /*
 The Secret holding admin REST credentials for the bootstrap Job's
 signing-key push. The operator mints one for its own instance; the dev
 instance has none and the dev credentials are used instead.
