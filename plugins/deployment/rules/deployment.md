@@ -182,6 +182,28 @@ assume a role can be granted at the scope its feature acts on.
 `gcloud auth login` does not refresh ADC.
 See [gcp-iam](../../../docs/recipes/gcp-iam.md).
 
+## Google sign-in is two console acts and an Admin API call
+
+Create the OAuth client by hand, as a Web application: no API makes one
+with a chosen redirect URI. Match that URI to
+`https://keycloak.<domain>/realms/<realm>/broker/<alias>/endpoint`
+exactly, alias included — a wrong one is accepted at setup and returns
+`redirect_uri_mismatch` once the user has already left for Google. Create
+one client per environment and never share one, since revoking a
+development client must not touch what customers sign in through, and a
+client in Testing mode is a different risk object from a published one.
+Settle internal against external consent first, because external means a
+verification queue.
+
+The realm keeps the placeholder pair it was imported with, whatever the
+chart later says, so both values go in over the Admin API against the
+running realm. Send the client id, and send a vault expression rather
+than the secret, so the identity provider holds a reference; place the
+secret in the mount and restart Keycloak, which reads it at startup.
+Never read `401 invalid_client` on a rebuilt environment as evidence the
+rebuild failed — it is the likelier cause and the wrong conclusion.
+See [google-sign-in](../../../docs/recipes/google-sign-in.md).
+
 ## A public zone needs proven ownership, and the registrar is touched once
 
 Verify the domain before a public zone is created — Cloud DNS refuses a
