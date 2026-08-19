@@ -43,13 +43,11 @@ spec:
               value: {{ tpl .Values.console.apiUpstream . | quote }}
             - name: KEYCLOAK_UPSTREAM
               value: {{ default (printf "http://%s:8080" (include "queenswood.keycloakServiceName" .)) (tpl .Values.console.keycloakUpstream .) | quote }}
-            # Runtime config the SPA reads via /env.js. The default
-            # `keycloakPublicUrl` points at the SPA's own same-origin
-            # `/keycloak` path so a bare `helm install` works after
-            # one port-forward to the SPA; GKE overrides to the
-            # public Keycloak hostname.
+            # Runtime config the SPA reads via /env.js. Derived from
+            # the issuer where Keycloak is published, and the SPA's own
+            # same-origin `/keycloak` path where it is not.
             - name: KEYCLOAK_URL
-              value: {{ .Values.console.keycloakPublicUrl | quote }}
+              value: {{ include "queenswood.consoleKeycloakUrl" . | quote }}
             - name: KEYCLOAK_REALM
               value: {{ .Values.keycloak.realm | quote }}
             - name: KEYCLOAK_CLIENT_ID
