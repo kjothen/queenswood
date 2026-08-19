@@ -1820,11 +1820,23 @@ declaring the instances inside the plane's own composite puts every
 environment's project, cluster and database in the blast radius of a
 plane rebuild.
 
-**Where it got to.** The instance is complete as infrastructure and
-the bank is deployed onto it, blocked only on Keycloak — see
-[picking this up cold](#picking-this-up-cold) for the state and the
-reason. `state` governs the node pool and, since CloudSQL arrived, that
-database's `activationPolicy` too.
+**Where it got to.** It is up. Every pod runs: FoundationDB fully
+replicated, Kafka, Jaeger, Keycloak, the Cloud SQL Auth Proxy, and the
+five services — bank-api serving, its Kafka producers created, its
+interceptor chain built. The migrator and bootstrap Jobs completed, and
+both realms imported. `state` governs the node pool and, since CloudSQL
+arrived, that database's `activationPolicy` too.
+
+Three things the bring-up settled rather than assumed. **A bank runs
+with no database password anywhere**: the workload authenticates to
+Cloud SQL as an IAM principal with a token from the metadata server,
+and created its own schema over that connection. **`up` and a node pool
+rebuilt underneath it are both survivable** — FoundationDB reattached
+its volumes and returned fully replicated, which is the property that
+lets a node hold nothing. And **two `e2-standard-4` beat three
+`e2-standard-2`**, measured: 56% of allocatable where the smaller shape
+sat at 90% and left FoundationDB a storage pod it could not
+schedule.
 
 **What to do next, in order.** Bring the environment up and watch
 Keycloak, which is declared but has never run. Three things are worth
@@ -1863,8 +1875,10 @@ code and a rollback has nothing to return to, and the build publishes
 no versioned tag to use instead. The gateway is disabled, so nothing is
 reachable from outside the cluster.
 
-**Three traps this cost a day to learn**, all of one family — a
-resource reporting `Ready` while being wrong:
+**The traps, all of one family** — something reports healthy while the
+thing that matters is stuck. The first three cost a day; the rest cost
+the first bring-up, and every one of them looked like a different
+problem than it was:
 
 - A **`ForceNew` change is refused, not performed.** Changing an IAM
   binding's role rewrote `spec` and left `atProvider` on the old value;
@@ -1879,13 +1893,98 @@ resource reporting `Ready` while being wrong:
   that does not exist leave ReplicaSets that can never become `Ready`,
   a rollout that will never retire them, and their CPU requests held
   forever — which starved FoundationDB of the capacity it needed to
-  schedule, so nothing could progress in either direction.
+  schedule, so nothing could progress in either direction. The same
+  shape arrives without a bad tag: a chart version bump changed the pod
+  template labels, so every Deployment rolled to a new ReplicaSet that
+  could not schedule while the old one still held its requests.
+- **A name two sides must spell, invented on one side.** Three times.
+  The proxy's Kubernetes service account was derived from the Helm
+  release name, which is the Argo Application's name, which the
+  manifest binding Workload Identity to it cannot know; Keycloak asked
+  for a database called `keycloak` where the composite had made
+  `sql-<code>-<env>-<label>-keycloak`; and the issuer lived in one
+  values file while the two strings verifying it lived in another. Each
+  reported healthy on both sides — binding `Synced` and `Ready`,
+  annotation present, probe green — until a real request crossed the
+  gap. A name another repository has to spell is a value, not a
+  derivation.
+- **The Cloud SQL Auth Proxy treats absent credentials as terminal.**
+  On a rebuilt node pool the GKE metadata server takes minutes to be
+  ready, and the proxy exits rather than waiting, so it crashloops
+  until a backoff happens to land after the metadata server is up —
+  four restarts, and anything depending on it that also exits on first
+  failure burns its own on top. It converges alone and reads exactly
+  like a broken Workload Identity binding while it does. It also needs
+  `--private-ip`, since it looks for a public address the instance
+  composite never builds.
+- **A NEG readiness gate with no load balancer never satisfies.** The
+  operator-published Keycloak Service carried `cloud.google.com/neg`,
+  so GKE injected a readiness gate on its pod; with the gateway
+  disabled there was no backend to program, so the pod sat
+  `ContainersReady=True` and `Ready=False` forever, the Service had no
+  serving endpoint, and a perfectly healthy Keycloak was unreachable.
+  Remove the annotation and recreate the pod — gates are set at
+  creation. The Gateway controller re-adds it when there is something
+  to attach to.
+- **Nothing re-evaluates after the environment is fixed underneath
+  it.** Three separate mechanisms, one afternoon: an Argo Application
+  whose retries are exhausted waits for a revision rather than a fixed
+  cluster; a Job that reached its `backoffLimit` never runs again; and
+  the bootstrap gate that selects the realm-import Job by label
+  snapshots the matching set at start, so a Job deleted afterwards
+  wedges it permanently. Each needs the waiter recreated, and
+  `selfHeal: false` means deleting a resource does not bring it back —
+  Argo reports the drift and leaves it.
 
-Sizing, measured rather than guessed: three `e2-standard-2` nodes give
-about 5.8 CPU and 19GB allocatable, and the full chart with
-FoundationDB sits near 78% of that once the stale ReplicaSets are gone.
-Worth revisiting against real usage rather than declared requests once
-Keycloak lets everything start.
+Sizing, measured on a running system rather than guessed. Three
+`e2-standard-2` give 5790m allocatable and the deployment asked for
+5226m of it — 90%, and FoundationDB was a storage pod short. Two
+`e2-standard-4` give 7840m for 4413m, which is 56%. Fewer larger nodes
+because GKE's own daemonsets cost about 278m per node whatever its
+size, so a small node pays that tax on a small base and three of them
+pay it three times. `redundancy_mode: single` is what makes two nodes
+enough.
+
+**Database authorisation is unowned, and that is the one thing here
+needing a decision rather than a note.** The design's claim that no
+password exists is true, and it quietly assumes that authenticating to
+Cloud SQL brings privileges inside Postgres with it. It does not. An
+IAM user is created with no privileges on any database, and since
+PostgreSQL 15 only a database's owner may create in its `public`
+schema — so Keycloak connected, authenticated, and could not create a
+table. The `Database` resource has no owner field to fix it with, and
+`User` has no `databaseRoles`, so the composite cannot express the
+grant at all.
+
+What unblocked it was `gcloud sql users assign-roles ...
+--database-roles=cloudsqlsuperuser`, which is an Admin API call needing
+no database session and no password — so the no-password property
+survives. What it also showed is that **no capability in
+[ADR-0023](../adr/0023-installation-naming-and-access.md) can perform
+it**: `grp-gcp-qw01-cluster-admin` holds `container.admin`, the viewer
+group holds reads, and neither carries `cloudsql.admin`. It worked only
+by impersonating the platform identity, which
+`grp-gcp-qw01-platform-admin` may do — itself worth reconciling against
+the rule that says never to grant a person `serviceAccountTokenCreator`
+on that identity.
+
+This is once per instance, so every future environment meets it. Three
+ways to own it: a Job on the instance cluster calling the Admin API
+through an identity the composite binds, which keeps it declarative and
+passwordless and is the shape to prefer; a fifth capability holding
+`cloudsql.admin` on the folder, which makes it a person's job and says
+whose; or upstream work on the provider so `User` can express
+`databaseRoles` and the composite grants it directly. Until one of them
+lands it is a manual step, and it should be written down as one rather
+than left to be rediscovered.
+
+**And the console's origin is not in the realm.** The realms imported
+from the chart's committed definitions with `consoleRedirectUri` unset,
+because no public hostname existed to name and a realm is created once
+and never overwritten. When the gateway and the domain arrive, the
+`queenswood-console` client's redirect URI has to be added through the
+Admin API. That was the right trade against baking in a guess, and it
+is a debt rather than a decision deferred.
 
 Four things wait rather than block:
 
