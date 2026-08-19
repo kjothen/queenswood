@@ -900,6 +900,225 @@ spec:
                     fmt: "svc-%s-%s-%s-servicenetworking"
                 toFieldPath: metadata.name
               - *api-project
+          # Secret Manager, for the values external-secrets reads into
+          # the cluster. Enabled here rather than only on the plane:
+          # GCP checks the project a resource lives in as well as the
+          # caller's, and these secrets are the instance's own.
+          - name: instance-service-secretmanager
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectService
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: secretmanager.googleapis.com
+                  disableOnDestroy: false
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "svc-%s-%s-%s-secretmanager"
+                toFieldPath: metadata.name
+              - *api-project
+          # The identity external-secrets runs as on this cluster.
+          # secretAccessor rather than admin: reading a version is all
+          # it does, and writing one stays a person's act.
+          - name: instance-secrets-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood secrets reader
+                  description: Reads Secret Manager for external-secrets
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-secrets"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-secrets"
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              # A literal, not the projectRef anchor: ServiceAccount
+              # declares no projectRef, and server-side apply rejects an
+              # undeclared field rather than dropping it.
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          - name: instance-secrets-accessor
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/secretmanager.secretAccessor
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-secrets-accessor"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-%s-%s-secrets@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+              - *api-project
+          # Both halves of Workload Identity. The chart installs into
+          # its own namespace and names its service account after
+          # itself, so the member string is pinned to that pair rather
+          # than to whatever happens to be running.
+          - name: instance-secrets-identity-wi
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-secrets-wi"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-secrets"
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.member
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "serviceAccount:%s.svc.id.goog[external-secrets/external-secrets]"
+          # The container, not the value. A version is written by a
+          # person from a secret Google issued once, so what exists is
+          # declared and what it holds never touches git. No Delete:
+          # losing this is losing the environment's way of proving who
+          # it is to Google.
+          - name: instance-google-oauth-secret
+            base:
+              apiVersion: secretmanager.gcp.m.upbound.io/v1beta1
+              kind: Secret
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  replication:
+                    - auto:
+                        - {}
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sec-%s-%s-%s-google-oauth"
+                toFieldPath: metadata.name
+              # The id Secret Manager knows it by, which the
+              # ExternalSecret that reads it must spell the same.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sec-%s-%s-%s-google-oauth"
+                toFieldPath: spec.forProvider.secretId
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
           # Certificate Manager, for the certificates the instance's
           # ingress terminates on. Enabled in this project rather than
           # only in the plane's: GCP checks the project the resource
