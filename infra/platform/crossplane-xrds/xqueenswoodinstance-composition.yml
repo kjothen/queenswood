@@ -1434,6 +1434,12 @@ spec:
               kind: ProjectIAMCustomRole
               metadata:
                 namespace: crossplane-system
+                annotations:
+                  # The role id, which is what a custom role is addressed
+                  # by and which `forProvider` has no field for.
+                  # Underscores because a custom role id takes no hyphens,
+                  # so it cannot be the Kubernetes name.
+                  crossplane.io/external-name: rl_sql_user_admin
               spec:
                 managementPolicies:
                   - Observe
@@ -1446,8 +1452,6 @@ spec:
                 forProvider:
                   # A custom role rather than cloudsql.admin, which also
                   # grants deleting the instance and every database on it.
-                  # Underscores because a custom role id takes no hyphens.
-                  roleId: rl_sql_user_admin
                   title: Cloud SQL user administrator
                   description: Grants database roles to this instance's users
                   permissions:
