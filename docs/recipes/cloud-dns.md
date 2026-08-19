@@ -3,24 +3,43 @@
 
 ## Problem
 
-The zone and the records in it are composed, but two things around them
+The zone and the records in it are composed, but the things around them
 are not. A public zone cannot be created by an identity that has not
-proved it owns the domain, and the delegation that sends the internet
-to that zone is edited wherever the domain was bought. Neither has an
-API the plane can reach, so both are done once, by hand, before the
-declared side means anything.
+proved it owns the domain, the delegation that sends the internet to
+that zone is edited wherever the domain was bought, and a signed domain
+has to be unsigned before it can move. None of that has an API the
+plane can reach.
 
-This is that half. Where the zone lives and what composes the records
-in it belongs to the composition, not here.
+This is that half: what a person does, in what order, and what each
+step is waiting on. Where the zone lives and what composes the records
+in it belongs to the composition.
 
 ## Solution
 
 ### Before you start
 
-- The domain, and access to change its nameservers at the registrar.
-- The installation's management project, which is where its zone goes.
-- Whichever identity will create the zone — yours if you are creating
-  it by hand, the platform identity if the composition is.
+- The domain, and an account that can edit its DNS and change its
+  nameservers at the registrar.
+- A Google account for the installation — the operator account, not a
+  personal one.
+- The email address of the identity the composition runs as.
+- The management project, which is where the zone goes.
+
+### The order, and why it is this order
+
+Three things gate each other, and getting them the wrong way round
+costs hours rather than minutes.
+
+Ownership comes first, because a public zone cannot be created without
+it. The zone comes before the delegation, because a delegation to a
+zone that does not answer is an outage. And the token that proves
+ownership has to be answering from the new zone *before* the delegation
+moves, or the move takes ownership away with it — which is the failure
+that takes the zone with it too.
+
+Unsigning is the long pole and the one that hurts. Read step 4 before
+choosing where to put it: it wants to be early, and there is one case
+where it should be last.
 
 ### 1. Verify the domain
 
@@ -30,71 +49,69 @@ identity has not verified, and reports
 Google Site Verification, not against anything in Cloud DNS — Cloud DNS
 only consults it.
 
-Verification is a TXT record. Google issues a token, the token goes in
-the domain's DNS as `google-site-verification=<token>` at the apex, and
-Google reads it back. It is managed at
-`search.google.com/search-console`, and `gcloud domains verify <domain>`
-opens whichever page is current, which is the durable form — Google
-moves these. A registrar offering one-click DNS writes the record for
-you rather than making you paste it, and that is all that widget does.
+Signed in as the operator account, at `search.google.com/search-console`:
 
-Two neighbouring permission systems are not this one. The Admin console
-manages Cloud Identity's own domains. The registrar has an account model
-of its own, granting people the right to edit DNS and move the
-registration. Neither grants ownership in Google's sense, and nothing
-the installation composes needs an account at either — the registrar is
-touched by hand twice, to add a TXT record and to change the
-nameservers, and never by an identity.
+1. Add a property, of type **Domain** rather than URL prefix. A Domain
+   property covers every subdomain, so no environment ever needs
+   verifying separately.
+2. Copy the `google-site-verification=` token it issues.
+3. At the registrar, add it as a TXT record at the apex. A registrar
+   with a preset menu usually has an entry for this — Squarespace calls
+   it Google Workspace Verification — and the preset is only a
+   convenience for pasting the value.
+4. Back in Search Console, verify.
 
-Four things about it are easy to get wrong.
+Then check **Settings, then Ownership verification** and confirm the
+method it recorded. Google may auto-verify by recognising who provides
+the domain's DNS and record the method as `Domain name provider`, in
+which case your token is sitting in DNS unused — and that verification
+rests on a provider relationship step 7 ends. Add the DNS TXT method
+explicitly so ownership rests on a record you control.
 
-**Verification belongs to an identity, not to a domain.** A token
-placed by one Google account verifies that account, so a
-`google-site-verification` record already at the apex is no evidence of
-who owns it. An empty property list is no evidence of the reverse
-either: Search Console shows properties somebody added, and the
-verification Cloud Identity performs at signup is administered from the
-Admin console and creates no property at all, so a domain that already
-carries a token can be absent from Search Console entirely. Add it as a
-Domain property rather than a URL-prefix one — a Domain property covers
-every subdomain, which saves verifying each environment separately. See
-[cloud-account](cloud-account.md).
+Three things about verification are easy to get wrong.
 
-**A method can be tied to the registrar rather than to a record.**
-Google may auto-verify a domain by recognising who provides its DNS,
-reporting the method as `Domain name provider`. That verification rests
-on the provider relationship, and the delegation change below ends
-it — leaving the domain un-verified for reasons that surface much later
-as a zone create or a reconcile failing. Add the DNS TXT method
-explicitly under Settings, then Ownership verification, before the
-delegation moves. It yields a token in a record you control, which is
-what step 4 carries into the new zone, and verification then no longer
-depends on who serves the domain.
+**It belongs to an identity, not to a domain.** A token verifies
+whoever placed it, so a `google-site-verification` record already at the
+apex is no evidence your account owns anything. An empty property list
+is no evidence of the reverse either: Search Console lists properties
+somebody added, and the verification Cloud Identity performs at signup
+is administered from the Admin console and creates no property at all.
+A domain can be verified, primary, and absent from Search Console
+entirely. See [cloud-account](cloud-account.md).
 
 **Delegated ownership lapses with the token it hangs off.** An owner may
-add owners, so a verified account of any kind is enough to unblock the
-rest. But an installation whose identities are all delegated from
-somebody's personal account loses the domain when that account is tidied
-up, and it surfaces as `verifyManagedZoneDnsNameOwnership` on a zone
-create, which reads like a Crossplane fault rather than an account one.
-Have the installation's own operator account verify in its own right and
-delegate from there. A domain carries several `google-site-verification`
-records without conflict, so that is an addition rather than a
-migration.
+add owners, so any verified account unblocks the rest — but an
+installation whose identities all delegate from somebody's personal
+account loses the domain when that account is tidied up. Have the
+operator account verify in its own right. A domain carries several
+verification records without conflict, so this is an addition rather
+than a migration, and an unattributed token already present stays:
+nothing reports which record holds the organisation's own domain.
 
-**The composition does not run as you.** The plane authenticates through
-Workload Identity, so the provider creates the zone as the platform
-service account, and a service account is never a verified owner by
-default. Grant it ownership under Settings, then Users and permissions,
-then Manage property owners, whose Add an owner box takes a service
-account address like any other. The property has to be verified before
-it has owners to add. Where that is not wanted, create the zone yourself
-as a verified human and let the composite adopt it.
+**Neither neighbouring permission system is this one.** The Admin
+console manages Cloud Identity's domains. The registrar has an account
+model of its own, granting people the right to edit DNS and move the
+registration. Neither grants ownership in Google's sense.
 
-### 2. Inventory the registrar
+### 2. Grant the composition's identity ownership
 
-Before moving anything, find out what the domain is actually serving.
-The records that matter are rarely the ones it is visibly for.
+The plane authenticates through Workload Identity, so the provider
+creates the zone as the platform service account rather than as you,
+and a service account is never a verified owner by default.
+
+**Settings, then Users and permissions, then Manage property owners.**
+The Add an owner box takes a service account address like any other.
+Choose **Owner** — Full and Restricted grant report access and confer no
+ownership, and a zone create refuses them exactly as it refuses a
+stranger.
+
+Where that is not wanted, create the zone by hand as a verified human
+and let the composite adopt it.
+
+### 3. Inventory the registrar
+
+Find out what the domain is actually serving. The records that matter
+are rarely the ones it is visibly for.
 
 ```
 for r in NS A AAAA MX TXT CAA DS SOA; do
@@ -108,120 +125,137 @@ done
 A sweep of the apex alone misses the records that matter most, because
 the ones carrying policy sit under names nothing advertises. `_dmarc`
 is the other half of an SPF lockdown and is invisible from the apex.
-`_domainconnect` is the registrar's one-click DNS endpoint, which is
-what a widget like Entri drives; it names the old provider and does not
-carry.
 
-Decide record by record what carries. A placeholder site's A records
-and `www` CNAME describe a page nobody depends on and can be dropped.
-An unattributed verification token is not in that category: the Admin
-console reports whether a domain is verified but not which record
-satisfies it, so a second token cannot be told apart from the one
-holding the organisation's primary domain. Carry both — the cost is a
-record, and the cost of guessing wrong arrives days later as a
-re-check nothing connects to the edit.
-Anything encoding a claim or a policy has to survive: the
-verification TXT above, whose loss can cost the organisation its
-domain, and an SPF record, whose `-all` is a standing statement that
-the domain sends no mail.
+Then decide record by record:
 
-### 3. Read the zone's nameservers
+- **Carries.** Verification tokens, including any you cannot attribute.
+  SPF, whose `-all` states the domain sends no mail, and DMARC, which is
+  the half that makes it enforceable.
+- **Does not carry.** A placeholder site's A records and `www` CNAME,
+  which describe a page nobody depends on. `_domainconnect`, which names
+  the old provider's one-click DNS endpoint and means nothing once the
+  domain delegates elsewhere.
 
-Once the plane has composed the zone and it reports `Ready`, Cloud DNS
-has assigned it four nameservers. They are not predictable and they
-are not the same for two zones.
+Whatever carries goes into the manifest the zone is composed from.
 
-```
-kubectl --context <plane> get managedzone <zone> \
-  -o jsonpath='{.status.atProvider.nameServers}'
-```
-
-### 4. Populate and check before delegating
-
-The verification token lives wherever the domain's nameservers say it
-lives. Until the delegation moves that is the registrar, and afterwards
-it is this zone — so the same token has to exist in both before the
-switch, or verification lapses the moment the registrar stops being
-asked. It is the same string throughout. Nothing is regenerated.
-
-Put the carry-over records into the new zone, then query its
-nameservers directly rather than through a resolver, which would still
-answer from the old authority.
-
-```
-dig @<assigned-nameserver> <domain> TXT +short
-```
-
-Diff that against what the registrar still serves. Both sides should
-answer identically for everything that carries. Done in this order the
-propagation window is a no-op, because there is no interval in which
-the two authorities disagree.
-
-### 5. Unsign before delegating
-
-A signed domain publishes a DS record at its registry naming the keys
-its current nameservers sign with. Cloud DNS signs with different keys,
-so moving the delegation while that DS stands makes every validating
-resolver treat the new authority's answers as forged — not a stale
-record served for a while, but SERVFAIL everywhere at once, taking the
-verification TXT down with it and with it the ownership the zone rests
-on.
-
-The mismatch is not read as unsigned-and-therefore-fine. DNSSEC fails
-closed there deliberately, since the alternative would let an attacker
-strip signatures to downgrade a protected domain. This is also the one
-failure the diff in step 4 does not protect against: that makes both
-authorities agree on content, and the parent's assertion is not about
-content.
-
-Keeping it signed across the move is not available. It would need the
-new provider's keys pre-published in the old zone, and Cloud DNS
-generates and owns its keys rather than accepting an existing one, so
-unsign, move, re-sign is the path.
+### 4. Unsign, if the domain is signed
 
 ```
 dig +short DS <domain>
 ```
 
-An answer means DNSSEC is on. Turn it off at the registrar, since the DS
-lives at the parent registry and only a registrar withdraws it, then
-wait out the DS record's own TTL before touching the nameservers — the
-registry's TTL, not the zone's, because a resolver still holding a
-cached DS goes on expecting signatures after the registry has dropped
-it.
+An answer means DNSSEC is on, and the domain cannot move until it is
+off. The DS record lives at the parent registry and names the keys the
+current nameservers sign with. Changing the delegation does not touch
+it, so the new authority answers unsigned against a parent still
+asserting signatures — and validating resolvers treat that as forgery
+rather than as an absence. Not a stale answer for a while: SERVFAIL
+everywhere at once, the verification TXT included, and with it the
+ownership the zone rests on.
 
-Expect the outage to begin at the disable rather than at the
-delegation. A registrar may strip the zone's keys at once and submit
-the DS withdrawal to the registry afterwards, which puts the domain in
-exactly the mismatched state above for as long as that takes — hours,
-against a published bound of days. So do this while an outage is
-affordable, which for a domain not yet serving anything is now rather
-than later, and watch the parent rather than the zone:
+The mismatch fails closed deliberately, since the alternative would let
+an attacker strip signatures to downgrade a protected domain. It is
+also the one failure the diff in step 6 cannot protect against: that
+makes the two authorities agree on content, and the parent's assertion
+is not about content.
+
+Keeping it signed across the move is not available. It would need the
+new provider's keys pre-published in the old zone, and Cloud DNS
+generates and owns its keys rather than accepting an existing one.
+
+**Expect the outage to begin here, not at the delegation.** A registrar
+may strip the zone's keys at once and submit the DS withdrawal to the
+registry afterwards, leaving the domain in exactly the mismatched state
+above for as long as that takes. So:
+
+- **For a domain not yet serving anything, do this first**, before
+  step 1 even, and let the wait overlap everything else.
+- **For a domain serving traffic, do it last**, immediately before
+  step 7, and accept a serial wait in exchange for the tightest
+  possible window.
+
+Watch the parent, not the zone:
 
 ```
-dig +short DS <domain> @<registry-nameserver>
+dig +short DS <domain> @<a registry nameserver, e.g. a0.nic.io>
 ```
 
-Empty is the signal. The delegation waits on that, plus the TTL.
-Re-sign on the new zone afterwards if wanted, which means publishing a
-fresh DS at the registrar once Cloud DNS has its keys.
+Empty is the signal. Then wait out the DS record's own TTL — the
+registry's, not the zone's — because a resolver still holding a cached
+DS goes on expecting signatures after the registry has dropped it.
+Recovery is uneven while that happens: public resolvers are anycast,
+each node caches independently, and one probe hits one node, so a
+single clean answer proves nothing. Take several, spaced, across more
+than one resolver.
 
-### 6. Change the delegation
+### 5. Let the plane compose the zone
 
-At the registrar, replace the nameservers with the four assigned ones.
-This is the act that moves the domain, and it is the last time the
-registrar is touched — after it, every name in the domain is declared
-in the manifest rather than typed into somebody's account.
+Merge the manifest naming the domain and the records from step 3. The
+zone and its records compose together, so this covers both the create
+and the populate. Then read the nameservers Cloud DNS assigned it —
+four, unpredictable, and not the same for two zones:
 
-A registrar serving its own DNS stops doing so at this point. Anything
-of its that was not carried in step 2 stops resolving here.
+```
+kubectl --context <plane> -n crossplane-system \
+  get managedzone <zone> -o jsonpath='{.status.atProvider.nameServers}'
+```
 
-### 7. Check
+### 6. Diff the two authorities
 
-Resolve each name through a public resolver, and confirm the
-verification TXT still answers from the new authority. The
-organisation rests on that record, and it is the one whose absence
-does not show up as a broken page.
+Query the new zone's own nameservers directly. A public resolver still
+answers from the old authority, so it cannot tell you anything about
+the new one.
+
+```
+dig @<assigned-nameserver> <domain> TXT +short
+dig @<assigned-nameserver> _dmarc.<domain> TXT +short
+```
+
+Compare against the same queries aimed at the registrar's nameservers.
+Everything that carries should answer identically. Done in this order
+the propagation window is a no-op, because there is no interval in
+which the two authorities disagree.
+
+### 7. Move the delegation
+
+At the registrar, choose custom nameservers and replace **all four**
+with the assigned ones, without trailing dots. A mixture of the two
+providers' nameservers leaves resolvers getting different answers
+depending on which they ask.
+
+The registrar will warn that this reduces functionality or disconnects
+the site. That is accurate and intended: its DNS stops being
+authoritative, and everything in its DNS panel stops applying.
+
+**Leave the old records in the registrar's panel.** They cost nothing
+dormant, and they are what makes reverting a matter of switching the
+nameservers back.
+
+**Do not re-enable DNSSEC there.** If signing is wanted again it goes on
+the new zone, with a fresh DS published at the registrar afterwards.
+
+### 8. Check
+
+The registrar saving is not the delegation moving. The registrar
+submits the change to the registry, which is its own hop and its own
+wait. Ask the registry, and ask for the authority section — a referral
+carries the NS records there rather than in the answer, so a `+short`
+query looks empty and reads as failure:
+
+```
+dig NS <domain> @<a registry nameserver> +noall +authority
+```
+
+Two TTLs then govern the tail. The registry's delegation TTL is one,
+and the NS records inside the old zone are the other, usually much
+longer. Resolvers holding the latter keep using the old nameservers
+after the parent has changed, so expect a period where resolvers
+disagree about who is authoritative. Both answer the same, which is the
+entire point of step 6.
+
+Last, confirm the verification TXT answers from the new authority. The
+organisation rests on that record, and it is the one whose absence does
+not show up as a broken page.
 
 Set a CAA record naming the issuing CA once it is known. An absent CAA
 authorises every CA rather than none.
@@ -230,54 +264,62 @@ authorises every CA rather than none.
 
 **MUST:**
 
-- Verify domain ownership before a public zone is created, and add the
-  platform identity as an owner — not Full or Restricted, which grant
-  report access and confer no ownership — if the composition creates
-  the zone.
+- Verify the domain before a public zone is created, as the operator
+  account in its own right.
+- Add the property as a Domain property, not a URL prefix.
+- Add the composition's identity as an **Owner** of the property. Full
+  and Restricted confer no ownership.
 - Add the DNS TXT verification method explicitly where the domain was
-  auto-verified through its provider, before the delegation moves.
-- Inventory every record type at the registrar before moving a domain.
-- Carry the ownership-verification TXT and any SPF record into the new
-  zone before the delegation moves.
-- Query the assigned nameservers directly to check the new zone, not a
-  public resolver.
-- Check for a DS record before delegating, and where one exists disable
-  DNSSEC at the registrar and wait out the DS TTL first.
-- Sweep the underscore-prefixed names as well as the apex. `_dmarc`
-  carries policy and the apex sweep does not show it.
-- Confirm the verification TXT resolves from the new authority after
+  auto-verified through its provider.
+- Inventory every record type at the registrar, and the
+  underscore-prefixed names, before moving a domain.
+- Carry the verification tokens, SPF and DMARC into the new zone before
   the delegation moves.
+- Check for a DS record before delegating, and where one exists unsign
+  at the registrar and wait out the DS TTL first, watching the parent
+  registry rather than the zone.
+- Take several spaced probes across more than one resolver before
+  calling DNSSEC recovery complete.
+- Query the assigned nameservers directly to check the new zone, and
+  the registry's authority section to check the delegation.
+- Confirm the verification TXT resolves from the new authority
+  afterwards.
 
 **MUST NOT:**
 
-- Assume a placeholder site's records are all that is there. Mail
-  policy and verification tokens carry no visible page.
-- Read an existing `google-site-verification` record as evidence that
-  your account owns the domain. It verifies whoever placed it.
-- Read an absent Search Console property as evidence the domain is
-  unverified. Cloud Identity's own verification creates no property.
+- Read an existing `google-site-verification` record as evidence your
+  account owns the domain, or an absent Search Console property as
+  evidence it is unverified.
+- Tidy away an unattributed verification token.
+- Regenerate a token to move it. The same string is copied, and answers
+  from both authorities across the switch.
 - Leave the installation's identities delegated from a personal
-  account. Delegated ownership lapses with the token it hangs off.
-- Regenerate the token to move it. The same string is copied into the
-  new zone, and it has to answer from both authorities across the
-  switch.
+  account.
 - Change the delegation before the new zone answers, or while a DS
   record still names the old nameservers' keys.
+- Replace only some of the registrar's nameservers.
+- Delete the old records at the registrar as part of the move. They are
+  the way back.
+- Re-enable DNSSEC at the registrar after moving.
 - Delete and recreate a zone to change it. The nameservers change with
   it, the registrar does not follow, and each fresh zone draws from a
   finite per-domain pool.
 
 **SHOULD:**
 
+- Unsign first for a domain not yet serving anything, so the wait
+  overlaps everything else; unsign last for one serving traffic, to
+  keep the window tight.
 - Move the apex once rather than delegating a subdomain per
   environment, so the registrar is a one-time act.
 - Set a CAA record naming the issuing CA.
 
 ## References
 
-- [cloud-account](cloud-account.md) — domain verification, and why the
-  directory work has no API.
+- [cloud-account](cloud-account.md) — domain verification at signup, and
+  why the directory work has no API.
 - [cloud-naming](cloud-naming.md) — the `dz-` prefix and the
   environment letter.
+- [crossplane](crossplane.md) — what composes the zone and its records.
 - [queenswood-installation](queenswood-installation.md) — the manifest
   the domain is named in.

@@ -186,49 +186,50 @@ See [gcp-iam](../../../docs/recipes/gcp-iam.md).
 
 Verify the domain before a public zone is created — Cloud DNS refuses a
 zone whose name the calling identity has not verified, and says so as
-`verifyManagedZoneDnsNameOwnership`. Verification belongs to an identity
-rather than to a domain, so an existing `google-site-verification` record
-is no evidence your account owns anything, nor is an absent Search
-Console property evidence of the reverse, since the verification Cloud
-Identity performs at signup creates no property. The composition creates
-the zone as the platform service account rather than as you: add that
-address as an owner of the property — Owner, since Full and Restricted
-grant report access and confer no ownership — or create the zone by hand
-and let the composite adopt it. Where Google auto-verified the domain
-through its DNS provider, add the TXT method explicitly before the
-delegation moves, or the switch ends the relationship the verification
-rested on. An owner may add owners, but a delegated owner holds
-ownership only as long as the verifying owner's token does, so have the
-installation's operator account verify in its own right and delegate
-from there rather than leaving its identities hanging off a personal
-account.
+`verifyManagedZoneDnsNameOwnership`. Verify as the operator account in
+its own right, as a Domain property rather than a URL prefix, and add the
+composition's identity as an Owner, since Full and Restricted grant
+report access and confer no ownership. Verification belongs to an
+identity rather than to a domain, so an existing
+`google-site-verification` record is no evidence your account owns
+anything, an absent Search Console property is no evidence the domain is
+unverified, and an unattributed token is not yours to tidy away. Where
+Google auto-verified through the DNS provider, add the TXT method
+explicitly, or the delegation change ends the relationship the
+verification rested on. Never leave the installation's identities
+delegated from a personal account, and never regenerate a token to move
+one: the same string is copied, and answers from both authorities across
+the switch.
 
-Inventory every record type at the registrar before moving a domain,
-because a placeholder site's records are not all that is there and mail
-policy and verification tokens carry no visible page. Sweep the
-underscore-prefixed names too, since `_dmarc` carries policy and an apex
-sweep does not show it, and carry an unattributed verification token
-rather than tidying it, since nothing reports which record holds the
-organisation's domain. Carry the ownership-verification TXT and any SPF
-record into the new zone before the delegation moves — the same token
-string, never a regenerated one, answering from both authorities across
-the switch — and check the new zone by querying its assigned nameservers
-directly rather than a public resolver, which still answers from the old
-authority.
+Inventory every record type at the registrar before moving a domain, and
+the underscore-prefixed names with it, since `_dmarc` carries policy an
+apex sweep does not show. Verification tokens, SPF and DMARC carry into
+the new zone before the delegation moves; a placeholder site's records
+and the registrar's one-click DNS endpoint do not. Check the new zone by
+querying its assigned nameservers directly rather than a public
+resolver, which still answers from the old authority, and check the
+delegation itself against the registry's authority section, since a
+referral carries the NS records there and a `+short` query reads as
+empty.
 
-Check for a DS record before delegating and, where one exists, disable
-DNSSEC at the registrar and wait out the DS TTL first: moving a signed
-domain while its DS names the old keys makes every validating resolver
-read the new authority as forged, which takes the verification TXT down
-with it. Watch the parent registry rather than the zone, and expect the
-outage to start at the disable, since a registrar may strip the zone's
-keys before withdrawing the DS. Change the delegation only once the new
-zone answers, then confirm the verification TXT resolves from the new
-authority. Never delete and recreate a zone to change it: the
+Check for a DS record before delegating and, where one exists, unsign at
+the registrar first: moving a signed domain while its DS names the old
+keys makes every validating resolver read the new authority as forged,
+taking the verification TXT down with it. Watch the parent registry
+rather than the zone, expect the outage to start at the unsigning rather
+than at the delegation, and take several spaced probes across more than
+one resolver before calling recovery complete, since anycast nodes cache
+independently and one clean answer proves nothing. Unsign first for a
+domain not yet serving anything so the wait overlaps everything else,
+last for one serving traffic to keep the window tight.
+
+Replace all of the registrar's nameservers rather than some, leave its
+old records in place as the way back, and do not re-enable DNSSEC there
+afterwards. Never delete and recreate a zone to change it: the
 nameservers change with it, the registrar does not follow, and each
 fresh zone draws from a finite per-domain pool. Move the apex once
-rather than delegating a subdomain per environment, so the registrar
-stays a one-time act, and set a CAA record naming the issuing CA.
+rather than delegating a subdomain per environment, and set a CAA record
+naming the issuing CA.
 See [cloud-dns](../../../docs/recipes/cloud-dns.md).
 
 ## A parent Application holds only kinds that already exist
