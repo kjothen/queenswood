@@ -79,7 +79,13 @@ metadata:
   # Content-addressed: a Job's pod template is immutable, so the name
   # has to change whenever anything it runs on does. Re-applying the
   # same chart and the same backup resolves to the same completed Job.
-  name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") | sha256sum | trunc 8 }}
+  {{- /* The console redirect is in the hash because the Job reconciles
+         it, and a Job is immutable: without it, changing the console's
+         hostname leaves the same name, the same completed Job, and
+         nothing to apply the change -- while Argo tries to patch an
+         immutable spec and fails the sync for every resource beside
+         it. What the Job acts on belongs in what names it. */}}
+  name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") (include "queenswood.consoleRedirectUri" .) | sha256sum | trunc 8 }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: keycloak-realm-import
@@ -183,6 +189,34 @@ spec:
               }
               # `|| true` so a transport error reads as "no status" and
               # is judged by the caller, rather than killing the script
+              # The console's deployed origin, applied to the client on
+              # every run rather than only at import. A realm is created
+              # once and never overwritten, so a hostname that changes
+              # later -- a new environment, a second origin -- would
+              # otherwise reach the realm not at all, and the fix would
+              # be a click nobody can review. Idempotent: it adds what
+              # is missing and returns when it is not.
+              reconcile_console_redirect() {
+                [ -n "$CONSOLE_REDIRECT_URI" ] || return 0
+                cid=$(api "$KC/admin/realms/$1/clients?clientId=$CONSOLE_CLIENT_ID" \
+                  | jq -r '.[0].id // ""')
+                if [ -z "$cid" ]; then
+                  echo "no client '$CONSOLE_CLIENT_ID' in realm '$1'; nothing to reconcile"
+                  return 0
+                fi
+                cur=$(api "$KC/admin/realms/$1/clients/$cid")
+                if echo "$cur" | jq -e --arg u "$CONSOLE_REDIRECT_URI" \
+                     '(.redirectUris // []) | index($u)' >/dev/null; then
+                  return 0
+                fi
+                echo "$cur" | jq --arg u "$CONSOLE_REDIRECT_URI" \
+                    '.redirectUris = (((.redirectUris // []) + [$u]) | unique)' \
+                  | curl -sf -X PUT -H "Authorization: Bearer $TOK" \
+                      -H 'Content-Type: application/json' -d @- \
+                      -o /dev/null "$KC/admin/realms/$1/clients/$cid"
+                echo "added $CONSOLE_REDIRECT_URI to '$CONSOLE_CLIENT_ID' in realm '$1'"
+              }
+
               # under `set -e` with curl's exit code and no explanation.
               status_of() {
                 curl -s -o /dev/null -w '%{http_code}' \
@@ -212,6 +246,7 @@ spec:
                 if [ "$(status_of "$realm")" = "200" ]; then
                   if [ -z "$RESTORED_FROM" ]; then
                     echo "realm '$realm' exists; nothing to import"
+                    reconcile_console_redirect "$realm"
                     continue
                   fi
                   # Set by this Job after a successful restore. Equal
@@ -354,6 +389,8 @@ spec:
               value: {{ join " " $realms | quote }}
             - name: CONSOLE_REDIRECT_URI
               value: {{ include "queenswood.consoleRedirectUri" . | quote }}
+            - name: CONSOLE_CLIENT_ID
+              value: {{ .Values.keycloak.consoleClientId | quote }}
             - name: KC
               value: "http://{{ .Release.Name }}-keycloak-service:8080"
             - name: ADMIN_USER
