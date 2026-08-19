@@ -177,6 +177,10 @@ those in full before non-trivial work on their topic.
   findings are accepted and why, and the difference between a muted
   finding and a deferred one. See
   [recipes/security-scanning.md](docs/recipes/security-scanning.md).
+- **Google sign-in** — the OAuth client no API creates, the redirect
+  URI Google refuses only after the user has left, and why the realm's
+  placeholder pair goes in over the Admin API. See
+  [recipes/google-sign-in.md](docs/recipes/google-sign-in.md).
 - **Cloud DNS** — the manual half: proving domain ownership before a
   public zone may be created, what has to survive a registrar move,
   and checking the new zone before the delegation follows. See
