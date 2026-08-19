@@ -1,0 +1,32 @@
+{{- $redirect := include "queenswood.consoleRedirectUri" . }}
+{{- if and (eq (include "queenswood.keycloakMode" .) "operator") $redirect }}
+# The console's client, as a resource the operator reconciles against
+# the running realm rather than as part of the realm import. A realm is
+# imported once and never overwritten, so the import cannot carry an
+# origin that did not exist when the instance was first built -- and
+# every later change to it would be a click in an admin console,
+# recorded nowhere.
+#
+# redirectUris is the deployed origin alone. The realm's own localhost
+# entries are for a console reached through a port-forward; a published
+# one should not accept them.
+apiVersion: k8s.keycloak.org/v2alpha1
+kind: KeycloakOIDCClient
+metadata:
+  name: {{ .Release.Name }}-console-client
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  keycloakCRName: {{ .Release.Name }}-keycloak
+  realm: {{ .Values.keycloak.realm | quote }}
+  client:
+    clientId: {{ .Values.keycloak.consoleClientId | quote }}
+    enabled: true
+    redirectUris:
+      - {{ $redirect | quote }}
+      {{- range .Values.keycloak.extraConsoleRedirectUris }}
+      - {{ . | quote }}
+      {{- end }}
+    webOrigins:
+      - {{ printf "https://%s" .Values.gateway.consoleHost | quote }}
+{{- end }}

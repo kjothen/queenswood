@@ -67,6 +67,10 @@ keycloak:
   # nothing -- a realm is imported once and never overwritten, so a
   # guessed origin is permanent.
   consoleRedirectUri: ""
+  # Origins the chart does not publish and so cannot derive -- a vanity
+  # domain, a preview deployment, a dev origin kept alongside. Added to
+  # the derived one rather than replacing it.
+  extraConsoleRedirectUris: []
 
   # A HealthCheckPolicy overriding the default `/`-on-the-serving-port
   # probe, which Keycloak answers 302 to. The kind is GKE's, so this is
