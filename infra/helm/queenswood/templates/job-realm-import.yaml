@@ -87,7 +87,7 @@ spec:
   backoffLimit: 3
   template:
     metadata:
-      # Deliberately not `queenswood.labels`, which carries
+      # Deliberately not `queenswood.podLabels`, which carries
       # `helm.sh/chart`: the component label is what the queenswood
       # chart's bootstrap Job selects on, and it must not move with a
       # chart version.

@@ -7,10 +7,23 @@ Common naming + labels for Queenswood templates.
 {{- end -}}
 
 {{- define "queenswood.labels" -}}
+{{ include "queenswood.podLabels" . }}
+helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
+{{- end -}}
+
+{{/*
+Labels for a pod template, which is everything above except the chart
+version. A pod template is immutable on a Job, so a label that moves
+with the chart makes every version bump a rejected apply -- and the
+Job names hash the pod spec, which these labels are not part of, so
+the name does not move to absorb it. On a Deployment the same label
+costs a rolling restart per bump. No selector references it: they
+match on instance and component.
+*/}}
+{{- define "queenswood.podLabels" -}}
 app.kubernetes.io/name: {{ .Chart.Name }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-helm.sh/chart: {{ printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" }}
 {{- end -}}
 
 {{/* Force Always when tag is `:latest` so re-pulls actually happen */}}
@@ -103,8 +116,12 @@ twice, and each time the release failed mid-upgrade and had to be
 cleared by deleting the Job by hand.
 
 A consequence worth knowing: a chart version bump that leaves both pod
-specs untouched now reuses the same names, because there is genuinely
-nothing to replace.
+specs untouched reuses the same names, because there is genuinely
+nothing to replace. That only holds while nothing outside the spec
+moves with the version -- `helm.sh/chart` in the pod template labels
+did, and made every bump a rejected apply against an immutable
+`spec.template`. Pod templates take `queenswood.podLabels` for that
+reason.
 */}}
 {{- define "queenswood.migratorJobName" -}}
 {{- printf "%s-migrator-%s" .Release.Name (include "queenswood.migratorPodSpec" . | sha256sum | trunc 10) -}}

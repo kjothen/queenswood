@@ -34,7 +34,7 @@ spec:
   backoffLimit: 3
   template:
     metadata:
-      # Deliberately not `queenswood.labels`: that carries
+      # Deliberately not `queenswood.podLabels`: that carries
       # `helm.sh/chart`, so every chart bump would mutate this pod
       # template. A Job's template is immutable, and this Job's name
       # tracks the restore version rather than the chart version, so

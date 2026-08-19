@@ -19,7 +19,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "queenswood.labels" . | nindent 8 }}
+        {{- include "queenswood.podLabels" . | nindent 8 }}
         app.kubernetes.io/component: console
     spec:
       {{- with .Values.image.pullSecrets }}
