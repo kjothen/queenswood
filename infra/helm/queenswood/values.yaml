@@ -232,6 +232,29 @@ postgres:
       # know what an Argo Application is called. Both sides spell this
       # constant or neither reports anything wrong.
       kubernetesServiceAccount: queenswood-cloudsql-proxy
+    # Giving the database user its rights inside the database, which IAM
+    # authentication does not carry with it -- see the grant Job. Its own
+    # account, not the proxy's: editing an instance's users is not
+    # something a workload should be able to do.
+    grant:
+      enabled: true
+      kubernetesServiceAccount: queenswood-sql-grant
+      serviceAccount: ""
+      gcloudImage: ""
+      # The full intended set, because assign-roles replaces rather than
+      # adds. `cloudsqlsuperuser` is broader than one database needs; it
+      # is what the Admin API can grant without a database session, and
+      # narrowing it means a second identity connecting as a superuser
+      # to run scoped SQL.
+      databaseRoles:
+        - cloudsqlsuperuser
+      resources:
+        requests:
+          cpu: "50m"
+          memory: "128Mi"
+        limits:
+          cpu: "200m"
+          memory: "256Mi"
 
 otel:
   endpoint: ""

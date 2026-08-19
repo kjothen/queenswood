@@ -1,0 +1,92 @@
+{{- if and (eq (include "queenswood.postgresProvider" .) "cloudsql") .Values.postgres.cloudsql.grant.enabled }}
+{{- /*
+  Gives the database user its rights inside the database, which is a
+  different system from the one that let it in. Cloud SQL authenticates
+  an IAM principal and PostgreSQL then authorises it, and an IAM user is
+  created holding nothing at all -- since PostgreSQL 15 only a database's
+  owner may create in `public`, so the workload connects successfully and
+  cannot make a table.
+
+  Neither of Crossplane's resources can express the fix: `Database` has
+  no owner field and `User` no database roles. So this calls the Admin
+  API, which needs no database session and therefore no password -- the
+  property that makes the whole design passwordless survives.
+
+  It runs as its own identity rather than the workload's, and grants to
+  the workload. Editing an instance's users is not something a workload
+  should be able to do, and granting narrowly later means connecting as
+  a superuser that is not the workload.
+
+  Retries rather than waits for ordering. Argo and Crossplane do not
+  sequence against each other, so the user may not exist yet; both
+  operations here are idempotent, so arriving early costs a retry.
+*/ -}}
+{{- $conn := required "postgres.cloudsql.proxy.connectionName is required" .Values.postgres.cloudsql.proxy.connectionName -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.postgres.cloudsql.grant.kubernetesServiceAccount }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+  annotations:
+    iam.gke.io/gcp-service-account: {{ required "postgres.cloudsql.grant.serviceAccount is required" .Values.postgres.cloudsql.grant.serviceAccount | quote }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "queenswood.sqlGrantJobName" . }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sql-grant
+spec:
+  backoffLimit: 20
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood.podLabels" . | nindent 8 }}
+        app.kubernetes.io/component: sql-grant
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: {{ .Values.postgres.cloudsql.grant.kubernetesServiceAccount }}
+      containers:
+        - name: grant
+          image: {{ .Values.postgres.cloudsql.grant.gcloudImage | required "postgres.cloudsql.grant.gcloudImage is required" | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              PROJECT=$(echo "$CONN" | cut -d: -f1)
+              INSTANCE=$(echo "$CONN" | cut -d: -f3)
+
+              # The user is composed by Crossplane, which is not
+              # sequenced against this. Absent means not yet.
+              for i in $(seq 1 60); do
+                if gcloud sql users list --instance="$INSTANCE" \
+                     --project="$PROJECT" --format='value(name)' \
+                     | grep -qx "$DB_USER"; then
+                  break
+                fi
+                echo "waiting for database user $DB_USER ($i/60)"
+                sleep 10
+              done
+
+              # Names the full intended set: assign-roles replaces
+              # rather than adds, so a partial list revokes the rest.
+              gcloud sql users assign-roles "$DB_USER" \
+                --instance="$INSTANCE" --project="$PROJECT" \
+                --type=CLOUD_IAM_SERVICE_ACCOUNT \
+                --database-roles="$DB_ROLES"
+              echo "granted $DB_ROLES to $DB_USER"
+          env:
+            - name: CONN
+              value: {{ $conn | quote }}
+            - name: DB_USER
+              value: {{ include "queenswood.postgresUser" . | quote }}
+            - name: DB_ROLES
+              value: {{ join "," .Values.postgres.cloudsql.grant.databaseRoles | quote }}
+          {{- with .Values.postgres.cloudsql.grant.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
