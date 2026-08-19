@@ -131,6 +131,18 @@ Network:
   hyphens. Always `c`: one public zone serves the installation and
   every instance composes its records into it, so there is no
   environment for the name to carry.
+- **DNS record set** — `rs-qw01-<env>-<label>-<name>-<type>`, where the
+  name is what it publishes and `host` stands for the domain itself. It
+  carries the instance rather than the zone, because the zone holds the
+  records of every instance in the installation and the object name is
+  what says whose a record is.
+- **DNS authorization** — `da-qw01-<env>-<label>`. One covers a domain
+  and its wildcard, so there is no second to distinguish.
+- **certificate** — `crt-qw01-<env>-<label>`, and `-wildcard` for the
+  one covering everything beneath it. Two, because a certificate's
+  domains cannot be added to.
+- **static address** — `addr-qw01-<env>-<label>` for an instance, where
+  the label already says what it is for.
 
 Compute and data:
 

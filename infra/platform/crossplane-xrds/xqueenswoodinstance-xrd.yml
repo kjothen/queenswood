@@ -371,6 +371,62 @@ spec:
                                 is not the workload's: giving a database
                                 its user's rights is not something that
                                 user should be able to do.
+                ingress:
+                  type: object
+                  default: {}
+                  description: |
+                    Where this instance is reached from the internet:
+                    an address, the names that resolve to it, and the
+                    certificates that terminate them. Absent composes
+                    none of it, which is an instance that runs and is
+                    not published -- a valid state, and the one every
+                    instance starts in.
+
+                    Not "apex". An apex is the root of a zone, and this
+                    sits well below one.
+                  properties:
+                    domain:
+                      type: string
+                      description: |
+                        This instance's own name, fully qualified, with
+                        no trailing dot -- test.example.com. Every
+                        service it publishes sits beneath it, so one
+                        wildcard certificate covers all of them and one
+                        DNS authorization covers both.
+                    zone:
+                      type: object
+                      description: |
+                        The zone the records are written into, which
+                        the plane holds rather than this instance --
+                        the zone outlives every instance in the
+                        installation.
+
+                        Stated rather than derived. Two composites have
+                        to spell one name and only one of them makes
+                        it, so the other is told.
+                      properties:
+                        name:
+                          type: string
+                          description: The ManagedZone's name on the plane.
+                        project:
+                          type: string
+                          description: |
+                            The project holding the zone, which is the
+                            management project rather than this
+                            instance's.
+                    subdomains:
+                      type: array
+                      default:
+                        - api
+                        - console
+                        - keycloak
+                      items:
+                        type: string
+                      description: |
+                        Names beneath the domain, each an A record to
+                        the same address. What answers on each is the
+                        chart's business; that they resolve is this
+                        composite's.
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
