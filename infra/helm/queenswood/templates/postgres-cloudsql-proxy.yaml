@@ -12,7 +12,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: {{ include "queenswood.postgresHost" . }}-proxy
+  name: {{ include "queenswood.postgresProxyServiceAccount" . }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
   annotations:
@@ -53,7 +53,7 @@ spec:
         app.kubernetes.io/name: {{ include "queenswood.postgresHost" . }}-proxy
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
-      serviceAccountName: {{ include "queenswood.postgresHost" . }}-proxy
+      serviceAccountName: {{ include "queenswood.postgresProxyServiceAccount" . }}
       containers:
         - name: cloud-sql-proxy
           image: {{ .Values.postgres.cloudsql.proxy.image | quote }}
