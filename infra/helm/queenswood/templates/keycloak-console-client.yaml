@@ -13,14 +13,17 @@
 apiVersion: k8s.keycloak.org/v2alpha1
 kind: KeycloakOIDCClient
 metadata:
-  name: {{ .Release.Name }}-console-client
+  # The client id, verbatim. The CRD carries no clientId field -- not on
+  # spec and not on spec.client -- so the resource's own name is what
+  # identifies the client to the operator, and a release-derived name
+  # would address a different client or create one.
+  name: {{ .Values.keycloak.consoleClientId }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
   keycloakCRName: {{ .Release.Name }}-keycloak
   realm: {{ .Values.keycloak.realm | quote }}
   client:
-    clientId: {{ .Values.keycloak.consoleClientId | quote }}
     enabled: true
     redirectUris:
       - {{ $redirect | quote }}
