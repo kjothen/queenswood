@@ -111,19 +111,19 @@ done
 # committed realm JSON carries no such field -- which is the worst way to
 # find out, an hour into a teardown cycle.
 echo "keycloak $keycloak"
-check "queenswood-keycloak values.yaml (server image)" "$keycloak" \
+check "queenswood values.yaml (server image)" "$keycloak" \
   "$(sed -n 's|^  image: quay.io/keycloak/keycloak:\(.*\)$|\1|p' \
-      infra/helm/queenswood-keycloak/values.yaml | head -1)"
+      infra/helm/queenswood/values.yaml | head -1)"
 check "keycloak-operator Chart.yaml appVersion" "$keycloak" \
   "$(sed -n 's/^appVersion: "\(.*\)"$/\1/p' \
-      infra/helm/keycloak-operator/Chart.yaml | head -1)"
+      infra/helm/queenswood/charts/keycloak-operator/Chart.yaml | head -1)"
 check "keycloak-operator vendored image" "$keycloak" \
   "$(grep -oE 'quay.io/keycloak/keycloak-operator:[0-9.]+' \
-      infra/helm/keycloak-operator/templates/operator.yaml \
+      infra/helm/queenswood/charts/keycloak-operator/templates/operator.yaml \
       | head -1 | cut -d: -f2)"
 check "keycloak-operator vendored CRD accepts server schema" "yes" \
   "$(grep -q 'webAuthnPolicyResidentKey:' \
-      infra/helm/keycloak-operator/crds/crd-keycloakrealmimports.yaml \
+      infra/helm/queenswood/charts/keycloak-operator/crds/crd-keycloakrealmimports.yaml \
       && echo yes || echo no)"
 
 # The management plane installs Crossplane onto its own cluster through a

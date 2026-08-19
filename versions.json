@@ -37,6 +37,6 @@
  },
  "keycloak": {
   "version": "26.7.0",
-  "$comment": "Server image and operator image. The operator vendors its CRDs, so infra/helm/keycloak-operator must be re-vendored from keycloak-k8s-resources at this same tag when this changes."
+  "$comment": "Server image and operator image. The operator vendors its CRDs, so infra/helm/queenswood/charts/keycloak-operator must be re-vendored from keycloak-k8s-resources at this same tag when this changes."
  }
 }
