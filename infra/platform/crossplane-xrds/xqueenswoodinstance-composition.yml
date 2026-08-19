@@ -2103,13 +2103,15 @@ spec:
                    worse than no record, so these wait for it. */}}
             {{- $ip := dig "instance-address" "resource" "status" "atProvider" "address" "" $observed }}
             {{- if $ip }}
-            {{- range $host := prepend (dig "subdomains" list $ingress) "" }}
-            {{- $fqdn := $domain }}
-            {{- $slug := "host" }}
-            {{- if $host }}
-            {{- $fqdn = printf "%s.%s" $host $domain }}
-            {{- $slug = $host }}
-            {{- end }}
+            {{- /* Subdomains only. Nothing serves the bare domain over
+                   HTTPS -- it appears in the chart's routes solely as
+                   the :80 redirect -- and pointing the console at it as
+                   well would give the SPA a second origin, which a
+                   realm imported once and never overwritten makes
+                   permanent. */}}
+            {{- range $host := dig "subdomains" list $ingress }}
+            {{- $fqdn := printf "%s.%s" $host $domain }}
+            {{- $slug := $host }}
             ---
             apiVersion: dns.gcp.m.upbound.io/v1beta1
             kind: RecordSet

@@ -427,6 +427,12 @@ spec:
                         the same address. What answers on each is the
                         chart's business; that they resolve is this
                         composite's.
+
+                        The domain itself gets no record. Nothing
+                        serves it over HTTPS, and giving it to the
+                        console would be a second origin for an SPA
+                        whose redirect URIs a realm import makes
+                        permanent.
                 projectId:
                   type: string
                   pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
