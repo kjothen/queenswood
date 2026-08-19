@@ -31,8 +31,9 @@ The shortlist:
 
 ## Decision
 
-We will keep a pre-commit hook at `scripts/hooks/pre-commit`,
-checked in to the repo. The hook does these jobs:
+We will keep two hooks checked in to the repo, at
+`scripts/hooks/pre-commit` and `scripts/hooks/commit-msg`. The
+pre-commit hook does these jobs:
 
 - **Refuse a cloud account identifier**, over every staged file
   rather than only Clojure. This repository is public, and an
@@ -49,11 +50,20 @@ checked in to the repo. The hook does these jobs:
   errors block the commit. Configured by `.clj-kondo/config.edn`,
   including `lint-as` mappings for the project's macros.
 
-Installation is manual, once per clone:
+The commit-msg hook runs the same identifier check over the message,
+which the pre-commit hook cannot see: it reads staged files, so an
+identifier written in a message rather than in the tree reached
+`main` unexamined. A message carries one rule the tree does not — a
+realised resource id, meaning a name closed by a long hex run. That
+is every UUID in a test fixture and so cannot be a repo-wide rule,
+while in a message it is a resource named on one afternoon, in prose
+that is permanent.
+
+Installation is manual, once per clone, and again whenever either
+hook changes — they are copies rather than symlinks:
 
 ```
-cp scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+just install-hooks
 ```
 
 The hook is a local convenience. The actual gate is CI, which runs

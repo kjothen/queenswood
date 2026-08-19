@@ -75,11 +75,13 @@ install-hooks:
     # git resolves this for a worktree too, where .git is a file and the real
     # hooks directory lives in the primary checkout — so one install covers
     # every worktree of this clone.
-    hook=$(git rev-parse --git-path hooks/pre-commit)
-    mkdir -p "$(dirname "$hook")"
-    cp scripts/hooks/pre-commit "$hook"
-    chmod +x "$hook"
-    echo "installed $hook"
+    for name in pre-commit commit-msg; do
+      hook=$(git rev-parse --git-path "hooks/$name")
+      mkdir -p "$(dirname "$hook")"
+      cp "scripts/hooks/$name" "$hook"
+      chmod +x "$hook"
+      echo "installed $hook"
+    done
 
 # Scan for semgrep guardrails (no args = all bricks, or pass paths)
 semgrep *paths="bases components projects":

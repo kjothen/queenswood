@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# A commit message is as permanent as the tree and as public, and until
+# this existed nothing looked at one -- the pre-commit hook reads staged
+# files, so an identifier written in a message reached main unexamined.
+set -e
+
+bash scripts/hooks/check-cloud-ids.sh --message "$1"

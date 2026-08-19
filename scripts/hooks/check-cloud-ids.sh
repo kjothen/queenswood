@@ -16,14 +16,22 @@
 # and xxxxxx for a project id's suffix. Where a real one genuinely
 # belongs, put `cloud-id-ok` in a comment on the same line.
 #
-#   bash check-cloud-ids.sh           # every tracked file
-#   bash check-cloud-ids.sh --staged  # only staged changes (pre-commit)
+# A commit message is checked too, and carries one rule of its own --
+# see the bottom of this file.
+#
+#   bash check-cloud-ids.sh                 # every tracked file
+#   bash check-cloud-ids.sh --staged        # staged changes (pre-commit)
+#   bash check-cloud-ids.sh --message FILE  # a commit message (commit-msg)
 
 set -euo pipefail
 
 scope="${1:-}"
+message=""
 
-if [ "$scope" = "--staged" ]; then
+if [ "$scope" = "--message" ]; then
+  message="${2:?--message needs the path to a commit message}"
+  files="$message"
+elif [ "$scope" = "--staged" ]; then
   files=$(git diff --cached --name-only --diff-filter=ACM)
 else
   files=$(git ls-files)
@@ -88,6 +96,22 @@ if [ -n "$prose" ]; then
     '(^|[^0-9A-Za-z_./=-])[0-9]{9,12}([^0-9A-Za-z_./-]|$)' 2>/dev/null \
     | grep -v 'cloud-id-ok' || true)
   [ -n "$hits" ] && report "bare account-length number" "$hits"
+fi
+
+# A realised resource, named in prose that is permanent. Not an account
+# identifier and not sensitive -- a Job's name carries a hash of its own
+# pod spec, and a message quoting one reads as though it means something
+# when it names one cluster's state on one afternoon. The guard's
+# opening rule applies: name shapes are wanted, realised ones are not,
+# so write <release>-bootstrap-<hash>.
+#
+# Message-only, and that is the whole reason it can be this loose: the
+# same shape is every UUID in a test fixture, so repo-wide it would
+# match hundreds of lines that are exactly what they should be.
+if [ -n "$message" ]; then
+  hits=$(grep -nHE '[0-9a-z]-[0-9a-f]{8,}([^0-9a-z-]|$)' "$message" 2>/dev/null \
+    | grep -v 'cloud-id-ok' || true)
+  [ -n "$hits" ] && report "realised resource id in a commit message" "$hits"
 fi
 
 exit $fail
