@@ -2129,11 +2129,15 @@ spec:
                 project: {{ $zone.project | quote }}
                 managedZoneRef:
                   name: {{ $zone.name | quote }}
-                name: {{ printf "%s." $record.name | quote }}
+                # Both arrive fully qualified, so the trailing dot is
+                # trimmed before it is added -- appending blindly gives
+                # a name ending in two, which Cloud DNS takes and
+                # nothing resolves.
+                name: {{ printf "%s." (trimSuffix "." $record.name) | quote }}
                 type: CNAME
                 ttl: 300
                 rrdatas:
-                  - {{ printf "%s." $record.data | quote }}
+                  - {{ printf "%s." (trimSuffix "." $record.data) | quote }}
             {{- end }}
             {{- /* Likewise the address: a record pointing at nothing is
                    worse than no record, so these wait for it. */}}
