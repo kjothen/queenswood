@@ -75,6 +75,12 @@ spec:
             # fails whichever connection arrives first.
             - "--health-check"
             - "--http-address=0.0.0.0"
+            # Positional, and last so it reads as the subject of the
+            # flags above. `required` rather than a default: without it
+            # the proxy starts, rejects its own arguments and prints its
+            # usage, which is a crashloop that says nothing about the
+            # value that is missing.
+            - {{ required "postgres.cloudsql.proxy.connectionName is required when postgres.provider is cloudsql" .Values.postgres.cloudsql.proxy.connectionName | quote }}
           ports:
             - containerPort: 5432
               name: postgres
