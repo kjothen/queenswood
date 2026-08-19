@@ -1887,6 +1887,23 @@ FoundationDB sits near 78% of that once the stale ReplicaSets are gone.
 Worth revisiting against real usage rather than declared requests once
 Keycloak lets everything start.
 
+**Spot capacity, once that number is real.** A non-production instance
+runs at a fraction of the price on Spot, and what makes it plausible
+here is that `down` already proved nothing may sit on a node's disk:
+the nodes are the one thing inside the boundary that does not survive,
+so a preemption is a smaller version of something the design has been
+through deliberately. FoundationDB is the part to think about rather
+than the services — it tolerates losing a storage pod and rebuilds,
+but a whole node pool reclaimed at once is a different event, and
+whether the answer is a mixed pool with FDB pinned to standard nodes
+or full Spot with more replicas is a question for measured usage.
+Autopilot is the other shape, and prices Spot per pod rather than per
+node, which suits a cluster whose load is this uneven; against it, it
+takes the node pool out of the composite and with it the field `state`
+turns, so `up` and `down` would need another expression. Neither is
+urgent while an instance is rebuilt this often; both get cheaper to
+adopt once the instance composition stops changing.
+
 Four things wait rather than block:
 
 - **A lien on the instance project.** Deferred deliberately while the
