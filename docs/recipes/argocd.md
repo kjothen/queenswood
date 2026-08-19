@@ -53,7 +53,36 @@ after the budget ran out still needs a nudge, and a nudge is cluster
 write access. Prefer budgets that outlast an ordinary incident.
 
 Trigger a sync without the CLI by setting `.operation` on the
-Application.
+Application, and cancel one by removing it.
+
+Cancelling is the part worth knowing, because a **running** retry loop
+is worse than an exhausted one. An operation pins the revision it
+started with, and each retry replays that revision's manifests — so a
+fix merged while it is retrying never arrives, however many attempts
+remain. With a budget backing off to ten minutes, that is an hour of
+replaying a fault that no longer exists in git.
+
+The status reads as though the fix has landed.
+`status.sync.revisions` shows the revision Argo *would* sync, which
+updates the moment the merge is polled;
+`.operation.sync.revisions` shows the one being retried, and only that
+second one says what is actually being applied. Compare them before
+concluding anything, and remove `.operation` to let a fresh sync start
+at the current revision.
+
+### One bad object fails the whole sync
+
+A sync is one operation over every resource, so a single object the
+API server rejects leaves every well-formed one beside it reported
+`OutOfSync` — and the message names the fault, not the resources
+waiting behind it. The cluster looks mostly right while the
+Application keeps failing.
+
+Server-side apply is stricter than a rendered manifest looks. An
+undeclared field is refused outright rather than dropped, so
+`.spec.foo: field not declared in schema` fails the object entirely.
+`helm template` renders it happily; only the API server has the
+schema. A template that renders is not a template that applies.
 
 ### Revisions
 
@@ -69,6 +98,11 @@ field the manifest can set.
   whose kind a child installs into a child of its own.
 - Set `ServerSideApply=true` for charts with large CRDs.
 - Set retry budgets that outlast an operator install.
+- Read `.operation.sync.revisions` rather than `status.sync.revisions`
+  when a sync is failing. The first is what is being retried; the
+  second is only what would be synced next.
+- Remove `.operation` to cancel a retry loop replaying a revision whose
+  fault is already fixed. Merging does not reach it.
 - Set `prune: false` where pruning would delete something a missing
   file should not delete.
 - Merge a change before expecting Argo to apply it. It reads the

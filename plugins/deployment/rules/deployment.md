@@ -243,7 +243,15 @@ apply succeed. Set `ServerSideApply=true` for charts with large CRDs,
 whose client-side apply exceeds the annotation limit. Set retry budgets
 that outlast an operator install, since an Application that exhausts
 its retries waits for a revision change or a manual sync — a merged fix
-does not reach it. Set `prune: false` where pruning would delete
+does not reach it. A running retry loop is worse: an operation pins the
+revision it started with and replays that revision's manifests, so read
+`.operation.sync.revisions` rather than `status.sync.revisions`, which
+shows only what would be synced next, and remove `.operation` to cancel
+a loop replaying a fault already fixed. One object the API server
+rejects fails the whole sync and leaves every well-formed resource
+beside it `OutOfSync`, and server-side apply refuses an undeclared field
+rather than dropping it — so a template that renders is not a template
+that applies. Set `prune: false` where pruning would delete
 something a missing file should not delete. Merge a change before
 expecting Argo to apply it: it reads the revision an Application names,
 never a working tree.
