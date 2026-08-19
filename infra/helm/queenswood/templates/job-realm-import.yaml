@@ -353,7 +353,7 @@ spec:
             - name: REALMS
               value: {{ join " " $realms | quote }}
             - name: CONSOLE_REDIRECT_URI
-              value: {{ .Values.keycloak.consoleRedirectUri | quote }}
+              value: {{ include "queenswood.consoleRedirectUri" . | quote }}
             - name: KC
               value: "http://{{ .Release.Name }}-keycloak-service:8080"
             - name: ADMIN_USER
