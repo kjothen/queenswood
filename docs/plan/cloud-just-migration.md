@@ -47,15 +47,16 @@ the Admin API because a realm is imported once and never overwritten,
 and `image.tag`, which is `latest` and should not be for anything
 reachable.
 
-**What gates the apex is not wiring, it is the zone.** A DNS zone is
-the one thing here genuinely expensive to get wrong — a churned zone
-can block the domain for around thirty days. The question is where a
-per-environment zone lives. It was ruled out of an instance project
-while instances were disposable; they are not any more, so
-`test.queenswood.io` in the instance project with NS delegation from a
-`queenswood.io` zone held in the management project is what the
-constraints point at. Settle it deliberately before composing
-anything.
+**The zone is settled, and the apex is what is left.** One public zone
+per installation, held in the management project, with each instance
+composing its own records into it. A child zone per environment was
+ruled out: the NS records naming it are a read across two composites,
+and it adds a second zone that can churn, which is where the risk
+lives — each fresh zone for a domain draws from a finite per-domain
+nameserver pool. What gates a create is ownership rather than wiring,
+because Cloud DNS refuses a public zone whose name the calling
+identity has not verified. See
+[cloud-dns](../recipes/cloud-dns.md).
 
 **What not to do yet.** FoundationDB backup stays off until the
 S3-to-GCS proxy replaces the HMAC path — a before-it-holds-data gate
@@ -2073,7 +2074,10 @@ durable one.
 `gcp-dns-zone-create`; `gcp-backup-bucket-create`;
 `gcp-backup-lifecycle-set`; `gcp-keycloak-restore-sa-create`;
 `gcp-keycloak-backup-sa-create`; the `skipDefaultNetworkCreation` half
-of `gcp-org-create`.
+of `gcp-org-create`. `gcp-dns-zone-create` carries a half that does
+not: the domain-ownership verification it falls back to has no API, so
+it stays directory work and the composition assumes it has already
+happened.
 
 **Dies with the key.** `gcp-backup-hmac-create` and
 `_gcp-allow-sa-keys`, once the backup agents reach GCS through the

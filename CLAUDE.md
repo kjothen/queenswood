@@ -177,6 +177,10 @@ those in full before non-trivial work on their topic.
   findings are accepted and why, and the difference between a muted
   finding and a deferred one. See
   [recipes/security-scanning.md](docs/recipes/security-scanning.md).
+- **Cloud DNS** — the manual half: proving domain ownership before a
+  public zone may be created, what has to survive a registrar move,
+  and checking the new zone before the delegation follows. See
+  [recipes/cloud-dns.md](docs/recipes/cloud-dns.md).
 - **Cloud naming** — the installation code, the prefix/code/env/label
   rule and its exceptions, the inventory of every kind and a worked
   example of one installation. See

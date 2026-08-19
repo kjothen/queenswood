@@ -1,6 +1,6 @@
 # Cloud naming
-
 <!-- tessl-plugin: deployment -->
+
 
 ## Problem
 
@@ -127,7 +127,10 @@ Network:
 - **Cloud Router** — `cr-qw01-c-mgmt-euw2`
 - **Cloud NAT** — `nat-qw01-c-mgmt-euw2`
 - **static address** — `addr-qw01-c-<label>`
-- **DNS zone** — `dz-qw01-<env>-<label>`
+- **DNS zone** — `dz-qw01-c-<domain>`, the domain with its dots as
+  hyphens. Always `c`: one public zone serves the installation and
+  every instance composes its records into it, so there is no
+  environment for the name to carry.
 
 Compute and data:
 
