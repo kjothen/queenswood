@@ -178,6 +178,27 @@ spec:
                       items:
                         type: string
                         pattern: '^(user|group|serviceAccount|domain):.+$'
+                    platformAdmin:
+                      type: array
+                      description: |
+                        Who administers this instance, as whole IAM
+                        member strings.
+
+                        Holds the rights a person needs and no
+                        automation ever will. Creating the OAuth client
+                        Google sign-in runs on is a console act with no
+                        API behind it -- Google exposes none for a web
+                        client with a chosen redirect URI -- so the job
+                        cannot be given to an identity, and the right
+                        has to sit with whoever does it.
+
+                        Separate from platformViewer because creating a
+                        client mints a credential that speaks for this
+                        installation to Google, and a capability called
+                        viewer should not.
+                      items:
+                        type: string
+                        pattern: '^(user|group|serviceAccount|domain):.+$'
                 network:
                   type: object
                   default: {}

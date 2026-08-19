@@ -2228,6 +2228,45 @@ spec:
                 role: projects/{{ $project }}/roles/rl_pod_log_reader
                 member: {{ $member | quote }}
             {{- end }}
+            {{- /* Named from a hash of the member rather than its index,
+                   unlike the loop above: a principal removed from the
+                   middle of a list renumbers everything after it, and
+                   Crossplane rebuilds live bindings it only renamed.
+                   The loop above predates this and keeps its names
+                   rather than rebuilding what it has. */}}
+            {{- range $member := dig "access" "platformAdmin" (list) $xr.spec }}
+            {{- $slug := sha256sum $member | trunc 8 }}
+            ---
+            # Creating the OAuth client Google sign-in runs on, which
+            # Google exposes no API for. So this is a right a person
+            # holds and no automation can use, and it lives with the
+            # capability that already writes rather than with the one
+            # named viewer.
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectIAMMember
+            metadata:
+              name: {{ $name }}-oauth-config-{{ $slug }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-oauth-config-{{ $slug }}
+            spec:
+              # With Delete: a principal dropped from the mapping has to
+              # lose the binding in GCP, not merely the resource naming
+              # it.
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+                - Delete
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project }}
+                role: roles/oauthconfig.editor
+                member: {{ $member | quote }}
+            {{- end }}
     - step: auto-ready
       functionRef:
         name: function-auto-ready

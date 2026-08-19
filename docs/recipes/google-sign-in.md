@@ -17,10 +17,27 @@ surface after a user has already left the site.
 ### Before you start
 
 - The instance's project, and access to its console.
+- `roles/oauthconfig.editor` on that project. The console names the
+  half it is missing — `oauthconfig.verification.get` — and
+  `roles/oauthconfig.viewer` carries that one and stops at the next:
+  creating the client needs `clientauthconfig.clients.create` and
+  `.createSecret`, which only the editor role has.
 - The domain Keycloak is published on, and the realm name.
 - The identity provider's alias as the realm defines it — `google`
   below, and the same string the console SPA sends as its
   `keycloakIdpHint`.
+
+The right is granted through the installation's `platformAdmin`
+capability, so it reaches a person through group membership rather than
+by being clicked on. It sits there rather than with `platformViewer`
+for a reason worth keeping: creating a client mints a credential that
+speaks for this installation to Google, and a capability called viewer
+should not.
+
+No automation holds it, and none can. Google exposes no API for a web
+client with a chosen redirect URI, so there is no identity to give the
+job to — which is what makes this a standing right for a person rather
+than something to grant an automation and take away.
 
 ### 1. Create the OAuth client
 
@@ -105,6 +122,8 @@ Sign in. A failure is legible if you know which half produced it:
   `https://keycloak.<domain>/realms/<realm>/broker/<alias>/endpoint`
   exactly, alias included.
 - Create one client per environment.
+- Grant `roles/oauthconfig.editor` through `platformAdmin`, not
+  `platformViewer`. Creating a client mints a credential.
 - Put the id and the secret in over the Admin API. A realm that exists
   keeps the placeholder it was imported with, whatever the chart says.
 - Send a vault expression as the secret, never the secret itself.

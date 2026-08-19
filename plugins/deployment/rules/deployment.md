@@ -185,7 +185,10 @@ See [gcp-iam](../../../docs/recipes/gcp-iam.md).
 ## Google sign-in is two console acts and an Admin API call
 
 Create the OAuth client by hand, as a Web application: no API makes one
-with a chosen redirect URI. Match that URI to
+with a chosen redirect URI, so no automation holds the right and none
+can — grant `roles/oauthconfig.editor` through `platformAdmin` rather
+than `platformViewer`, since creating a client mints a credential and a
+capability called viewer should not. Match that URI to
 `https://keycloak.<domain>/realms/<realm>/broker/<alias>/endpoint`
 exactly, alias included — a wrong one is accepted at setup and returns
 `redirect_uri_mismatch` once the user has already left for Google. Create
