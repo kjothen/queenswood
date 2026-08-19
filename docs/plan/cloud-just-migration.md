@@ -24,14 +24,44 @@ created. This plan is that, and what follows it.
 
 ## Picking this up cold
 
-**The pivot is done.** Steps 1 to 6 are complete: the management plane
-reconciles the installation from the committed manifest, and the boot
-plane that built it is gone. What remains is listed under
-[what is left](#what-is-left), and none of it blocks anything.
+**The bank is up on the first instance, and nothing is blocked.** The
+pivot is done, `qw01-n-test` runs every service, and the deployment
+needs no more manual steps to repeat itself on a second instance. What
+remains is listed under [what is left](#what-is-left) and under
+[after the pivot](#after-the-pivot); none of it stops anything.
 
-Read that, then verify against the live account rather than against
+Read those, then verify against the live account rather than against
 this line, because a sentence naming a step is the first thing here to
-go stale.
+go stale. `kubectl --context qw01-n-test -n queenswood get pods` is the
+fastest answer to "is it still up".
+
+**What to pick up next, in order.** The apex — a static address, its
+DNS record, a certificate, and the gateway turned on — which is what
+makes the instance reachable at all. It is a smaller change than it
+looks: `keycloak.host.domain` moves the issuer and both
+`expectedIssuer` values together, because the fold made them one
+derivation, and enabling the gateway resolves the NEG readiness gate
+rather than needing it worked around. Two things travel with it: the
+`queenswood-console` client's redirect URI, which must go in through
+the Admin API because a realm is imported once and never overwritten,
+and `image.tag`, which is `latest` and should not be for anything
+reachable.
+
+**What gates the apex is not wiring, it is the zone.** A DNS zone is
+the one thing here genuinely expensive to get wrong — a churned zone
+can block the domain for around thirty days. The question is where a
+per-environment zone lives. It was ruled out of an instance project
+while instances were disposable; they are not any more, so
+`test.queenswood.io` in the instance project with NS delegation from a
+`queenswood.io` zone held in the management project is what the
+constraints point at. Settle it deliberately before composing
+anything.
+
+**What not to do yet.** FoundationDB backup stays off until the
+S3-to-GCS proxy replaces the HMAC path — a before-it-holds-data gate
+rather than a before-it-is-reachable one. There is still no
+external-secrets operator on an instance cluster, which the FDB
+encryption key will need.
 
 **The API was renamed after the pivot.** The composite is
 `XManagementPlane` in `platform.repldriven.com`, and `qw01` was
@@ -95,7 +125,9 @@ environment identifier is ever committed here.
 and the migrator Job completed. The five services sit at `Init:1/2`:
 past `wait-for-fdb-cluster`, waiting on `wait-for-bootstrap`.
 
-**It was blocked on Keycloak, which is not optional.** The bootstrap
+**It was blocked on Keycloak, which is history now rather than state
+— kept because the shape it forced is what the deployment still is.**
+The bootstrap
 Job's `sync-admin-client-key` initContainer registers the admin
 client's public key *on Keycloak*, and retries forever against a
 Service that does not exist. So the Job never completes, so no service
@@ -1838,24 +1870,20 @@ lets a node hold nothing. And **two `e2-standard-4` beat three
 sat at 90% and left FoundationDB a storage pod it could not
 schedule.
 
-**What to do next, in order.** Bring the environment up and watch
-Keycloak, which is declared but has never run. Three things are worth
-watching in order, because each is the first of its kind: the proxy
-reaching Cloud SQL as an IAM principal, which is where a Workload
-Identity binding spelling the wrong pair would surface — and where
-`--private-ip` earns its place, since the proxy looks for a public
-address by default and this instance has none, so the connection it
-would otherwise fail to make is one nothing else in the design can
-make either; the realm
-import, which creates a realm once and never overwrites it, so the
-console redirect URI it bakes in is `console.test.queenswood.io` for
-good unless the Admin API changes it; and the bootstrap Job, which is
-what everything else has been waiting on.
+**All three firsts have now happened.** The proxy reached Cloud SQL as
+an IAM principal — which is where a Workload Identity binding spelling
+the wrong pair surfaced, twice, and where `--private-ip` earns its
+place, since the proxy looks for a public address by default and this
+instance has none. The realm import created both realms from the
+chart's committed definitions, with no console redirect URI baked in
+because there was no hostname to name. And the bootstrap Job completed,
+which is what every service had been waiting on.
 
 The issuer is the in-cluster Service rather than a public hostname,
-because nothing outside the cluster can reach this instance yet. That
-is a value to revisit when the gateway arrives, not a permanent one —
-tokens minted before it changes stop verifying after.
+because nothing outside the cluster can reach this instance yet. It is
+a value to revisit when the gateway arrives, not a permanent one —
+tokens minted before it changes stop verifying after, and the two
+`expectedIssuer` values move with it on their own.
 
 After that: the apex address, DNS record and certificate, which need
 the zone question answered first. Whether an instance composes
@@ -1945,16 +1973,14 @@ size, so a small node pays that tax on a small base and three of them
 pay it three times. `redundancy_mode: single` is what makes two nodes
 enough.
 
-**Database authorisation is unowned, and that is the one thing here
-needing a decision rather than a note.** The design's claim that no
-password exists is true, and it quietly assumes that authenticating to
-Cloud SQL brings privileges inside Postgres with it. It does not. An
-IAM user is created with no privileges on any database, and since
-PostgreSQL 15 only a database's owner may create in its `public`
-schema — so Keycloak connected, authenticated, and could not create a
-table. The `Database` resource has no owner field to fix it with, and
-`User` has no `databaseRoles`, so the composite cannot express the
-grant at all.
+**Database authorisation is owned now, and this is how.** The design's claim
+that no password exists is true, and it quietly assumes that authenticating
+to Cloud SQL brings privileges inside Postgres with it. It does not. An IAM
+user is created with no privileges on any database, and since PostgreSQL 15
+only a database's owner may create in its `public` schema — so Keycloak
+connected, authenticated, and could not create a table. The `Database`
+resource has no owner field to fix it with, and `User` has no
+`databaseRoles`, so the composite cannot express the grant at all.
 
 What unblocked it was `gcloud sql users assign-roles ...
 --database-roles=cloudsqlsuperuser`, which is an Admin API call needing
@@ -1968,15 +1994,36 @@ by impersonating the platform identity, which
 the rule that says never to grant a person `serviceAccountTokenCreator`
 on that identity.
 
-This is once per instance, so every future environment meets it. Three
-ways to own it: a Job on the instance cluster calling the Admin API
-through an identity the composite binds, which keeps it declarative and
-passwordless and is the shape to prefer; a fifth capability holding
-`cloudsql.admin` on the folder, which makes it a person's job and says
-whose; or upstream work on the provider so `User` can express
-`databaseRoles` and the composite grants it directly. Until one of them
-lands it is a manual step, and it should be written down as one rather
-than left to be rediscovered.
+This is once per instance, so every future environment would have met
+it. The composite now closes it: a custom role holding
+`cloudsql.users.{update,get,list}` and `cloudsql.instances.{get,update}`
+rather than `cloudsql.admin`, an identity holding that role, the
+Workload Identity binding, and a Job in the chart that calls the Admin
+API. No password, no person, and nobody needs `platform-admin` to build
+an environment.
+
+The identity is its own rather than the workload's, because editing an
+instance's users is not something a workload should be able to do — and
+because granting narrowly later means connecting as a superuser that is
+not the workload, so that step becomes a sidecar and some SQL rather
+than another identity. `cloudsqlsuperuser` is broader than one database
+needs; it is what the Admin API can grant without a database session,
+which is what keeps this passwordless, and it suffices while one
+workload uses the instance.
+
+Four things it took to get right, each worth not repeating. A custom
+role's id is its **external name** — `forProvider` has no `roleId`, and
+the role twenty lines above already showed it. `cloudsql.users.update`
+alone is **refused**: `assign-roles` writes through the instance, so it
+needs `instances.update` too, and the tell is that `users.list` through
+the same role succeeds while the write does not — a missing permission
+and an unbound identity are the same 403 otherwise. A **required chart
+value with nothing setting it breaks the whole release**, not one Job,
+so a chart change and the installation change it needs are one unit and
+not two merges. And the Job's `backoffLimit` is a budget: it survived
+seven restarts across three fixes, but a Job that exhausts one needs a
+person to delete it and sync, which is the same shape as everything
+else here that does not re-evaluate.
 
 **And the console's origin is not in the realm.** The realms imported
 from the chart's committed definitions with `consoleRedirectUri` unset,
