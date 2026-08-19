@@ -148,7 +148,14 @@ not the provider's documentation — shapes differ between versions and
 from what Terraform documents. Delete the managed resource to change
 anything that identifies it: a ForceNew change is refused rather than
 performed, and the refusal appears in `LastAsyncOperation`, so
-diagnosing from `Synced` alone misreads it. Use the `.m.` API group.
+diagnosing from `Synced` alone misreads it. A list-shaped field may
+still be identity — a managed `Certificate`'s `managed.domains` replaces
+the certificate rather than extending it, so a second name is a second
+`Certificate` sharing the one `DNSAuthorization`. Pivot a
+provider-assigned value up to the composite and compose from it rather
+than committing a literal read out by hand, since a `DNSAuthorization`
+issues the record it wants answered only once it exists.
+Use the `.m.` API group.
 Set the external name explicitly where it must differ from the
 Kubernetes name or where something else spells the same string, and
 feed a generated id back as an adopt value where the external name is
