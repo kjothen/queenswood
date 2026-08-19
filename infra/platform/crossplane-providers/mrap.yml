@@ -5,16 +5,15 @@
 # CRD memory for resources we don't use.
 #
 # This MRAP pins activation to exactly the kinds queenswood
-# composes (XPlatform + XQueenswoodApex + XQueenswoodCertificate)
-# plus the env-level ManagedZone. When a new MR kind is composed,
-# add it here.
+# composes (XManagementPlane + XQueenswoodInstance). When a new MR
+# kind is composed, add it here.
 apiVersion: apiextensions.crossplane.io/v1alpha1
 kind: ManagedResourceActivationPolicy
 metadata:
   name: queenswood
 spec:
   activate:
-    # XPlatform (project-scoped GCP infra)
+    # Project-scoped GCP infrastructure, and the identities on it.
     - projectservices.cloudplatform.gcp.m.upbound.io
     - projectiammembers.cloudplatform.gcp.m.upbound.io
     - serviceaccounts.cloudplatform.gcp.m.upbound.io
@@ -32,12 +31,11 @@ spec:
     - databaseinstances.sql.gcp.m.upbound.io
     - databases.sql.gcp.m.upbound.io
     - users.sql.gcp.m.upbound.io
-    # XQueenswoodApex (static IP + apex/keycloak DNS records)
+    # The installation's public zone and its records, and the
+    # addresses an instance is reached on.
     - addresses.compute.gcp.m.upbound.io
     - recordsets.dns.gcp.m.upbound.io
-    # XQueenswoodCertificate (DNS-01 validated managed cert)
+    - managedzones.dns.gcp.m.upbound.io
+    # Managed certificates, validated through a DNS authorization.
     - dnsauthorizations.certificatemanager.gcp.m.upbound.io
     - certificates.certificatemanager.gcp.m.upbound.io
-    # Env-level DNS zone (observe-only, owned outside the
-    # Composition)
-    - managedzones.dns.gcp.m.upbound.io

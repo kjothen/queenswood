@@ -29,6 +29,26 @@ Identity includes more than it looks: a GKE node pool's
 `serviceAccount`, an IAM binding's `member`, a resource's name. Anything
 that identifies the thing is a delete, not an update.
 
+It also includes a field that reads as a list you could append to. A
+managed `Certificate`'s `managed.domains` is ForceNew, so adding a name
+to a live certificate replaces the certificate rather than extending
+it — which on a certificate already serving traffic is an outage
+arriving through what looked like an addition. Compose a second
+`Certificate` instead. One `DNSAuthorization` covers a domain and its
+wildcard, so the two certificates share it rather than needing one
+each.
+
+### Values that only exist after create
+
+A resource may publish in its status the thing another resource needs
+as input. A `DNSAuthorization` issues the validation record it wants
+answered — name and data both — as `status.atProvider.dnsResourceRecord`.
+Pivot it up to the composite with a `ToCompositeFieldPath` patch and
+compose the record from there, rather than reading it out by hand and
+committing a literal: the value is assigned by the provider, differs
+per resource, and a hand-copied one is correct only until something
+rebuilds.
+
 ### External names
 
 The external name is the cloud identifier, and defaults to
@@ -71,6 +91,10 @@ turns out not to exist.
 - Read the CRD before writing a composed resource, not the provider's
   documentation.
 - Delete the managed resource to change anything that identifies it.
+  A list-shaped field may still be one — a `Certificate`'s
+  `managed.domains` replaces the certificate rather than extending it.
+- Pivot a provider-assigned value up to the composite and compose from
+  it, rather than committing a literal read out by hand.
 - Use the `.m.` API group.
 - Set the external name explicitly where it must differ from the
   Kubernetes name, or where something else spells it.

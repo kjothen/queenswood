@@ -14,8 +14,8 @@
 # Crossplane MR has nil status until the controller's first
 # reconcile, so during that window EVERY upbound MR (Cluster, Network,
 # IAMMember, ...) reports Healthy. That window is enough for
-# `kubectl wait --for=health.status=Healthy application/queenswood-gcp`
-# to catch it and proceed before GKE has even started provisioning.
+# `kubectl wait --for=health.status=Healthy` on the Application to
+# catch it and proceed before GKE has even started provisioning.
 #
 # Fix: regroup so empty-status only short-circuits to Healthy for
 # kinds that legitimately have no status (ProviderConfig*,
@@ -110,9 +110,14 @@ data:
   resource.customizations.health.certificatemanager.gcp.m.upbound.io: *upbound_health
   resource.customizations.health.gcp.upbound.io: *upbound_health
   resource.customizations.health.gcp.m.upbound.io: *upbound_health
-  # XR group. Composite Resources follow the same Crossplane
-  # convention (Synced + Ready conditions); the upbound Lua works
-  # for them too, so kubectl wait --for=health.status=Healthy
-  # on the queenswood-gcp Argo App correctly blocks until the XR
-  # (and via Ready aggregation, every composed MR) is actually up.
-  resource.customizations.health.platform.queenswood.repldriven.com: *upbound_health
+  # XR groups. Composite Resources follow the same Crossplane
+  # convention (Synced + Ready conditions), so the upbound Lua works
+  # for them too and an Application blocks until the XR -- and via
+  # Ready aggregation, every composed MR -- is actually up. A group
+  # with no entry has no health check at all, and Argo reports the
+  # Application Healthy however the composite is doing, so an
+  # Application applying a manifest that fails to compose looks
+  # indistinguishable from one that worked. One entry per group the
+  # plane serves.
+  resource.customizations.health.platform.repldriven.com: *upbound_health
+  resource.customizations.health.queenswood.repldriven.com: *upbound_health
