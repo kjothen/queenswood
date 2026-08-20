@@ -22,7 +22,8 @@ Two reasonable shapes for declaring all of that are Terraform
 
 We use Crossplane. Concretely:
 
-- A small local kind cluster (`xp-mp` — "management plane") runs
+- A small local kind cluster (`boot-mgmt`, the boot management
+  plane) runs
   Crossplane plus the GCP family of upjet providers and
   provider-helm.
 - Every cloud resource is a Crossplane Managed Resource or a

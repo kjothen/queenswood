@@ -13,7 +13,7 @@ argo-cd:
 
 # Crossplane Provider and Function packages. These are re-exported here
 # (as opposed to in infra/platform/crossplane-providers/providers.yml)
-# so a single `helm template infra/helm/xp-mp` render exposes the
+# so a single `helm template infra/helm/boot-management-plane` render exposes the
 # package images to the audit pipeline.
 #
 # Argo still owns reconciliation in-cluster: the Application at

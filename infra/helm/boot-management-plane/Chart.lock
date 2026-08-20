@@ -1,0 +1,9 @@
+dependencies:
+- name: crossplane
+  repository: https://charts.crossplane.io/stable
+  version: 2.3.4
+- name: argo-cd
+  repository: https://argoproj.github.io/argo-helm
+  version: 10.2.1
+digest: sha256:20e01ffc1ca26aa9ff54b5236925bed313c6fc79221b9ee36e6884ed25d0ef73
+generated: "2026-08-09T00:03:35.942462+01:00"

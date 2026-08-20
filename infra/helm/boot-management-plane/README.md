@@ -1,4 +1,4 @@
-# xp-mp
+# boot-management-plane
 
 Umbrella Helm chart for the Crossplane management plane. Bundles
 Crossplane core, ArgoCD, and the Crossplane Provider/Function
@@ -31,9 +31,9 @@ the audit, the Argo-managed YAML drives the cluster.
 ## Audit usage
 
 ```bash
-helm dependency update infra/helm/xp-mp
-helm template xp-mp infra/helm/xp-mp > /tmp/xp-mp-rendered.yaml
-# Feed /tmp/xp-mp-rendered.yaml into the audit skill (see SKILL.md).
+helm dependency update infra/helm/boot-management-plane
+helm template boot-management-plane infra/helm/boot-management-plane > /tmp/boot-management-plane-rendered.yaml
+# Feed /tmp/boot-management-plane-rendered.yaml into the audit skill (see SKILL.md).
 ```
 
 The audit's image-extraction regex currently matches `image:` keys
@@ -47,9 +47,9 @@ The chart will also install end-to-end as a replacement for the
 hand-rolled steps in `just kind-xp-bootstrap`:
 
 ```bash
-helm dependency update infra/helm/xp-mp
-helm upgrade --install xp-mp infra/helm/xp-mp \
-  --kube-context kind-xp-mp \
+helm dependency update infra/helm/boot-management-plane
+helm upgrade --install boot-management-plane infra/helm/boot-management-plane \
+  --kube-context kind-boot-mgmt \
   --namespace crossplane-system --create-namespace
 ```
 

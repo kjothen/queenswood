@@ -10,8 +10,8 @@
 # Throwaway control plane used to create the folder and the management
 # project, then discarded. Deliberately not XP_CLUSTER: that one is the
 # previous generation's permanent plane.
-BOOT_CLUSTER := "qw-boot"
-BOOT_CTX := "kind-qw-boot"
+BOOT_CLUSTER := "boot-mgmt"
+BOOT_CTX := "kind-boot-mgmt"
 
 # The installation these recipes act on. Names derive from the code.
 CODE := "qw01"
@@ -844,14 +844,14 @@ gcp-plane-up:
     kind get clusters | grep -q '^{{ BOOT_CLUSTER }}$' \
       || kind create cluster --name '{{ BOOT_CLUSTER }}'
 
-    # Crossplane from the xp-mp chart, providers from the manifest Argo
+    # Crossplane from the boot-management-plane chart, providers from
     # applies on the real plane. Both, because the chart templates
     # Provider and Function CRs in the same release as the subchart that
     # installs their CRDs, so Helm rejects the render on a new cluster --
     # its provider block is an audit re-export, not an install path.
     # Argo is off: a plane that lives for minutes reconciles nothing.
-    helm dependency build infra/helm/xp-mp >/dev/null
-    helm upgrade --install xp-mp infra/helm/xp-mp \
+    helm dependency build infra/helm/boot-management-plane >/dev/null
+    helm upgrade --install boot-management-plane infra/helm/boot-management-plane \
       --kube-context {{ BOOT_CTX }} \
       --namespace crossplane-system --create-namespace \
       --set argo-cd.enabled=false --set providers.enabled=false --wait

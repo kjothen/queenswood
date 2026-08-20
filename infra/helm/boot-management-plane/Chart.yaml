@@ -1,5 +1,5 @@
 apiVersion: v2
-name: xp-mp
+name: boot-management-plane
 description: |
   Crossplane management-plane umbrella: bundles Crossplane core, ArgoCD,
   and the GCP/helm Crossplane provider+function packages currently
