@@ -68,6 +68,22 @@ keycloak:
   # guessed origin is permanent.
   consoleRedirectUri: ""
 
+  # The Google OAuth client the realm's `google` identity provider
+  # authenticates as. Created by hand in the Cloud console -- Google
+  # exposes no API for a web client with a chosen redirect URI -- so the
+  # id is supplied rather than derived. Empty leaves the realm's
+  # committed placeholder alone.
+  #
+  # Only the id. Its secret reaches Keycloak through the file vault
+  # below, so nothing about the client is committed at all.
+  googleClientId: ""
+
+  # The identity provider that id belongs to, and the last segment of
+  # the redirect URI Google is configured with. Renaming one without the
+  # other returns `redirect_uri_mismatch`, and only once the user has
+  # already left for Google.
+  googleIdpAlias: google
+
   # A HealthCheckPolicy overriding the default `/`-on-the-serving-port
   # probe, which Keycloak answers 302 to. The kind is GKE's, so this is
   # off here and on in values-gcp.yaml.

@@ -79,13 +79,14 @@ metadata:
   # Content-addressed: a Job's pod template is immutable, so the name
   # has to change whenever anything it runs on does. Re-applying the
   # same chart and the same backup resolves to the same completed Job.
-  {{- /* The console redirect is in the hash because the Job reconciles
-         it, and a Job is immutable: without it, changing the console's
-         hostname leaves the same name, the same completed Job, and
+  {{- /* The console redirect and the Google client id are in the hash
+         because the Job reconciles them, and a Job is immutable:
+         without them, changing the console's hostname or the OAuth
+         client leaves the same name, the same completed Job, and
          nothing to apply the change -- while Argo tries to patch an
          immutable spec and fails the sync for every resource beside
          it. What the Job acts on belongs in what names it. */}}
-  name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") (include "queenswood.consoleRedirectUri" .) | sha256sum | trunc 8 }}
+  name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") (include "queenswood.consoleRedirectUri" .) .Values.keycloak.googleClientId .Values.keycloak.googleIdpAlias | sha256sum | trunc 8 }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: keycloak-realm-import
@@ -187,8 +188,6 @@ spec:
               api() {
                 curl -s -H "Authorization: Bearer $TOK" "$@"
               }
-              # `|| true` so a transport error reads as "no status" and
-              # is judged by the caller, rather than killing the script
               # The console's deployed origin, applied to the client on
               # every run rather than only at import. A realm is created
               # once and never overwritten, so a hostname that changes
@@ -217,6 +216,46 @@ spec:
                 echo "added $CONSOLE_REDIRECT_URI to '$CONSOLE_CLIENT_ID' in realm '$1'"
               }
 
+              # The Google OAuth client id, applied to an existing realm
+              # for the same reason: the realm carries a placeholder and
+              # is never overwritten, so the id an environment actually
+              # signs in through has to arrive over the Admin API.
+              #
+              # Only the id. The secret stays the committed vault
+              # expression, which the representation returns masked --
+              # writing back what was read would replace it with
+              # asterisks, and Google would refuse the client with the
+              # realm looking entirely correct. It is restored from the
+              # definition instead.
+              #
+              # $2 is that definition. Called only where the realm was
+              # not restored, so it is always the chart's own.
+              reconcile_google_client_id() {
+                [ -n "$GOOGLE_CLIENT_ID" ] || return 0
+                idp="$KC/admin/realms/$1/identity-provider/instances/$GOOGLE_IDP_ALIAS"
+                cur=$(api "$idp")
+                if ! echo "$cur" | jq -e '.alias // empty' >/dev/null 2>&1; then
+                  echo "no identity provider '$GOOGLE_IDP_ALIAS' in realm '$1'; nothing to reconcile"
+                  return 0
+                fi
+                if [ "$(echo "$cur" | jq -r '.config.clientId // ""')" = "$GOOGLE_CLIENT_ID" ]; then
+                  return 0
+                fi
+                secret=$(jq -r --arg a "$GOOGLE_IDP_ALIAS" \
+                  '((.identityProviders // [])[]
+                     | select(.alias == $a) | .config.clientSecret) // ""' "$2")
+                echo "$cur" \
+                  | jq --arg id "$GOOGLE_CLIENT_ID" --arg s "$secret" \
+                      '.config.clientId = $id
+                       | if $s == "" then . else .config.clientSecret = $s end' \
+                  | curl -sf -X PUT -H "Authorization: Bearer $TOK" \
+                      -H 'Content-Type: application/json' -d @- \
+                      -o /dev/null "$idp"
+                echo "set the google client id on '$GOOGLE_IDP_ALIAS' in realm '$1'"
+              }
+
+              # `|| true` so a transport error reads as "no status" and
+              # is judged by the caller, rather than killing the script
               # under `set -e` with curl's exit code and no explanation.
               status_of() {
                 curl -s -o /dev/null -w '%{http_code}' \
@@ -247,6 +286,15 @@ spec:
                   if [ -z "$RESTORED_FROM" ]; then
                     echo "realm '$realm' exists; nothing to import"
                     reconcile_console_redirect "$realm"
+                    # Only the realm the console signs in through. The
+                    # operator realm's own google provider carries a
+                    # literal placeholder secret rather than a vault
+                    # expression, so giving it this id would leave a
+                    # provider that looks configured and cannot
+                    # authenticate.
+                    if [ "$realm" = "$GOOGLE_REALM" ]; then
+                      reconcile_google_client_id "$realm" "$src"
+                    fi
                     continue
                   fi
                   # Set by this Job after a successful restore. Equal
@@ -284,16 +332,29 @@ spec:
                 # never overwritten -- so a guessed host here is
                 # permanent. Empty adds nothing, which is what a console
                 # with no public origin yet wants.
-                if [ -n "$CONSOLE_REDIRECT_URI" ]; then
-                  jq --arg uri "$CONSOLE_REDIRECT_URI" '
+                #
+                # The Google client id rides the same transform, so a
+                # realm created here starts with the id the environment
+                # signs in through rather than the placeholder, and the
+                # reconcile above has nothing left to do.
+                gid=""
+                if [ "$realm" = "$GOOGLE_REALM" ]; then
+                  gid="$GOOGLE_CLIENT_ID"
+                fi
+                jq --arg uri "$CONSOLE_REDIRECT_URI" \
+                   --arg gid "$gid" \
+                   --arg alias "$GOOGLE_IDP_ALIAS" '
+                  (if $uri == "" then . else
                     .clients = ((.clients // []) | map(
                       if .clientId == "queenswood-console"
                       then .redirectUris = (((.redirectUris // []) + [$uri]) | unique)
                       else . end))
-                  ' "$src" > /tmp/$realm.json
-                else
-                  cat "$src" > /tmp/$realm.json
-                fi
+                   end)
+                  | (if $gid == "" then . else
+                    .identityProviders = ((.identityProviders // []) | map(
+                      if .alias == $alias then .config.clientId = $gid else . end))
+                   end)
+                ' "$src" > /tmp/$realm.json
 
                 # Performed by the running server, so the realm it
                 # creates is the realm it serves -- no second process,
@@ -391,6 +452,12 @@ spec:
               value: {{ include "queenswood.consoleRedirectUri" . | quote }}
             - name: CONSOLE_CLIENT_ID
               value: {{ .Values.keycloak.consoleClientId | quote }}
+            - name: GOOGLE_CLIENT_ID
+              value: {{ .Values.keycloak.googleClientId | quote }}
+            - name: GOOGLE_IDP_ALIAS
+              value: {{ .Values.keycloak.googleIdpAlias | quote }}
+            - name: GOOGLE_REALM
+              value: {{ .Values.keycloak.realm | quote }}
             - name: KC
               value: "http://{{ .Release.Name }}-keycloak-service:8080"
             - name: ADMIN_USER

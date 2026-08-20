@@ -1,0 +1,26 @@
+# The instance, as cloud-naming spells it. Every name here derives from
+# the three together, and has to spell what the instance composition
+# spelled -- the Secret Manager entries in particular, which are matched
+# literally.
+code: ""
+env: ""
+label: ""
+
+# The project those entries live in. An instance's own, not the
+# management project: the composite enables Secret Manager here and
+# grants the instance's secrets identity accessor on this project.
+projectId: ""
+
+keycloak:
+  # Keycloak's files-plaintext vault, materialised from Secret Manager.
+  # Each key becomes a file in the mount named <realm>_<key>, so the
+  # queenswood realm's ${vault.google-client-secret} reads
+  # queenswood_google-client-secret.
+  #
+  # The name and the realm both have to match what the queenswood chart
+  # mounts and imports -- keycloak.vault.secretName and keycloak.realm
+  # there.
+  vault:
+    enabled: true
+    secretName: queenswood-keycloak-vault
+    realm: queenswood
