@@ -90,10 +90,11 @@ any other unit would be converted on the way in, which is the
 arithmetic this decision exists to remove. It is also the unit the
 question is asked in — nobody wants to recover to 2,592,000 seconds
 ago. `snapshotPeriodSeconds` beside it is in seconds for the same
-reason and not out of inconsistency: a snapshot period is a thing you
+reason and not from inconsistency: a snapshot period is a thing you
 tune in minutes and FDB takes it in seconds. The unit follows what
-reads the value, not a house style. `fdbbackup expire` takes a cutoff and a floor
-as separate flags, and two flags that must agree is how a configuration
+reads the value, not a house style.
+
+`fdbbackup expire` takes a cutoff and a floor as separate flags, and two flags that must agree is how a configuration
 ends up cutting at thirty and guaranteeing seven, which nobody notices
 until the day it matters. Both come from the one value.
 
