@@ -217,7 +217,11 @@ enforced somewhere else. Grant both halves of Workload Identity, the
 GCP binding and the `iam.gke.io/gcp-service-account` annotation, and
 pin the Kubernetes service account name so the binding matches
 something. Grant `iam.serviceAccounts.actAs` on any account something
-must attach to a resource. Audit an inheriting identity against every
+must attach to a resource, and bucket-metadata read alongside object
+access where the client is S3-compatible — `storage.objectAdmin` carries
+no `storage.buckets.get`, and a HEAD-bucket is the first thing such a
+client sends, so it fails 403 against a name that plainly has write
+access. Audit an inheriting identity against every
 resource it must manage before the identity that created them is
 discarded: whoever creates a project owns it, so a bootstrap identity
 holds rights nothing declared. Prefer a project custom role over a

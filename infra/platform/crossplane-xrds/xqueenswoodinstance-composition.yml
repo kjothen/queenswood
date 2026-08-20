@@ -2651,6 +2651,39 @@ spec:
                 role: roles/storage.objectAdmin
                 member: {{ printf "serviceAccount:sa-%s-backup@%s.iam.gserviceaccount.com" $name $xr.spec.projectId | quote }}
             ---
+            # Reading the bucket itself, which objectAdmin does not
+            # carry: its permissions are all storage.objects.* and
+            # storage.folders.*, and none of them is
+            # storage.buckets.get. The proxy's GCS client asks for the
+            # bucket before it touches an object, so without this every
+            # request fails 403 naming a permission rather than
+            # anything about the object.
+            #
+            # legacyBucketReader rather than bucketViewer: both carry
+            # storage.buckets.get, and this is the one meant to be
+            # bound on a bucket. Its extra permissions are objects.list
+            # and folders.list, which objectAdmin already grants.
+            apiVersion: storage.gcp.m.upbound.io/v1beta1
+            kind: BucketIAMMember
+            metadata:
+              name: {{ printf "%s-backup-reader" $bucket }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-backups-bucket-reader
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                bucket: {{ $bucket | quote }}
+                role: roles/storage.legacyBucketReader
+                member: {{ printf "serviceAccount:sa-%s-backup@%s.iam.gserviceaccount.com" $name $xr.spec.projectId | quote }}
+            ---
             # Both halves of Workload Identity. The chart pins the
             # Kubernetes service account name, so the member string is
             # spelled rather than derived twice.
