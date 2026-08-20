@@ -1,4 +1,5 @@
 # 4. Avro for command and event payloads
+
 <!-- tessl-plugin: design -->
 
 ## Status

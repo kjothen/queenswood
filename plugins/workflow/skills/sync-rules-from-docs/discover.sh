@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Cross-references docs/recipes/*.md + docs/adr/*.md labels
-# (`<!-- tessl-plugin: <name> -->` on the line right after the title)
-# against a rule file's existing `See [...]` links, for one named
+# (`<!-- tessl-plugin: <name> -->` in the front matter, between the
+# title and the first section) against a rule file's existing `See
+# [...]` links, for one named
 # plugin. Deterministic, no judgment — locates and reports, doesn't
 # decide anything (same discipline as extract.sh).
 #
@@ -27,20 +28,30 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
-# --- A doc's label, if any (checks only the line after the title) ---------
+# --- A doc's label, if any -------------------------------------------------
 
+# Anywhere in the front matter -- after the title, before the first
+# section -- rather than on a fixed line. A markdown formatter puts a
+# blank line after a heading, so a label pinned to line 2 moves to line
+# 3 the first time the file is saved in an editor. A parser reading only
+# line 2 then finds nothing and reports it as unlabelled, which is
+# indistinguishable from a doc nobody has labelled -- so the doc leaves
+# the discovery it was written to be found by, silently, for being
+# formatted.
 doc_label() {
   local doc="$1"
   awk '
-    NR == 2 {
+    NR == 1 { next }
+    /^#/ { exit }
+    NR > 8 { exit }
+    {
       if (match($0, /tessl-plugin:[[:space:]]*[a-z0-9_-]+/)) {
         s = substr($0, RSTART, RLENGTH)
         sub(/^tessl-plugin:[[:space:]]*/, "", s)
         print s
+        exit
       }
-      exit
     }
-    NR > 2 { exit }
   ' "$doc"
 }
 

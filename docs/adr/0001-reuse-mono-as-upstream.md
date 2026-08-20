@@ -1,4 +1,5 @@
 # 1. Consume `mono` as a pinned dependency for shared infrastructure
+
 <!-- tessl-plugin: design -->
 
 ## Status

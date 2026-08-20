@@ -1,6 +1,6 @@
 # 24. Instances are their own composites
-<!-- tessl-plugin: deployment -->
 
+<!-- tessl-plugin: deployment -->
 
 ## Status
 

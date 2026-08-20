@@ -1,4 +1,5 @@
 # 17. Query/write brick split for domain components
+
 <!-- tessl-plugin: design -->
 
 ## Status
