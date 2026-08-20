@@ -1,0 +1,37 @@
+# The identifier guard reaches commits and the tree. It does not reach
+# a pull request's title or body, which are written outside git and are
+# just as public -- a real project id suffix went into four descriptions
+# before anyone noticed, in a repository anyone can read.
+#
+# Same script, same rules, so there is one definition of what an
+# identifier is rather than a second that drifts.
+name: Cloud identifiers
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloud-ids-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  description:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Through the environment rather than an expression: a title or
+      # body is attacker-controlled text, and interpolating it into a
+      # shell line is how that text becomes a command.
+      - name: Check the title and body
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          set -euo pipefail
+          printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" > pr-description.txt
+          bash scripts/hooks/check-cloud-ids.sh --message pr-description.txt
