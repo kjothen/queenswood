@@ -24,20 +24,20 @@ created. This plan is that, and what follows it.
 
 ## Picking this up cold
 
-**The bank is reachable at a real domain, and nothing is blocked.** The
-instance serves `console.`, `api.` and `keycloak.test.queenswood.io`
-over certificates it composed itself, the whole DNS path is declared
-from manifests, and the release was renamed while FoundationDB still
-held nothing anyone wanted. Verify against the account rather than
-against this line:
+**The bank is reachable at a real domain, a user signs in with Google,
+and a bank can be created.** The instance serves `console.`, `api.` and
+`keycloak.test.queenswood.io` over certificates it composed itself, the
+whole DNS path is declared from manifests, and the release was renamed
+while FoundationDB still held nothing anyone wanted. Verify against the
+account rather than against this line:
 
 ```
 kubectl --context qw01-n-test -n queenswood get pods
 curl -o /dev/null -w '%{http_code}\n' https://console.test.queenswood.io/
 ```
 
-**What is left is Google sign-in, and what remains of it is manual by
-design.** The plumbing is built. external-secrets runs on the instance
+**Google sign-in is done, and the three acts it took are the three
+that never become automated.** external-secrets runs on the instance
 cluster, a `ClusterSecretStore` reads the instance project with no auth
 block — the controller's pod carries the annotated service account —
 and an `ExternalSecret` materialises `queenswood_google-client-secret`
@@ -48,7 +48,7 @@ id from `keycloak.googleClientId`, and carries it in its own name, so a
 changed id produces a Job that runs rather than a completed one nothing
 re-applies.
 
-Three acts remain, and none of them becomes automated:
+What a second instance repeats, in this order:
 
 - **The OAuth client**, created by hand in the console. No API makes a
   web client with a chosen redirect URI, so no automation holds the
@@ -63,13 +63,17 @@ Three acts remain, and none of them becomes automated:
   shape, and where a value must not go on the way in, is
   [external-secrets](../recipes/external-secrets.md).
 - **The id**, set on `keycloak.googleClientId` in
-  `qw01/test-values.yml`. Empty today, which leaves the realm's
-  placeholder and returns `401 invalid_client`.
+  `qw01/test-values.yml`.
 
 Keycloak reads the vault at startup, so this instance — up before the
-store existed — needs one Keycloak restart after the secret is stored.
-A rebuilt instance does not: the operator and the config chart sit in
-sync waves ahead of the bank's own Application.
+store existed — needed one Keycloak restart after the secret was
+stored. A rebuilt instance does not: the operator and the config chart
+sit in sync waves ahead of the bank's own Application.
+
+Its consent screen is still in Testing mode, which is the one thing
+left on this path. Refresh tokens expire after seven days there, and
+that presents as a session dropping back to sign-in about weekly rather
+than as anything about a console setting.
 
 ### Also outstanding
 
@@ -130,7 +134,28 @@ credential**, because the operator owns the Secret and regenerates it.
 It presents as an instance that will not start, and only Keycloak's own
 log names the cause.
 
-## How the machinery fits together
+**A chart that generates a value regenerates it on every render.** The
+signing key for `queenswood-admin` was minted by `genSelfSignedCert`
+and preserved by a `lookup` of the live Secret — which returns nothing
+under `helm template`, so Argo took the generate branch every time and
+applied a fresh key over the last. The certificate registered on the
+client stayed whatever the bootstrap Job had pushed, because that Job's
+name hashes its pod spec and a changed Secret does not move it. Nothing
+reported drift: from Argo's side the Secret was exactly what git said.
+The fix was to generate in the cluster, from the Job that registers it,
+and let the chart declare the Secret with no `data` so server-side
+apply leaves the contents alone. Now in
+[argocd](../recipes/argocd.md).
+
+**Two credentials in a row failed only at the moment of use.** A
+redirect URI missing its last character is accepted by Google at setup
+and rejected once the user has already left the site; a keypair whose
+halves have drifted apart verifies nowhere but at a token exchange.
+Neither is visible in any status, which is what put both of them last.
+The general shape is worth carrying forward: for anything with a
+counterpart held by another system, the thing to check is not that each
+side is present but that the two were written in the same act.
+
 ## How the machinery fits together
 
 Written down because reconstructing it from the manifests takes an hour
