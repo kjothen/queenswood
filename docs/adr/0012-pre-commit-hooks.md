@@ -1,4 +1,5 @@
 # 12. Pre-commit hooks for formatting and linting
+
 <!-- tessl-plugin: workflow -->
 
 ## Status

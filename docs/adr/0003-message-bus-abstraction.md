@@ -1,4 +1,5 @@
 # 3. Message-bus abstraction with pluggable backends
+
 <!-- tessl-plugin: design -->
 
 ## Status

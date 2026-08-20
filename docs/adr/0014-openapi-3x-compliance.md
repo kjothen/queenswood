@@ -1,4 +1,5 @@
 # 14. Full OpenAPI 3.x compliance for the API contract
+
 <!-- tessl-plugin: design -->
 
 ## Status

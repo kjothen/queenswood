@@ -19,6 +19,18 @@ GitHub fails to render the block. A mermaid line MAY exceed 80
 characters when the diagram reads more clearly as one line.
 See [writing-docs](../../../docs/recipes/writing-docs.md).
 
+## A doc may be formatted, so the tooling tolerates formatting
+
+Carry `<!-- tessl-plugin: <name> -->` in a recipe or ADR's front matter,
+between the title and the first section; anywhere in that window is
+found and the exact line is not load-bearing. A formatter puts a blank
+line after a heading, so a label pinned to one line moves the first time
+the file is saved, and a parser reading a fixed line reports the doc as
+unlabelled — indistinguishable from one nobody labelled, and silent.
+Never move a label to satisfy a script: if discovery cannot find a
+labelled doc, the script is what is wrong.
+See [writing-docs](../../../docs/recipes/writing-docs.md).
+
 ## Tone, maturity claims, and the PRD register
 
 Don't describe `mono`, Queenswood, or their components as

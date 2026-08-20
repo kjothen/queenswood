@@ -58,7 +58,8 @@ shapes below are specific to those two).
    `plugins/<plugin-name>/rules/<plugin-name>.md`). Also
    deterministic and judgment-free: it scans every `docs/recipes/*.md`
    and `docs/adr/*.md` for a `<!-- tessl-plugin: <name> -->` label on
-   the line after the title, and cross-references against the rule
+   the front matter, between the title and the first section, and
+   cross-references against the rule
    file's existing `See [...]` links. Reports two finding types:
    - **`unlinked: <doc>`** — labeled for this plugin, no rule section
      references it yet. This is now a well-founded case for authoring

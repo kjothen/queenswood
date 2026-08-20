@@ -1,4 +1,5 @@
 # Writing docs
+
 <!-- tessl-plugin: docs -->
 
 ## Problem
@@ -36,6 +37,23 @@ The 80-column rule exists because the docs are read in Neovim
 with a colorcolumn ruler at 80; long lines render with the
 ruler overlapping content. Workspace Clojure code is already
 80-wrapped via zprint; docs match.
+
+### The tessl-plugin label
+
+A recipe or ADR distilled into a plugin rule carries
+`<!-- tessl-plugin: <name> -->` in its front matter — after the title,
+before the first section. Anywhere in that window is found; the exact
+line is not load-bearing.
+
+That is deliberate rather than lax. A markdown formatter puts a blank
+line after a heading, so a label pinned to line 2 moves to line 3 the
+first time somebody saves the file, and a parser reading a fixed line
+then reports the doc as unlabelled — indistinguishable from one nobody
+has labelled, and silent. Documents should be free to be formatted, so
+the tooling tolerates the shapes formatting produces.
+
+Which means: do not move a label to satisfy a script. If discovery
+cannot find a labelled doc, the script is wrong.
 
 ### Markdown link hygiene
 

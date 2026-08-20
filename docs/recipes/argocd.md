@@ -1,4 +1,5 @@
 # Argo CD
+
 <!-- tessl-plugin: deployment -->
 
 ## Problem

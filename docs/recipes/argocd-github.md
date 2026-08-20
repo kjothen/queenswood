@@ -1,4 +1,5 @@
 # Argo CD against a private GitHub repository
+
 <!-- tessl-plugin: deployment -->
 
 ## Problem

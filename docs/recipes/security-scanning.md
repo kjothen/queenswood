@@ -1,6 +1,6 @@
 # Scanning the organisation, and what it is allowed to find
-<!-- tessl-plugin: deployment -->
 
+<!-- tessl-plugin: deployment -->
 
 ## Problem
 
