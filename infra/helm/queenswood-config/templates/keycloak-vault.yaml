@@ -27,7 +27,7 @@ spec:
   refreshInterval: 1h
   secretStoreRef:
     kind: ClusterSecretStore
-    name: {{ printf "%s-%s-%s" .Values.code .Values.env .Values.label | quote }}
+    name: {{ include "queenswood-config.instance" . | quote }}
   target:
     name: {{ .Values.keycloak.vault.secretName | quote }}
   data:
@@ -36,5 +36,5 @@ spec:
         # The external name the composite gave the entry, which is what
         # Secret Manager knows it by. The CRD declares no secretId, so
         # there is no second spelling to disagree with this one.
-        key: {{ printf "sec-%s-%s-%s-google-oauth" .Values.code .Values.env .Values.label | quote }}
+        key: {{ printf "sec-%s-google-oauth" (include "queenswood-config.instance" .) | quote }}
 {{- end }}
