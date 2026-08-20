@@ -1272,6 +1272,56 @@ gcp-platform-billing-role billing="":
     echo ">>> granted. The platform identity can now bill the projects"
     echo ">>> it creates, which is what an instance needs."
 
+# Generate the key an instance's FDB backups are encrypted under, and
+# put it in that instance's entry. Once, ever.
+gcp-fdb-backup-key env label:
+    #!/usr/bin/env zsh
+    set -e
+    # Its own recipe rather than a value typed into gcp-secret-version,
+    # because the encoding is not a thing to leave to whoever is
+    # holding the terminal.
+    #
+    # fdbbackup reads encryptionKeyPath as raw bytes. The ExternalSecret
+    # base64s the Secret Manager payload on its way into the Secret, so
+    # what lands on disk is the payload verbatim -- meaning the entry
+    # holds 32 raw bytes and not the base64 text of them. The previous
+    # generation held the text, because a chart writing into `data`
+    # needed base64 and Kubernetes decoded it again. Same key, two
+    # encodings, and the one that is wrong fails at a restore.
+    #
+    # Piped, never written down: a file you delete afterwards is not
+    # deleted on a copy-on-write filesystem. And not through
+    # gcp-secret-version, which strips a trailing newline -- correct for
+    # a typed secret, and one key in 256 ends in 0x0a.
+    SECRET="sec-{{ CODE }}-{{ env }}-{{ label }}-fdb-backup-key"
+    PROJECT=$(just _gcp-recovery-project || true)
+    if [[ -z "$PROJECT" ]]; then
+      echo "no recovery project for {{ CODE }}" >&2
+      echo "the plane composes it from recoveryProjectId -- merge that first" >&2
+      exit 1
+    fi
+    if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
+      echo "no secret $SECRET in $PROJECT" >&2
+      echo "the composite makes the container -- apply it first" >&2
+      exit 1
+    fi
+    # Refused rather than versioned. An existing backup is readable only
+    # under the key it was written with, so a second version does not
+    # rotate anything -- it strands every backup taken before it. Rotate
+    # by starting a new generation under a new entry and keeping this
+    # one until nothing readable is left under it.
+    if VERSIONS=$(gcloud secrets versions list "$SECRET" --project="$PROJECT" \
+                    --filter="state=ENABLED" --format='value(name)' 2>/dev/null) \
+       && [[ -n "$VERSIONS" ]]; then
+      echo "$SECRET already holds a key, and replacing it would strand" >&2
+      echo "every backup taken under the current one" >&2
+      exit 1
+    fi
+    openssl rand 32 \
+      | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=- \
+        >/dev/null
+    echo ">>> $SECRET now holds a key. It is the only copy, deliberately."
+
 # Add a version to a Secret Manager entry, reading the value off stdin.
 gcp-secret-version secret project="" file="":
     #!/usr/bin/env zsh

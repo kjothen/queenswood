@@ -137,6 +137,18 @@ instance that owns it, living where that instance does not. `just
 gcp-secret-version` looks there when the derived project does not have
 it, and says which one it used.
 
+It holds **32 raw bytes, not the base64 text of them**, and the
+difference is invisible until a restore. `fdbbackup` reads
+`encryptionKeyPath` as bytes, and an `ExternalSecret` base64s the
+Secret Manager payload on its way into the Secret — so what lands on
+disk is the payload verbatim. The previous generation stored the text,
+because a chart writing into a Secret's `data` needed base64 and
+Kubernetes decoded it again: same key, two encodings, one of them
+wrong. `just gcp-fdb-backup-key <env> <label>` is what puts it in, so
+the encoding is not left to whoever is holding the terminal — and it
+refuses an entry that already holds one, since a second version does
+not rotate anything, it strands every backup taken under the first.
+
 One per instance rather than one per installation, for the reason each
 instance has its own bucket: a key that opens every instance's backups
 makes that separation decorative. Reading it is granted on the entry
