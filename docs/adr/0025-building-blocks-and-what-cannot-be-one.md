@@ -1,6 +1,6 @@
 # 25. Building blocks, and what cannot be one
-<!-- tessl-plugin: deployment -->
 
+<!-- tessl-plugin: deployment -->
 
 ## Status
 
@@ -84,7 +84,7 @@ cannot exist. The manual half lives in recipes —
 [google-sign-in](../recipes/google-sign-in.md) — and is as much a part
 of building an installation as anything composed.
 
-Note what this does *not* exclude. The OAuth client cannot be composed;
+Note what this does _not_ exclude. The OAuth client cannot be composed;
 the Secret Manager entry holding its secret is an ordinary managed
 resource and belongs in the catalogue like any other.
 
@@ -115,7 +115,7 @@ further from their cause. A catalogue also invites the question of
 whether composing a raw managed resource is still allowed, which this
 does not answer.
 
-**Deferred.** Whether the catalogue becomes the *only* way to build
+**Deferred.** Whether the catalogue becomes the _only_ way to build
 cloud infrastructure. That is a policy, it costs the ability to compose
 a one-off, and it is worth deciding when there are more consumers than
 the two that exist.
