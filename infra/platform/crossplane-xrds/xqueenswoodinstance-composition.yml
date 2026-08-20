@@ -1091,9 +1091,12 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
+                  # A map, not a list of one. And no secretId: the CRD
+                  # declares none, so what Secret Manager knows this by
+                  # is the external name below -- which the
+                  # ExternalSecret reading it has to spell the same.
                   replication:
-                    - auto:
-                        - {}
+                    auto: {}
             patches:
               - type: CombineFromComposite
                 combine:
@@ -1105,8 +1108,6 @@ spec:
                   string:
                     fmt: "sec-%s-%s-%s-google-oauth"
                 toFieldPath: metadata.name
-              # The id Secret Manager knows it by, which the
-              # ExternalSecret that reads it must spell the same.
               - type: CombineFromComposite
                 combine:
                   variables:
@@ -1116,7 +1117,7 @@ spec:
                   strategy: string
                   string:
                     fmt: "sec-%s-%s-%s-google-oauth"
-                toFieldPath: spec.forProvider.secretId
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
               - fromFieldPath: spec.projectId
                 toFieldPath: spec.forProvider.project
           # Certificate Manager, for the certificates the instance's
