@@ -51,6 +51,40 @@ into environments. Inserting the code after the prefix keeps the guide's
 together, which matches the folder being the unit that gets created and
 destroyed as a whole.
 
+### A name you cannot take back carries a suffix
+
+Some names are consumed by being used. Delete the resource and the name
+does not come back, or comes back only if nobody else took it first —
+so a rebuild under the same name is not available, and the rebuild is
+what an installation does routinely.
+
+Give those six hex characters at the end. The test is one question:
+**if this resource were deleted right now, could the next one have the
+same name?** Where the answer is no, or is somebody else's to decide,
+the name takes a suffix. Where it is yes, it does not — a suffix on a
+name that could simply be reused is noise, and reads as though
+something were at stake.
+
+What that settles, and how each was checked rather than assumed:
+
+- **Project id** — never reusable after deletion. Suffix.
+- **Bucket** — globally unique across all of GCP, so the name is not
+  merely consumed but contested: lose the race and it is gone. Suffix.
+- **KMS key ring and key** — cannot be deleted at all, so a name is
+  spent permanently. Suffix, from the first commit, if one is ever
+  composed.
+- **Cloud SQL instance** — reusable immediately, which it was not
+  always. No suffix.
+- **Service account** — the name is reusable, but the account that
+  takes it is a separate identity and inherits none of the roles the
+  deleted one held, while those bindings linger with a `deleted:`
+  prefix for up to sixty days. Survivable here only because the
+  composition creates every binding it needs, so a rebuild re-grants
+  them; a grant made by hand does not come back. No suffix, and worth
+  knowing why.
+- **Folder** — display names are unique among siblings rather than
+  globally, and anything durable references the folder id. No suffix.
+
 ### The exceptions, and why each is one
 
 - **Folder** — `fldr-qw01`. No environment: the folder *is* the
@@ -181,7 +215,12 @@ Compute and data:
   no region qualifier
 - **service networking peering** — `psa-qw01-<env>-<label>`, one per
   VPC and named for what it grants rather than for either end
-- **bucket** — `bkt-qw01-<label>`
+- **bucket** — `bkt-qw01-<env>-<label>-<what>-<suffix>`, with the
+  `<what>` distinguishing buckets whose retention regimes differ: a
+  retention policy is bucket-wide and, once locked, permanent, so
+  anything sharing a bucket with what is kept forever is kept forever
+  too. The suffix is six hex characters, because a bucket name is
+  globally unique.
 - **secret** — `sec-qw01-<env>-<label>`
 
 ### Installation qw01, as built
@@ -284,6 +323,9 @@ installation is that field and nothing else.
   kinds the guide does not list.
 - Add a kind to the inventory above when you name one that is not
   already there.
+- End a name with six hex characters where the name cannot be reused
+  after the resource is deleted. Check what the kind actually does
+  rather than assuming, and record the answer in the list above.
 
 **MUST NOT:**
 
