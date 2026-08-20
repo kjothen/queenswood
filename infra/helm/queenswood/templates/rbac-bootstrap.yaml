@@ -1,0 +1,63 @@
+{{- if .Values.bootstrap.enabled }}
+---
+# The bootstrap Job's own identity. It generates the private_key_jwt
+# signing pair on first run and writes it into the Secret named below,
+# so it needs write access to that one Secret -- which the namespace
+# default ServiceAccount must not carry, since every service pod
+# inherits it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "queenswood.bootstrapServiceAccount" . }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Release.Name }}-bootstrap-key
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+rules:
+  # resourceNames, so this is a grant on one Secret rather than on
+  # secrets. No `create`: the Secret is rendered by the chart, only its
+  # contents are written here, and resourceNames does not restrict
+  # create in any case -- the name is not known at admission.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["{{ include "queenswood.keycloakAdminKeySecret" . }}"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-bootstrap-key
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-bootstrap-key
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "queenswood.bootstrapServiceAccount" . }}
+    namespace: {{ .Release.Namespace }}
+---
+# The Job's own gates -- wait-for-fdb-cluster, wait-for-realm-import,
+# wait-for-migrator -- read ConfigMaps and Jobs, which the default
+# ServiceAccount held before the Job had one of its own.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Release.Name }}-bootstrap-wait-sa
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .Release.Name }}-bootstrap-wait
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "queenswood.bootstrapServiceAccount" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

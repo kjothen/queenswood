@@ -338,7 +338,13 @@ rather than dropping it — so a template that renders is not a template
 that applies. Set `prune: false` where pruning would delete
 something a missing file should not delete. Merge a change before
 expecting Argo to apply it: it reads the revision an Application names,
-never a working tree.
+never a working tree. Never rely on `lookup` to preserve a generated
+value — Argo renders with `helm template`, where it returns nothing, so
+the generate branch always wins and every sync applies a fresh value
+over whatever the last one left. Generate such a value in the cluster
+instead, from the same Job that registers it wherever its counterpart
+lives, and let the chart declare the Secret without `data` so
+server-side apply leaves the contents to whoever wrote them.
 See [argocd](../../../docs/recipes/argocd.md).
 
 ## Argo reads a private repository as a GitHub App

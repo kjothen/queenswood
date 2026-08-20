@@ -373,3 +373,22 @@ rejected.
 {{- $spec := printf "%s|%s|%s" .Values.postgres.cloudsql.proxy.connectionName (include "queenswood.postgresUser" .) (join "," .Values.postgres.cloudsql.grant.databaseRoles) -}}
 {{- printf "%s-sql-grant-%s" .Release.Name ($spec | sha256sum | trunc 10) -}}
 {{- end -}}
+
+{{- /*
+The Secret holding the private_key_jwt signing pair for the
+`queenswood-admin` client. Named here because three templates reach
+it: the Secret itself, the bootstrap Job that fills it, and the
+service Deployments that mount it.
+*/ -}}
+{{- define "queenswood.keycloakAdminKeySecret" -}}
+{{ .Release.Name }}-keycloak-admin
+{{- end -}}
+
+{{- /*
+ServiceAccount the bootstrap Job runs as. Its own rather than the
+namespace default, because it writes the signing pair into the Secret
+above and that grant must not reach every pod in the namespace.
+*/ -}}
+{{- define "queenswood.bootstrapServiceAccount" -}}
+{{ .Release.Name }}-bootstrap
+{{- end -}}
