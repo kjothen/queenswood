@@ -80,9 +80,19 @@ field that destroys on every reconcile, which is the hazard ADR-0022
 names from the other end — *a live plane watching its resources vanish
 through a prune and doing what it was told.*
 
-**Retention is one number, and everything else is derived from it.**
-An installation says how far back it can recover — thirty days — and
-nothing else is stated. `fdbbackup expire` takes a cutoff and a floor
+**Retention is one number, expressed in days, and everything else is
+derived from it.** An installation says how far back it can recover —
+thirty days — and nothing else is stated.
+
+Days because that is the unit the tool consuming it uses:
+`--delete-before-days` and `--min-restorable-days` both take days, so
+any other unit would be converted on the way in, which is the
+arithmetic this decision exists to remove. It is also the unit the
+question is asked in — nobody wants to recover to 2,592,000 seconds
+ago. `snapshotPeriodSeconds` beside it is in seconds for the same
+reason and not out of inconsistency: a snapshot period is a thing you
+tune in minutes and FDB takes it in seconds. The unit follows what
+reads the value, not a house style. `fdbbackup expire` takes a cutoff and a floor
 as separate flags, and two flags that must agree is how a configuration
 ends up cutting at thirty and guaranteeing seven, which nobody notices
 until the day it matters. Both come from the one value.
