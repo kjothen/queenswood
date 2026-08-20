@@ -228,7 +228,13 @@ Composition for a kind it no longer serves.
   mistake rather than a meaning.
 - Put constants in `base`. A `Format` transform with no verb for its
   input corrupts the value.
-- Install a provider for every kind the composite composes, on every
+- Enable an API before composing a kind that needs it. Cloud Storage is
+on by default in a new project and Secret Manager is not, so an entry
+composed into a fresh project fails observe with a 403 naming the API —
+on the managed resource, while the composite goes on reporting `Ready`
+because everything else in it is.
+
+Install a provider for every kind the composite composes, on every
   plane that composes it.
 - Read `Synced`, `Ready` and `LastAsyncOperation` before concluding
   anything. They report different failures.
