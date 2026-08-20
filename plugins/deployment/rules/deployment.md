@@ -123,7 +123,10 @@ Change a resource's `- name:` to rebuild it under a new
 and recreates from the composite's record, so renaming the object alone
 rebuilds the old one. Set `policy.fromFieldPath: Required` where a
 missing source is a mistake rather than a meaning — a patch whose
-source is absent is skipped silently — and put constants in `base`,
+source is absent is skipped silently, while a Required patch whose
+source is absent drops the whole composed resource, which is how a
+block becomes optional without a second composition and why such a
+field cannot carry an XRD default — and put constants in `base`,
 because a `Format` transform with no verb for its input corrupts the
 value. Server-side apply gives every field a manager, and a manager
 that stops declaring a field it solely owns removes it — so the
@@ -140,8 +143,23 @@ because nothing links them but a `compositeTypeRef`. Where the
 Application carrying the XRD prunes, deleting the file is the removal;
 where it does not, the plane goes on serving the kind and the edit reads
 as a change that did nothing.
-Withhold `Delete` from `managementPolicies` for anything whose loss is
-unrecoverable: deleting the managed resource then orphans the cloud
+Give a kind composed from more than one place an XRD of its own, fixing
+the invariants and parameterising the rest: a Composition is read by
+every composite of its kind on the next reconcile, so tightening a
+policy centrally is one edit rather than a version each caller must
+adopt — and extract it at the second call site, since what varies is
+guesswork from one example while the invariants are the same either
+way. Nothing opts out, so an XRD version is not a compatibility knob: no
+composite pins one, so keep a kind versionless and leave it at
+`v1alpha1` — where a change is large enough to want a version it is a
+different kind, named for what it is and adopted deliberately, since a
+second version of one kind promises an upgrade path that does not
+exist. Every Composition edit is taken by every live composite on its
+next reconcile — so add fields rather than
+repurpose them, default what a manifest does not yet set, and never make
+a field required in the change that introduces it.
+Withhold `Delete` from `managementPolicies` for anything whose loss
+is unrecoverable: deleting the managed resource then orphans the cloud
 resource rather than destroying it, and deleting a composite destroys
 whatever its resources permit. Install a provider for every kind the
 composite composes, on every plane that composes it, and never compose
@@ -203,11 +221,17 @@ controller's pod already carries the annotated service account. That is
 what keeps the value out of git and out of Argo, and what makes a
 rebuilt cluster re-read rather than re-upload. Name the entry
 `sec-<code>-c-<what>` on a plane and `sec-<code>-<env>-<label>-<what>`
-on an instance, pin the release name and the service account name that
-binding spells literally rather than letting Argo derive either from an
-Application's name, and withhold `Delete` where the value cannot be
-regenerated. Put a version in with `just gcp-secret-version`, which
-refuses to create a container the composite has not made and strips the
+on an instance. The FoundationDB backup key is the one whose name and
+home disagree: named for the instance whose backups it opens, composed
+into the installation's recovery project because a key in the project
+whose data it protects is not a second copy of anything, one per
+instance so a single key does not open every instance's backups, and
+granted on that entry alone rather than project-wide. Pin the release
+name and the service account name that binding spells literally rather
+than letting Argo derive either from an Application's name, and
+withhold `Delete` where the value cannot be regenerated. Put a version
+in with `just gcp-secret-version`, which refuses to create a container
+the composite has not made and strips the
 trailing newline from anything typed or piped: Secret Manager stores the
 bytes it is given, and a consumer reading the value whole sends that
 newline as part of the credential, failing as a rejected secret rather

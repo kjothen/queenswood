@@ -973,7 +973,7 @@ gcp-plane-up:
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
 # Print the installation manifest, resolved, e.g. just gcp-plane-manifest organizations/<org-id>
-gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
+gcp-plane-manifest parent name="" folder="" mgmt="" billing="" recovery="":
     #!/usr/bin/env zsh
     set -e
     # stdout carries the manifest and nothing else, so this can be
@@ -1035,6 +1035,17 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
       echo ">>> naming the management project $MGMT" >&2
     fi
 
+    # Minted here rather than added when backups are first wanted, so a
+    # from-scratch installation has somewhere to keep what it would be
+    # rebuilt from without anyone deciding to. Its own id for the same
+    # reason the management project's is minted once: consumed
+    # permanently, and not derivable afterwards.
+    RECOVERY="{{ recovery }}"
+    if [[ -z "$RECOVERY" ]]; then
+      RECOVERY="prj-{{ CODE }}-c-recovery-$(openssl rand -hex 3)"
+      echo ">>> naming the recovery project $RECOVERY" >&2
+    fi
+
     # Set only when the project already exists, for the same reason the
     # folder's adoption field is: a pre-set external name turns a
     # first-run create into a failed observe.
@@ -1094,6 +1105,8 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
         platformAdmin: ["group:{{ PLATFORM_ADMIN_GROUP }}@${DOMAIN}"]
         clusterAdmin: ["group:{{ CLUSTER_ADMIN_GROUP }}@${DOMAIN}"]
         secretsAdmin: ["group:{{ SECRETS_ADMIN_GROUP }}@${DOMAIN}"]
+      recovery:
+        projectId: "$RECOVERY"
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT
@@ -1176,6 +1189,26 @@ gcp-plane-down:
 # The durable plane, inside the installation's folder -- as opposed to
 # the throwaway one above, which exists only long enough to create it.
 # =========================================================================
+
+# Print the recovery project's id, found by id prefix. Empty where the
+# installation has none.
+[private]
+_gcp-recovery-project:
+    #!/usr/bin/env zsh
+    set -e
+    # Same id-prefix lookup as the management project below, for the
+    # same reason: the suffix is random and nothing labels the project.
+    # Empty rather than an error where there is none -- an installation
+    # that keeps nothing has no recovery project, and a caller that can
+    # do without it should not be stopped.
+    if ! OUT=$(gcloud projects list \
+                 --filter="projectId ~ ^prj-{{ CODE }}-c-recovery-" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    printf '%s\n' "${OUT%%$'\n'*}"
 
 # Print the management project's id, found by id prefix.
 [private]
@@ -1274,10 +1307,25 @@ gcp-secret-version secret project="" file="":
       fi
     fi
 
+    # An instance owns entries that do not live in its project: a
+    # backup key is named for the instance whose backups it opens and
+    # composed into the recovery project, because a key in the project
+    # whose data it protects is not a second copy of anything. The name
+    # cannot say both, so a miss where the name points is a look in the
+    # recovery project rather than a failure -- and it says which one it
+    # used, since a value written to the wrong project is a container
+    # nothing reads and a failure much later.
     if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
-      echo "no secret $SECRET in $PROJECT" >&2
-      echo "the composite makes the container -- apply it first" >&2
-      exit 1
+      RECOVERY=$(just _gcp-recovery-project || true)
+      if [[ -n "$RECOVERY" && "$RECOVERY" != "$PROJECT" ]] \
+         && gcloud secrets describe "$SECRET" --project="$RECOVERY" >/dev/null 2>&1; then
+        PROJECT="$RECOVERY"
+        echo ">>> $SECRET is in the recovery project $PROJECT" >&2
+      else
+        echo "no secret $SECRET in $PROJECT" >&2
+        echo "the composite makes the container -- apply it first" >&2
+        exit 1
+      fi
     fi
 
     if [[ -n "{{ file }}" ]]; then

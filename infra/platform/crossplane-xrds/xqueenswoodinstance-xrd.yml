@@ -496,6 +496,47 @@ spec:
                     prj-<code>-<env>-<label>-<suffix>, the suffix six
                     hex characters because a project id is globally
                     unique.
+                recovery:
+                  type: object
+                  description: |
+                    Where this instance keeps what it would be rebuilt
+                    from. The plane composes the project and leaves it
+                    empty; each instance composes its own bucket in it,
+                    so one instance's identity is granted on its own
+                    backups and reaches no other's.
+
+                    Normally left absent: the project is named once for
+                    the installation, in its EnvironmentConfig as
+                    `recoveryProjectId`, and every instance reads the
+                    same answer. This is the override, for an instance
+                    keeping its backups somewhere else, and it follows
+                    billingAccountId's shape rather than inventing a
+                    second one.
+
+                    Supplied rather than discovered either way. Two
+                    composites cannot read each other's status, and the
+                    id is not derivable -- it carries a suffix chosen
+                    when the plane's manifest was minted.
+
+                    Named in neither place composes no bucket, which is
+                    an instance keeping nothing.
+                  properties:
+                    projectId:
+                      type: string
+                      pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                      description: |
+                        The installation's recovery project, as
+                        `management`'s manifest spells it.
+                    location:
+                      type: string
+                      description: |
+                        Where the bucket lives, defaulting to this
+                        instance's region. A backup in the region it
+                        backs up does not survive losing that region; a
+                        multi-region costs more and answers the S3
+                        interop endpoint under a region name of its
+                        own, which the backup agent signs over and so
+                        is not free to change later.
                 adopt:
                   type: string
                   pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
@@ -532,6 +573,20 @@ spec:
             status:
               type: object
               properties:
+                backupsBucket:
+                  type: string
+                  description: |
+                    This instance's bucket in the installation's
+                    recovery project. A workload writing to it cannot
+                    derive the name: the suffix belongs to that project
+                    rather than to this instance.
+                fdbBackupKeySecret:
+                  type: string
+                  description: |
+                    The Secret Manager entry holding the key this
+                    instance's backups are encrypted under, in the
+                    recovery project. A container with no version until
+                    somebody writes one.
                 projectId:
                   type: string
                   description: |

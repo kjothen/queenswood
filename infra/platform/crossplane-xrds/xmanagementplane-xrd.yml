@@ -64,12 +64,20 @@ spec:
                     field restating it is a second copy that can
                     disagree.
 
-                    Wanted only where a project is being created, and
-                    supplied then by gcp-plane-apply from the identity's
-                    own binding. Once a project exists the provider's
+                    A running plane reads the account from the
+                    installation's EnvironmentConfig, as every instance
+                    already does, so it can create a project from git
+                    alone -- which is what a plane that composes one is
+                    for. This field is the override, and the boot
+                    plane's only route: it applies the manifest and
+                    nothing else, so there is no config on it to read
+                    and gcp-plane-apply supplies the account from the
+                    identity's own binding.
+
+                    Once a project exists the provider's
                     late-initialisation owns forProvider.billingAccount,
-                    so a manifest omitting this leaves billing untouched
-                    rather than unsetting it.
+                    so neither source being present leaves billing
+                    untouched rather than unsetting it.
                 access:
                   type: object
                   description: |
@@ -262,6 +270,78 @@ spec:
                         console and a manifest read alike and meaning
                         lives in labels. Set it where a project is
                         handed to us already named.
+                recovery:
+                  type: object
+                  description: |
+                    The project holding what an installation must have
+                    after losing everything else -- backups, the key
+                    they are encrypted under, and the exports that
+                    outlive the databases they came from.
+
+                    Its own project rather than the management one so
+                    that the identity able to destroy a primary cannot
+                    reach the copy, and rather than an instance's so
+                    that a rebuilt instance does not take its own
+                    backups with it. Inside the folder rather than
+                    beside it: a folder is the installation and its IAM
+                    boundary, and creating a project above one needs
+                    rights an installation hosted in somebody else's
+                    organisation will not have.
+
+                    The plane composes the project and leaves it empty.
+                    Each instance composes its own bucket in it and is
+                    granted on that bucket alone, so one instance's
+                    identity does not reach another's backups.
+
+                    Absent composes nothing, which is an installation
+                    not yet keeping anything. Optional only because
+                    qw01 predates the field: a manifest minted from
+                    gcp-plane-manifest always carries it.
+
+                    Not audit or evidence, which want a locked
+                    retention policy and a different set of readers, so
+                    want a project of their own.
+                  properties:
+                    projectId:
+                      type: string
+                      description: |
+                        Normally left absent: the id is stated once for
+                        the installation, in its EnvironmentConfig as
+                        `recoveryProjectId`, and the plane and every
+                        instance resolve it from there. Two copies of
+                        one id is two places to disagree, which is the
+                        argument billingAccountId already makes.
+
+                        This is the override. Either way it is supplied
+                        rather than generated, for the reason
+                        management.projectId is: a project id is
+                        consumed permanently, so a plane that invented
+                        one would strand what the last was holding.
+                    adopt:
+                      type: string
+                      pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                      description: |
+                        An existing recovery project to take over,
+                        written projects/<id>. Separate from projectId
+                        for the reason management.adopt is: GCP answers
+                        permission denied rather than not found for a
+                        project you do not own, so an external name set
+                        before the project exists makes the first
+                        observation fail and creation never follows.
+                    displayName:
+                      type: string
+                      description: |
+                        Overrides the derived name, as
+                        management.displayName does.
+                    location:
+                      type: string
+                      description: |
+                        Where the buckets live. Defaults to the
+                        installation's region. A multi-region survives
+                        losing one, and costs more and answers the S3
+                        interop endpoint under a region name of its own
+                        -- which the backup agent signs over, so it is
+                        not free to change later.
                 dns:
                   type: object
                   description: |
@@ -352,6 +432,12 @@ spec:
                 managementProjectId:
                   type: string
                   description: The management project, once it exists.
+                recoveryProjectId:
+                  type: string
+                  description: |
+                    The recovery project this installation keeps its
+                    backups in, echoed back so a reader need not know
+                    which of the two places named it.
                 clusterEndpoint:
                   type: string
                   description: The management cluster's API endpoint.

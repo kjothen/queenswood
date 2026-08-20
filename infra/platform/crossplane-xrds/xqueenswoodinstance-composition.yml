@@ -2412,6 +2412,199 @@ spec:
     # installation that has not decided yet rather than one that has
     # decided nobody.
     # =======================================================================
+    # =======================================================================
+    # This instance's bucket, in the installation's recovery project.
+    # Templated rather than patched because the block is absent until
+    # an instance keeps something, and because the name is built from
+    # part of another field.
+    #
+    # One bucket per instance rather than one per installation, so an
+    # instance's identity is granted on its own backups and reaches no
+    # other's -- which is the whole reason the project sits outside the
+    # instance in the first place, and would be given back by a bucket
+    # everything shares.
+    # =======================================================================
+    - step: recovery
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
+            {{- $recovery := dig "recovery" dict $xr.spec }}
+            {{- $env := index .context "apiextensions.crossplane.io/environment" | default dict }}
+            {{- /* The installation's EnvironmentConfig, then this
+                   instance's field if it names one -- the same
+                   environment-then-override ordering billingAccountId
+                   uses above, so the project is stated once for the
+                   installation and every instance reads the same
+                   answer. */}}
+            {{- $project := dig "projectId" (dig "recoveryProjectId" "" $env) $recovery }}
+            {{- if $project }}
+            {{- /* The suffix is the recovery project's rather than this
+                   instance's. A bucket named for a project that may be
+                   rebuilt changes name when it is, which is a backup
+                   nobody can find under the name they recorded. */}}
+            {{- $suffix := last (splitList "-" $project) }}
+            {{- $location := dig "location" $xr.spec.region $recovery }}
+            {{- $bucket := printf "bkt-%s-backups-%s" $name $suffix }}
+            {{- /* No suffix: a Secret Manager entry is scoped to its
+                   project, and its name is reusable after deletion. */}}
+            {{- $key := printf "sec-%s-fdb-backup-key" $name }}
+            ---
+            apiVersion: storage.gcp.m.upbound.io/v1beta1
+            kind: Bucket
+            metadata:
+              name: {{ $bucket }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-backups-bucket
+                crossplane.io/external-name: {{ $bucket }}
+            spec:
+              # Without Delete. Deleting the managed resource orphans
+              # the bucket rather than emptying it, which is the outcome
+              # to want from an edit nobody meant to make -- and this is
+              # the one thing an instance owns that its own teardown
+              # must not take with it.
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project | quote }}
+                location: {{ $location | upper | quote }}
+                storageClass: STANDARD
+                uniformBucketLevelAccess: true
+                publicAccessPrevention: enforced
+                # A delete stays recoverable for a week without the
+                # object versioning that would leave `fdbbackup expire`
+                # trimming live objects while their noncurrent copies
+                # remain.
+                softDeletePolicy:
+                  retentionDurationSeconds: 604800
+                # No retentionPolicy. It is bucket-wide and, once
+                # locked, permanent -- and a continuous backup's old
+                # objects are pruned by `fdbbackup expire`, which a
+                # retention period longer than the expiry horizon would
+                # block. Evidence that must not be deletable wants its
+                # own bucket, and its own project.
+                lifecycleRule:
+                  # Realm exports only. FDB's prefixes are deliberately
+                  # not age-managed: a continuous backup's older objects
+                  # are not stale copies, they are the log a restore
+                  # reads through, and `fdbbackup expire` prunes them by
+                  # version. Everything is written Standard and demoted
+                  # by age rather than written cold, so a restore drill
+                  # in the first week is not a Coldline retrieval.
+                  - action:
+                      type: SetStorageClass
+                      storageClass: NEARLINE
+                    condition:
+                      age: 7
+                      matchesPrefix:
+                        - keycloak/realms/
+                  - action:
+                      type: SetStorageClass
+                      storageClass: COLDLINE
+                    condition:
+                      age: 30
+                      matchesPrefix:
+                        - keycloak/realms/
+                  - action:
+                      type: Delete
+                    condition:
+                      age: 365
+                      matchesPrefix:
+                        - keycloak/realms/
+            ---
+            # The key those backups are encrypted under. The container,
+            # not the value: a person writes the version once from
+            # secretsAdmin, and what it holds never touches git.
+            #
+            # Beside the bucket rather than in the instance's own
+            # project, because it has to survive whatever loses the
+            # instance -- a key in the project whose data it protects
+            # is not a second copy of anything.
+            #
+            # No Delete, and this is the case the policy exists for.
+            # The Google client secret withholds it and is still
+            # rotatable; this one is not rotatable at all. An existing
+            # backup is readable only under the key it was written
+            # with, so losing the entry loses every backup taken before
+            # it, silently, and only at a restore.
+            #
+            # One per instance rather than one per installation, for
+            # the reason the bucket is: a key that opens every
+            # instance's backups makes the separation above decorative.
+            apiVersion: secretmanager.gcp.m.upbound.io/v1beta1
+            kind: Secret
+            metadata:
+              name: {{ $key }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-fdb-backup-key
+                # What Secret Manager knows this by. The CRD declares no
+                # secretId, so there is no second spelling to disagree,
+                # and an ExternalSecret reading it spells this one.
+                crossplane.io/external-name: {{ $key }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project | quote }}
+                # A map, not a list of one.
+                replication:
+                  auto: {}
+            ---
+            # On this entry alone, rather than the project-wide
+            # accessor the instance's own secrets take. The recovery
+            # project holds every instance's key, and a project-scoped
+            # grant would let each instance read the others' -- which
+            # is the separation the project exists to draw.
+            apiVersion: secretmanager.gcp.m.upbound.io/v1beta1
+            kind: SecretIAMMember
+            metadata:
+              name: {{ printf "%s-accessor" $key }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-fdb-backup-key-accessor
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project | quote }}
+                secretId: {{ $key | quote }}
+                role: roles/secretmanager.secretAccessor
+                member: {{ printf "serviceAccount:sa-%s-secrets@%s.iam.gserviceaccount.com" $name $xr.spec.projectId | quote }}
+            ---
+            # The composite's own kind, which is how this function
+            # writes composite status.
+            apiVersion: queenswood.repldriven.com/v1alpha1
+            kind: XQueenswoodInstance
+            status:
+              backupsBucket: {{ $bucket | quote }}
+              fdbBackupKeySecret: {{ $key | quote }}
+            {{- end }}
     - step: access
       functionRef:
         name: function-go-templating

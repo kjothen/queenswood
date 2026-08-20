@@ -8,6 +8,40 @@ spec:
     kind: XManagementPlane
   mode: Pipeline
   pipeline:
+    # =======================================================================
+    # The installation's EnvironmentConfig, which is where the billing
+    # account is stated. Without this the plane can compose a project
+    # only from spec.billingAccountId, which the committed manifest
+    # deliberately omits -- so a project the plane created reading git
+    # would have no billing account, and Cloud Storage in it would not
+    # work. Instances have read it from here all along; the plane had
+    # no way to.
+    #
+    # mode Multiple, where the instance's selector is Single. The first
+    # plane to apply this composite is a boot plane, which applies the
+    # manifest and nothing else -- there is no EnvironmentConfig on it
+    # at all, and Single means exactly one, so the step fails and the
+    # composite composes nothing rather than falling back. Multiple
+    # tolerates none, leaving billing to spec.billingAccountId, which is
+    # what gcp-plane-apply supplies at exactly that moment.
+    # =======================================================================
+    - step: environment
+      functionRef:
+        name: function-environment-configs
+      input:
+        apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+        kind: Input
+        spec:
+          policy:
+            resolution: Optional
+          environmentConfigs:
+            - type: Selector
+              selector:
+                mode: Multiple
+                matchLabels:
+                  - type: FromCompositeFieldPath
+                    key: installation
+                    valueFromFieldPath: spec.code
     - step: patch-and-transform
       functionRef:
         name: function-patch-and-transform
@@ -161,6 +195,13 @@ spec:
                       fmt: "prj-%s-c-mgmt"
               - fromFieldPath: spec.management.displayName
                 toFieldPath: spec.forProvider.name
+              # The installation's account, then this manifest's if it
+              # names one: the same later-patch-wins ordering the
+              # display name above uses, so the config supplies it
+              # normally and gcp-plane-apply overrides at bootstrap.
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: billingAccountId
+                toFieldPath: spec.forProvider.billingAccount
               - fromFieldPath: spec.billingAccountId
                 toFieldPath: spec.forProvider.billingAccount
               # Names the composed Folder, so Crossplane resolves it and
@@ -2210,6 +2251,108 @@ spec:
             {{- end }}
             {{- end }}
             {{- end }}
+    # =======================================================================
+    # The recovery project: backups, the key they are encrypted under,
+    # and the exports that outlive the databases they came from. Beside
+    # the management project rather than inside it, so the identity
+    # that reconciles the platform is not also the one that can empty
+    # what the platform would be rebuilt from. Inside the folder rather
+    # than above it: creating a project at the organisation needs
+    # rights an installation hosted in somebody else's will not have.
+    #
+    # The plane composes the project and leaves it empty. Each instance
+    # composes its own bucket and its own backup key in it, so one
+    # instance's identity is granted on its own backups and reaches no
+    # other's.
+    #
+    # Templated rather than patched because the id is stated once for
+    # the installation, in its EnvironmentConfig, and both composites
+    # resolve it the same way -- environment first, then the manifest's
+    # own field if it names one. A Required patch could switch the
+    # block off when one source is absent but not when either is, which
+    # is what "stated in either place" needs.
+    # =======================================================================
+    - step: recovery
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $code := $xr.spec.code }}
+            {{- $env := index .context "apiextensions.crossplane.io/environment" | default dict }}
+            {{- $recovery := dig "recovery" dict $xr.spec }}
+            {{- $project := dig "projectId" (dig "recoveryProjectId" "" $env) $recovery }}
+            {{- if $project }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: Project
+            metadata:
+              name: {{ printf "prj-%s-c-recovery" $code }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: recovery-project
+                {{- with dig "adopt" "" $recovery }}
+                # Adoption only. Set before the project exists, the
+                # first observation fails with permission denied --
+                # which Crossplane cannot tell from a real error, so it
+                # never creates.
+                crossplane.io/external-name: {{ . | quote }}
+                {{- end }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                projectId: {{ $project | quote }}
+                name: {{ dig "displayName" (printf "prj-%s-c-recovery" $code) $recovery | quote }}
+                autoCreateNetwork: false
+                deletionPolicy: PREVENT
+                folderIdRef:
+                  name: {{ printf "fldr-%s" $code | quote }}
+                {{- $billing := dig "billingAccountId" (dig "billingAccountId" "" $env) $xr.spec }}
+                {{- with $billing }}
+                billingAccount: {{ . | quote }}
+                {{- end }}
+            ---
+            # Cloud Storage in it. Enabled by default on a new project,
+            # and declared anyway so nothing depends on that holding.
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectService
+            metadata:
+              name: {{ printf "svc-%s-c-recovery-storage" $code }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: recovery-service-storage
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project | quote }}
+                service: storage.googleapis.com
+                # Leaving an API enabled on the way down is harmless and
+                # avoids a dependent-resource cascade.
+                disableOnDestroy: false
+            ---
+            apiVersion: platform.repldriven.com/v1alpha1
+            kind: XManagementPlane
+            status:
+              recoveryProjectId: {{ $project | quote }}
+            {{- end }}
     - step: access
       functionRef:
         name: function-go-templating
@@ -2298,6 +2441,52 @@ spec:
                 serviceAccountIdRef:
                   name: {{ printf "sa-%s-platform" $code | quote }}
             {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+            {{- /* secretsAdmin again, on the recovery project. It is a
+                   second project and a binding on the management one
+                   reaches nothing in it, so without this the entries
+                   the instances compose there are containers nobody
+                   may write a version to.
+
+                   Two narrow roles rather than the secretmanager.admin
+                   the management project grants: viewer sees the
+                   container, secretVersionAdder adds to it, and
+                   neither carries versions.access -- so whoever writes
+                   a backup key here cannot read one back, which is the
+                   shape an instance's own entries already take. */}}
+            {{- $recoveryEnv := index .context "apiextensions.crossplane.io/environment" | default dict }}
+            {{- $recoveryProject := dig "recovery" "projectId" (dig "recoveryProjectId" "" $recoveryEnv) $xr.spec }}
+            {{- if $recoveryProject }}
+            {{- range $member := dig "secretsAdmin" list $access }}
+            {{- range $role := (list "roles/secretmanager.viewer" "roles/secretmanager.secretVersionAdder") }}
+            {{- $slug := printf "%s-%s"
+                  ($role | splitList "/" | last | replace "." "-" | lower)
+                  (sha256sum $member | trunc 8) }}
+            {{- $resource := printf "access-recovery-secrets-admin-%s" $slug }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectIAMMember
+            metadata:
+              name: {{ printf "%s-%s" $code $resource }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+                - Delete
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $recoveryProject | quote }}
+                role: {{ $role | quote }}
+                member: {{ $member | quote }}
             {{- end }}
             {{- end }}
             {{- end }}

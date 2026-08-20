@@ -29,6 +29,52 @@ makes an optional manifest field work, and what turns an unapplied XRD
 into an empty value nothing complains about. Where absence is a
 mistake rather than a meaning, set `policy.fromFieldPath: Required`.
 
+### One definition, or one per caller
+
+A Composition is a definition every composite of its kind reads on the
+next reconcile. Edit it and every one of them changes — which is what a
+building-block XRD buys, and it is not the same thing as removing
+duplication. A shared module in a tool where callers pin a version
+leaves each caller to adopt the change, so a policy tightened centrally
+is a policy that has to be chased, and an estate divides into the ones
+that took v27 and the ones that did not.
+
+So a kind worth composing from more than one place wants an XRD of its
+own — one that fixes the invariants (uniform access, no public access,
+the recovery window) and parameterises only what genuinely differs.
+The cost is a CRD on every plane that composes it, and a failure inside
+the child reporting on the child rather than on the composite that
+asked for it, which is one more hop in the direction that already
+misleads.
+
+Extract it at the second call site rather than the first: what varies
+is guesswork from one example, and the invariants are the same either
+way. Keep the block contiguous until then, so the extraction is a move.
+
+The leverage has a discipline attached, and it is the same fact read
+from the other side: nothing can opt out. A version on an XRD is not a
+compatibility knob — no composite pins one — so keep a kind versionless
+in practice and leave it at `v1alpha1` for good. Where a change is
+large enough to want a version, what it wants is a different kind, with
+a name of its own, that an installation moves to deliberately. A second
+version of the same kind promises an upgrade path that does not exist:
+existing composites would have to be migrated either way, and the
+version number is the only thing suggesting otherwise. Every edit to a
+Composition is therefore an edit every live composite takes on its next
+reconcile, whether or not anyone was ready. So make each one safe for a
+composite that already exists: add fields rather than repurpose them,
+default what a manifest does not yet set, and never make a field
+required in the same change that introduces it — the manifests are in
+another repository and reach the plane on their own schedule.
+
+`Required` also does more than mark a field: a Required patch whose
+source is absent drops the whole composed resource, rather than
+skipping the one field. So a block of resources becomes optional
+without a second composition — put `Required` on the patch reading the
+field that says whether the block applies, and nothing under it is
+composed until the field is set. The cost is that such a field cannot
+be given an XRD default, since a default would make it always present.
+
 A field the XRD defaults is absent too, for a window. Argo applies an
 XRD and a Composition in one sync, and the new composition can be
 selected before the API server serves the regenerated CRD, so the
@@ -174,6 +220,10 @@ Composition for a kind it no longer serves.
 
 - Change a resource's `- name:` to rebuild it under a new
   `metadata.name`. Deleting the object alone rebuilds the old one.
+- Use a Required patch as the switch for an optional block of
+  resources: a missing source drops the composed resource entirely, so
+  the block composes nothing until the field is set. Such a field
+  cannot then carry an XRD default.
 - Set `policy.fromFieldPath: Required` where a missing source is a
   mistake rather than a meaning.
 - Put constants in `base`. A `Format` transform with no verb for its
@@ -191,8 +241,19 @@ Composition for a kind it no longer serves.
 - Withhold `Delete` from `managementPolicies` for anything whose loss
   is not recoverable. Deleting the managed resource then orphans the
   cloud resource rather than destroying it.
+- Give a kind composed from more than one place an XRD of its own,
+  fixing the invariants and parameterising the rest, so tightening a
+  policy is one edit rather than a version every caller must adopt.
+- Make every Composition edit safe for a composite that already
+  exists. Nothing pins a version, so every live composite takes it on
+  the next reconcile: add fields rather than repurpose them, default
+  what a manifest does not yet set, and never make a field required in
+  the change that introduces it.
 
 **MUST NOT:**
+
+- Add a version to an XRD. Where a change is that large it is a
+  different kind, named for what it is, adopted deliberately.
 
 - Patch a field the composition sets and expect it to hold.
 - Expect a composition to withhold a field. A patch always writes
