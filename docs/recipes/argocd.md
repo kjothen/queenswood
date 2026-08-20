@@ -85,6 +85,15 @@ undeclared field is refused outright rather than dropped, so
 `helm template` renders it happily; only the API server has the
 schema. A template that renders is not a template that applies.
 
+A `valuesObject` is YAML, so a bare `n`, `y`, `no` or `yes` in one is a
+boolean rather than a short string. A chart building a name with
+`printf "%s"` then renders `%!s(bool=false)`, and what fails is the API
+server refusing a resource name containing a `%` — which reads as a
+templating fault rather than as a missing pair of quotes two files
+away. Quote every short value, and have the chart fail on a non-string
+rather than compose one: coercing is worse, because `false` is a name
+that applies cleanly and is wrong.
+
 ### Revisions
 
 Argo reads the revision an Application names, not a working tree. A
