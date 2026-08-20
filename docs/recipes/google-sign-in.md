@@ -145,13 +145,19 @@ realm that looks entirely correct.
 
 The secret itself is written by hand into one Secret Manager entry,
 `sec-<code>-<env>-<label>-google-oauth`, which the instance composite
-creates as a container and never fills. An `ExternalSecret` on the
-instance cluster materialises it into the vault Keycloak mounts, under
-the filename that vault expects: `<realm>_<key>`, so
-`${vault.google-client-secret}` in realm `queenswood` reads
-`queenswood_google-client-secret`. Rename either half and the
-expression stays unresolved, which presents as Google refusing the
-client rather than as anything about a mount.
+creates as a container and never fills:
+
+```
+just gcp-secret-version sec-<code>-<env>-<label>-google-oauth
+```
+
+It prompts, does not echo, and never puts the value on a command line.
+An `ExternalSecret` on the instance cluster then materialises it into
+the vault Keycloak mounts, under the filename that vault expects:
+`<realm>_<key>`, so `${vault.google-client-secret}` in realm
+`queenswood` reads `queenswood_google-client-secret`. Rename either
+half and the expression stays unresolved, which presents as Google
+refusing the client rather than as anything about a mount.
 
 Nothing automates the writing, and nothing should — the secret is
 issued by Google to whoever created the client, which is the console
@@ -172,9 +178,13 @@ Sign in. A failure is legible if you know which half produced it:
   form above, character for character, including the scheme.
 - **`401 invalid_client`, from Google** — the id or the secret is
   wrong, or the secret never resolved and Keycloak sent the literal
-  vault expression. On a restored or rebuilt environment this is
-  indistinguishable from the restore itself having failed, which is
-  what makes it worth ruling out first.
+  vault expression. A trailing newline is the version of "wrong" worth
+  knowing about: Secret Manager stores the bytes it is given and the
+  vault reads the file whole, so `echo secret | gcloud …` sends the
+  newline as part of the credential and fails here rather than
+  anywhere that mentions one. On a restored or rebuilt environment
+  this is indistinguishable from the restore itself having failed,
+  which is what makes it worth ruling out first.
 - **`Invalid parameter: redirect_uri`, from Keycloak** — nothing to do
   with Google. That is the console client's own redirect list, which
   the realm import reconciles; see
@@ -204,8 +214,8 @@ Sign in. A failure is legible if you know which half produced it:
   itself, and restore it from the committed definition rather than from
   what the Admin API returned — a configured secret comes back masked.
 - Write the secret into `sec-<code>-<env>-<label>-google-oauth` by
-  hand, and name the vault key `<realm>_<key>` so the realm's
-  expression resolves.
+  hand, with no trailing newline, and name the vault key
+  `<realm>_<key>` so the realm's expression resolves.
 - Restart Keycloak where a secret is stored after the pod started.
 
 **MUST NOT:**

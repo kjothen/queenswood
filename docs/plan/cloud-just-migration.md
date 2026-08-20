@@ -55,9 +55,9 @@ Three acts remain, and none of them becomes automated:
   right — it is `roles/oauthconfig.editor`, granted through
   `platformAdmin`. See
   [google-sign-in](../recipes/google-sign-in.md).
-- **The secret**, written once into `sec-qw01-n-test-google-oauth`.
-  Crossplane composes containers, never values, and somebody put the
-  GitHub App key into Secret Manager by hand too. What
+- **The secret**, written once into `sec-qw01-n-test-google-oauth` with
+  `just gcp-secret-version`. Crossplane composes containers, never
+  values, and the GitHub App key went in by hand the same way. What
   external-secrets buys is that it survives a cluster rebuild and
   lives somewhere auditable rather than only in etcd.
 - **The id**, set on `keycloak.googleClientId` in
@@ -1902,10 +1902,17 @@ in-cluster actions, which have no declarative equivalent because they
 act on a running system rather than on its shape:
 `gcp-fdb-restore-points`, `gcp-fdb-export`,
 `gcp-keycloak-restore-points`, `gcp-keycloak-export`,
-`gcp-keycloak-idp`, `gcp-keycloak-vault-secret`,
 `gcp-k8s-redeploy-svc`, `gcp-dns-check`, `gcp-health-check`. Each loses
 its `pass` lookups in favour of Secret Manager and the manifest, and
 each gains the installation code in place of `QUEENSWOOD_ENV`.
+
+**Dies with `pass`.** `gcp-keycloak-idp` and
+`gcp-keycloak-vault-secret`, which read a client id and a secret out of
+`pass` and pushed both at a cluster. The realm-import Job reconciles the
+id from the installation's values, and `external-secrets` materialises
+the secret out of Secret Manager, so what is left of either is
+`gcp-secret-version` putting one value into one entry — general, and
+named for what it acts on rather than for Keycloak.
 
 **Never migrates.** The directory work in
 [cloud-account](../recipes/cloud-account.md) — the organisation, the

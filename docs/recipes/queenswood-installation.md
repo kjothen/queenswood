@@ -393,5 +393,6 @@ one piece the composite deliberately cannot fill.
 - `infra/platform/crossplane-xrds/xmanagementplane-xrd.yml` — the
   fields above, as a schema.
 - `justfiles/gcp.just` — `gcp-plane-manifest` mints a first manifest,
-  `gcp-plane-apply` applies a committed one, and
-  `gcp-github-app-secret` stores the App's three values.
+  `gcp-plane-apply` applies a committed one, `gcp-github-app-secret`
+  stores the App's three values, and `gcp-secret-version` puts any
+  other one into the entry its composite made.
