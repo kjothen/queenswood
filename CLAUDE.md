@@ -150,6 +150,11 @@ those in full before non-trivial work on their topic.
   repetition wants a composite rather than a loop, why a pair that must
   agree earns a kind, and the boundary a catalogue cannot cross. See
   [ADR-0025](docs/adr/0025-building-blocks-and-what-cannot-be-one.md).
+- **Recovering data** — proposed: why `down` no longer empties anything
+  and so no restore path exists, why a destructive state must not share
+  a word with a reversible one, and why a corrupted primary is
+  evidence. See
+  [ADR-0026](docs/adr/0026-recovering-data-and-the-states-that-do-it.md).
 - **The plane and the instances on it** — what a management plane is
   for, why an instance is its own composite rather than a field on the
   plane's, the kind and the group, and what `down` leaves standing. See
