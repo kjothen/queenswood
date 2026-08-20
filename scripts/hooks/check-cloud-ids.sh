@@ -17,7 +17,10 @@
 # belongs, put `cloud-id-ok` in a comment on the same line.
 #
 # A commit message is checked too, and carries one rule of its own --
-# see the bottom of this file.
+# see the bottom of this file. Everything written outside git goes
+# through the same mode, from .github/workflows/check-cloud-ids.yml: a
+# pull request's title and body, an issue's, a comment, a review. No
+# hook reaches any of them and all of them are as public as the tree.
 #
 #   bash check-cloud-ids.sh                 # every tracked file
 #   bash check-cloud-ids.sh --staged        # staged changes (pre-commit)
@@ -89,8 +92,18 @@ hits=$(printf '%s\n' "$files" | xargs grep -nHE \
 # repo-wide: a minor-unit money amount in a UI fixture is the same shape
 # and means something entirely different. A value after = is a setting,
 # not an identifier -- retries=2147483647 is Integer.MAX_VALUE.
-prose=$(printf '%s\n' "$files" \
-  | grep -E '^(docs|justfiles|scripts|infra|\.github)/' || true)
+# A message is always prose: it is a commit message or the text of a
+# pull request, an issue or a comment, and none of those carries a
+# balance fixture. Restricting this check to infra paths left it never
+# running in that mode at all, which is how a bare folder id sat in
+# three descriptions that a scan of the same descriptions reported
+# clean.
+if [ -n "$message" ]; then
+  prose="$message"
+else
+  prose=$(printf '%s\n' "$files" \
+    | grep -E '^(docs|justfiles|scripts|infra|\.github)/' || true)
+fi
 if [ -n "$prose" ]; then
   hits=$(printf '%s\n' "$prose" | xargs grep -nHE \
     '(^|[^0-9A-Za-z_./=-])[0-9]{9,12}([^0-9A-Za-z_./-]|$)' 2>/dev/null \
