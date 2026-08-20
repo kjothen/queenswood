@@ -305,11 +305,18 @@ spec:
                     projectId:
                       type: string
                       description: |
-                        The recovery project's id. Always supplied, for
-                        the reason management.projectId is: a project
-                        id is consumed permanently, so a rebuilt plane
-                        that invented one would strand what the first
-                        was holding.
+                        Normally left absent: the id is stated once for
+                        the installation, in its EnvironmentConfig as
+                        `recoveryProjectId`, and the plane and every
+                        instance resolve it from there. Two copies of
+                        one id is two places to disagree, which is the
+                        argument billingAccountId already makes.
+
+                        This is the override. Either way it is supplied
+                        rather than generated, for the reason
+                        management.projectId is: a project id is
+                        consumed permanently, so a plane that invented
+                        one would strand what the last was holding.
                     adopt:
                       type: string
                       pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
@@ -427,7 +434,10 @@ spec:
                   description: The management project, once it exists.
                 recoveryProjectId:
                   type: string
-                  description: The recovery project, once it exists.
+                  description: |
+                    The recovery project this installation keeps its
+                    backups in, echoed back so a reader need not know
+                    which of the two places named it.
                 clusterEndpoint:
                   type: string
                   description: The management cluster's API endpoint.
