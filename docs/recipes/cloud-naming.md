@@ -122,7 +122,10 @@ Resource-manager and identity:
 
 - **folder** — `fldr-qw01`
 - **project** — `prj-qw01-c-mgmt-<suffix>`. The suffix is six hex
-  characters, because a project id is globally unique.
+  characters, because a project id is globally unique. An installation
+  has two `c` projects: `mgmt` reconciles the platform and
+  `recovery` holds what the platform would be rebuilt from, apart so
+  that the identity able to destroy a primary cannot reach the copy.
 - **API enablement** — `svc-qw01-c-<api>`, the API's first label:
   `svc-qw01-c-iam`, `svc-qw01-c-container`. The management project ends
   the name there because there is one of it. An instance keeps its
@@ -220,7 +223,11 @@ Compute and data:
   retention policy is bucket-wide and, once locked, permanent, so
   anything sharing a bucket with what is kept forever is kept forever
   too. The suffix is six hex characters, because a bucket name is
-  globally unique.
+  globally unique, and it is the suffix of the project holding the
+  bucket rather than one of its own — so a bucket is legible as its
+  project's from the name alone, and no second unique value has to be
+  supplied and kept in step. `bkt-qw01-c-backups-<suffix>` is the one
+  that exists.
 - **secret** — `sec-qw01-<env>-<label>`
 
 ### Installation qw01, as built

@@ -29,6 +29,14 @@ makes an optional manifest field work, and what turns an unapplied XRD
 into an empty value nothing complains about. Where absence is a
 mistake rather than a meaning, set `policy.fromFieldPath: Required`.
 
+`Required` also does more than mark a field: a Required patch whose
+source is absent drops the whole composed resource, rather than
+skipping the one field. So a block of resources becomes optional
+without a second composition — put `Required` on the patch reading the
+field that says whether the block applies, and nothing under it is
+composed until the field is set. The cost is that such a field cannot
+be given an XRD default, since a default would make it always present.
+
 A field the XRD defaults is absent too, for a window. Argo applies an
 XRD and a Composition in one sync, and the new composition can be
 selected before the API server serves the regenerated CRD, so the
@@ -174,6 +182,10 @@ Composition for a kind it no longer serves.
 
 - Change a resource's `- name:` to rebuild it under a new
   `metadata.name`. Deleting the object alone rebuilds the old one.
+- Use a Required patch as the switch for an optional block of
+  resources: a missing source drops the composed resource entirely, so
+  the block composes nothing until the field is set. Such a field
+  cannot then carry an XRD default.
 - Set `policy.fromFieldPath: Required` where a missing source is a
   mistake rather than a meaning.
 - Put constants in `base`. A `Format` transform with no verb for its

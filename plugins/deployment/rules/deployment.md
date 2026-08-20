@@ -123,7 +123,10 @@ Change a resource's `- name:` to rebuild it under a new
 and recreates from the composite's record, so renaming the object alone
 rebuilds the old one. Set `policy.fromFieldPath: Required` where a
 missing source is a mistake rather than a meaning — a patch whose
-source is absent is skipped silently — and put constants in `base`,
+source is absent is skipped silently, while a Required patch whose
+source is absent drops the whole composed resource, which is how a
+block becomes optional without a second composition and why such a
+field cannot carry an XRD default — and put constants in `base`,
 because a `Format` transform with no verb for its input corrupts the
 value. Server-side apply gives every field a manager, and a manager
 that stops declaring a field it solely owns removes it — so the

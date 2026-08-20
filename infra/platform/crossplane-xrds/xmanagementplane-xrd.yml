@@ -262,6 +262,57 @@ spec:
                         console and a manifest read alike and meaning
                         lives in labels. Set it where a project is
                         handed to us already named.
+                recovery:
+                  type: object
+                  description: |
+                    The project holding what an installation must have
+                    after losing everything else -- backups, the key
+                    they are encrypted under, and the exports that
+                    outlive the databases they came from.
+
+                    Its own project rather than the management one so
+                    that the identity able to destroy a primary cannot
+                    reach the copy, and rather than an instance's so
+                    that a rebuilt instance does not take its own
+                    backups with it. Absent composes nothing, which is
+                    an installation not yet keeping anything.
+
+                    Not audit or evidence, which want a different
+                    retention regime and a different set of readers.
+                  properties:
+                    projectId:
+                      type: string
+                      description: |
+                        The recovery project's id. Always supplied, for
+                        the reason management.projectId is: a project
+                        id is consumed permanently, so a rebuilt plane
+                        that invented one would strand what the first
+                        was holding.
+                    adopt:
+                      type: string
+                      pattern: '^projects/[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                      description: |
+                        An existing recovery project to take over,
+                        written projects/<id>. Separate from projectId
+                        for the reason management.adopt is: GCP answers
+                        permission denied rather than not found for a
+                        project you do not own, so an external name set
+                        before the project exists makes the first
+                        observation fail and creation never follows.
+                    displayName:
+                      type: string
+                      description: |
+                        Overrides the derived name, as
+                        management.displayName does.
+                    location:
+                      type: string
+                      description: |
+                        Where the buckets live. Defaults to the
+                        installation's region. A multi-region survives
+                        losing one, and costs more and answers the S3
+                        interop endpoint under a region name of its own
+                        -- which the backup agent signs over, so it is
+                        not free to change later.
                 dns:
                   type: object
                   description: |
@@ -352,6 +403,15 @@ spec:
                 managementProjectId:
                   type: string
                   description: The management project, once it exists.
+                recoveryProjectId:
+                  type: string
+                  description: The recovery project, once it exists.
+                backupsBucket:
+                  type: string
+                  description: |
+                    The backups bucket's name, which is what a workload
+                    writing to it needs and cannot derive: the suffix
+                    comes from the recovery project's id.
                 clusterEndpoint:
                   type: string
                   description: The management cluster's API endpoint.
