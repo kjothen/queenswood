@@ -146,6 +146,10 @@ those in full before non-trivial work on their topic.
   layout, one management plane on GKE, foundations protected rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
+- **Building blocks, and what cannot be one** — proposed: when
+  repetition wants a composite rather than a loop, why a pair that must
+  agree earns a kind, and the boundary a catalogue cannot cross. See
+  [ADR-0025](docs/adr/0025-building-blocks-and-what-cannot-be-one.md).
 - **The plane and the instances on it** — what a management plane is
   for, why an instance is its own composite rather than a field on the
   plane's, the kind and the group, and what `down` leaves standing. See
