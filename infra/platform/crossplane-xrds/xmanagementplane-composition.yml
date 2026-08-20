@@ -2348,6 +2348,33 @@ spec:
                 # avoids a dependent-resource cascade.
                 disableOnDestroy: false
             ---
+            # Secret Manager in it, for the key each instance's backups
+            # are encrypted under. Not enabled by default on a new
+            # project, unlike Cloud Storage: the entry reconciles as a
+            # 403 naming the API rather than as anything about the
+            # entry, and the composite goes on reporting Ready because
+            # every other resource in it is.
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectService
+            metadata:
+              name: {{ printf "svc-%s-c-recovery-secretmanager" $code }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: recovery-service-secretmanager
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project | quote }}
+                service: secretmanager.googleapis.com
+                disableOnDestroy: false
+            ---
             apiVersion: platform.repldriven.com/v1alpha1
             kind: XManagementPlane
             status:
