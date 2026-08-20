@@ -64,12 +64,20 @@ spec:
                     field restating it is a second copy that can
                     disagree.
 
-                    Wanted only where a project is being created, and
-                    supplied then by gcp-plane-apply from the identity's
-                    own binding. Once a project exists the provider's
+                    A running plane reads the account from the
+                    installation's EnvironmentConfig, as every instance
+                    already does, so it can create a project from git
+                    alone -- which is what a plane that composes one is
+                    for. This field is the override, and the boot
+                    plane's only route: it applies the manifest and
+                    nothing else, so there is no config on it to read
+                    and gcp-plane-apply supplies the account from the
+                    identity's own binding.
+
+                    Once a project exists the provider's
                     late-initialisation owns forProvider.billingAccount,
-                    so a manifest omitting this leaves billing untouched
-                    rather than unsetting it.
+                    so neither source being present leaves billing
+                    untouched rather than unsetting it.
                 access:
                   type: object
                   description: |

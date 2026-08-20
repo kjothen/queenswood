@@ -8,6 +8,40 @@ spec:
     kind: XManagementPlane
   mode: Pipeline
   pipeline:
+    # =======================================================================
+    # The installation's EnvironmentConfig, which is where the billing
+    # account is stated. Without this the plane can compose a project
+    # only from spec.billingAccountId, which the committed manifest
+    # deliberately omits -- so a project the plane created reading git
+    # would have no billing account, and Cloud Storage in it would not
+    # work. Instances have read it from here all along; the plane had
+    # no way to.
+    #
+    # mode Multiple, where the instance's selector is Single. The first
+    # plane to apply this composite is a boot plane, which applies the
+    # manifest and nothing else -- there is no EnvironmentConfig on it
+    # at all, and Single means exactly one, so the step fails and the
+    # composite composes nothing rather than falling back. Multiple
+    # tolerates none, leaving billing to spec.billingAccountId, which is
+    # what gcp-plane-apply supplies at exactly that moment.
+    # =======================================================================
+    - step: environment
+      functionRef:
+        name: function-environment-configs
+      input:
+        apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+        kind: Input
+        spec:
+          policy:
+            resolution: Optional
+          environmentConfigs:
+            - type: Selector
+              selector:
+                mode: Multiple
+                matchLabels:
+                  - type: FromCompositeFieldPath
+                    key: installation
+                    valueFromFieldPath: spec.code
     - step: patch-and-transform
       functionRef:
         name: function-patch-and-transform
@@ -161,6 +195,13 @@ spec:
                       fmt: "prj-%s-c-mgmt"
               - fromFieldPath: spec.management.displayName
                 toFieldPath: spec.forProvider.name
+              # The installation's account, then this manifest's if it
+              # names one: the same later-patch-wins ordering the
+              # display name above uses, so the config supplies it
+              # normally and gcp-plane-apply overrides at bootstrap.
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: billingAccountId
+                toFieldPath: spec.forProvider.billingAccount
               - fromFieldPath: spec.billingAccountId
                 toFieldPath: spec.forProvider.billingAccount
               # Names the composed Folder, so Crossplane resolves it and
@@ -231,6 +272,9 @@ spec:
                       fmt: "prj-%s-c-recovery"
               - fromFieldPath: spec.recovery.displayName
                 toFieldPath: spec.forProvider.name
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: billingAccountId
+                toFieldPath: spec.forProvider.billingAccount
               - fromFieldPath: spec.billingAccountId
                 toFieldPath: spec.forProvider.billingAccount
               - fromFieldPath: spec.code
