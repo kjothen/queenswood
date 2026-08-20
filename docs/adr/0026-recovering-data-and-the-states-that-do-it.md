@@ -131,6 +131,32 @@ the console signs into, the Keycloak user ids that FDB records
 reference. ADR-0024 already defers `draining` for a related reason —
 an unattended Keycloak restore is its precondition and is not met.
 
+**Nothing expires anything, and the bucket grows without bound.**
+Measured on the test instance: 195 objects an hour, of which 144 are
+mutation-log files carrying a twenty-million-version range and, with
+nobody writing to the bank, zero bytes. That is around 4,700 a day and
+1.7 million a year. The bytes are nil; the count is not, and every
+listing walks it.
+
+The lifecycle rules deliberately do not touch FDB's prefixes, and must
+not. A continuous backup's older objects are not stale copies but the
+log a restore reads through, and an object deleted by GCS behind FDB's
+back leaves metadata describing something that is no longer there. So
+`fdbbackup expire` is the only thing that may delete, and running it
+needs the backup image, the credentials and the proxy — which is to
+say, a scheduled job in the instance, not a bucket rule.
+
+**Retention is a recovery decision wearing cleanup's clothes.**
+Expiring everything older than thirty days is not tidying: it is
+declaring that this installation cannot restore to thirty-one days ago,
+which is a statement about what the bank can recover from and belongs
+beside the others here rather than in a values file nobody reads twice.
+Whatever runs it inherits the rule two sections up — a destructive act
+must be self-limiting. A window computed from now can only ever remove
+what has aged out of it, and a retention of zero removes everything,
+irreversibly, on a schedule. The floor wants to be refused rather than
+documented.
+
 **Keycloak and FoundationDB recover to different points.** Restoring
 one and not the other leaves a user who exists in the realm with no
 party in the bank, and onboarding gives them a second one. The
