@@ -199,6 +199,35 @@ spec:
                       items:
                         type: string
                         pattern: '^(user|group|serviceAccount|domain):.+$'
+                    secretsAdmin:
+                      type: array
+                      description: |
+                        Who writes this instance's secret versions, as
+                        whole IAM member strings.
+
+                        The composite composes each Secret Manager entry
+                        as a container and never a value, so somebody has
+                        to put the version in -- and until this existed
+                        nobody could, because the plane's secretsAdmin
+                        binds on the management project and an
+                        instance's entries are in its own.
+
+                        Two roles, and deliberately not
+                        secretmanager.admin the way the plane's does it:
+                        viewer to see the container, secretVersionAdder
+                        to add to it. That is the whole act. It carries
+                        no versions.access, so a person who writes a
+                        secret cannot read one back, and it destroys
+                        nothing -- rotation is a new version, and the
+                        entries are composed with no Delete precisely so
+                        that losing one is not a thing anybody can do.
+
+                        Empty binds nothing, which leaves the entries
+                        unwritable and their consumers holding an empty
+                        Secret.
+                      items:
+                        type: string
+                        pattern: '^(user|group|serviceAccount|domain):.+$'
                 network:
                   type: object
                   default: {}

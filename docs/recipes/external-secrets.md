@@ -31,8 +31,11 @@ never touches git. The entry is named as
 `sec-<code>-<env>-<label>-<what>` for an instance's.
 
 **A person writes the version.** Once, from the `secretsAdmin`
-capability. This does not become automated by anything: the value came
-from outside, and composing a container is the most a composite can do.
+capability — the installation's for a plane entry, and the instance's
+own for an instance entry, since the installation's binds on the
+management project and an instance's entries are in its own. This does
+not become automated by anything: the value came from outside, and
+composing a container is the most a composite can do.
 
 **An operator reads it on the destination cluster.** external-secrets,
 authenticated by Workload Identity, with a `ClusterSecretStore` carrying
@@ -160,6 +163,9 @@ does, needs a restart after that.
   value cannot be regenerated.
 - Put a version in with `just gcp-secret-version`, and let it strip the
   trailing newline from anything typed or piped.
+- Grant the writer on the project the entry is in. A capability bound
+  on one project writes nothing in another, and the denial surfaces as
+  a container that appears not to exist.
 
 **MUST NOT:**
 
