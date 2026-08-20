@@ -94,9 +94,10 @@ reason and not from inconsistency: a snapshot period is a thing you
 tune in minutes and FDB takes it in seconds. The unit follows what
 reads the value, not a house style.
 
-`fdbbackup expire` takes a cutoff and a floor as separate flags, and two flags that must agree is how a configuration
-ends up cutting at thirty and guaranteeing seven, which nobody notices
-until the day it matters. Both come from the one value.
+`fdbbackup expire` takes a cutoff and a floor as separate flags, and
+two flags that must agree is how a configuration ends up cutting at
+thirty and guaranteeing seven, which nobody notices until the day it
+matters. Both come from the one value.
 
 That the two are the same number is what makes the floor useful rather
 than decorative: it stops being a second decision and becomes a check
