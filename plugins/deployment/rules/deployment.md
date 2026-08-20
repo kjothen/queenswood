@@ -205,8 +205,18 @@ exactly, alias included — a wrong one is accepted at setup and returns
 one client per environment and never share one, since revoking a
 development client must not touch what customers sign in through, and a
 client in Testing mode is a different risk object from a published one.
-Settle internal against external consent first, because external means a
-verification queue.
+Configure the consent screen first, since the client cannot be created
+without one, and read its verification warning against the scopes
+actually requested: Keycloak asks for `openid profile email` unless the
+realm sets `defaultScope`, and verification binds only sensitive and
+restricted scopes — so external, which is what a product whose users
+bring their own identity needs, joins no queue. Publish out of testing
+mode once the test-user list stops being the point, or refresh tokens go
+on expiring after seven days and read as an application fault. Name the
+app for the environment as well as the product, since each instance has
+its own consent screen, and give the user support address a group rather
+than a person — it is shown to users, while the contact addresses are
+Google notifying you, and neither wants a personal account.
 
 The realm keeps the placeholder pair it was imported with, whatever the
 chart later says, so both values go in over the Admin API against the
