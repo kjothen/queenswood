@@ -49,7 +49,7 @@ sop-fdb-list-backups env label count="20":
     # is a real answer here rather than a failure -- a backup has no
     # snapshot until its first period elapses. Recursive-and-grep tells
     # the two apart: an empty result is empty, and a denial is an error.
-    if ! OUT=$(gcloud storage ls -r "gs://$BUCKET/data/**" 2>&1); then
+    if ! OUT=$(gcloud storage ls -l -r "gs://$BUCKET/data/**" 2>&1); then
       if printf '%s\n' "$OUT" | grep -q "matched no objects"; then
         OUT=""
       else
@@ -65,13 +65,39 @@ sop-fdb-list-backups env label count="20":
       echo "lands, which takes up to fdb.backup.snapshotPeriodSeconds" >&2
       exit 0
     fi
+    # The write time is the version's wall clock. A snapshot object is
+    # written when the snapshot completes, so its timestamp is when the
+    # version beside it was current -- which is the whole of what
+    # sop-fdb-version-at does at finer grain, and the reason a listing
+    # of versions is worth reading at all.
     printf '%s\n' "$ROWS" \
-      | awk -F'/' '{ split($NF, f, ",");
-                     printf "%s/%s\t%s\t%s\n", $(NF-3), $(NF-2), f[3], f[4] }' \
+      | awk '
+          match($0, /[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z/) {
+            when = substr($0, RSTART, RLENGTH)
+            n = split($NF, p, "/"); split(p[n], f, ",")
+            printf "%s/%s\t%s\t%s\t%s\n", p[n-3], p[n-2], f[3], when, f[4]
+          }' \
       | sort -k2 -n \
       | tail -n {{ count }} \
-      | awk 'BEGIN { printf "%-14s %-22s %s\n", "GENERATION", "VERSION", "BYTES" }
-             { printf "%-14s %-22s %s\n", $1, $2, $3 }'
+      | awk 'BEGIN { printf "%-14s %-22s %-22s %s\n",
+                       "GENERATION", "VERSION", "WRITTEN", "BYTES" }
+             { printf "%-14s %-22s %-22s %s\n", $1, $2, $3, $4 }'
+    # The window, which is what "how far back can I go" actually asks.
+    # From the log rather than the snapshots: every version between two
+    # snapshots is restorable, so the log's span is the answer and the
+    # snapshots are only where it can start.
+    LOGS=$(printf '%s\n' "$OUT" | grep '/log,' || true)
+    if [[ -n "$LOGS" ]]; then
+      WINDOW=$(printf '%s\n' "$LOGS" \
+        | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z' \
+        | sort)
+      echo
+      printf 'restorable across %s .. %s\n' \
+        "$(printf '%s\n' "$WINDOW" | head -1)" \
+        "$(printf '%s\n' "$WINDOW" | tail -1)"
+      echo "every version in that span is restorable, not only the rows above"
+      echo "-- name a moment with: just sop-fdb-version-at {{ env }} {{ label }} <time>"
+    fi
     echo
     echo ">>> restore to one of these by setting, in the instance's values:"
     echo "      fdb.restore.backupName: <generation>"
