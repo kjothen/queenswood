@@ -70,13 +70,18 @@ store existed — needed one Keycloak restart after the secret was
 stored. A rebuilt instance does not: the operator and the config chart
 sit in sync waves ahead of the bank's own Application.
 
-Its consent screen is still in Testing mode, which is the one thing
-left on this path. Refresh tokens expire after seven days there, and
-that presents as a session dropping back to sign-in about weekly rather
-than as anything about a console setting.
-
 ### Also outstanding
 
+- **The consent screen is in Testing mode**, and publishing it is a
+  console act nobody has performed. Refresh tokens expire after seven
+  days there, so a session that should persist drops back to sign-in
+  about weekly and reads as an application fault. It also caps sign-in
+  at the hundred accounts on the test-user list. Publishing ends both,
+  and joins no verification queue: Keycloak requests `openid profile
+  email` unless the realm sets `defaultScope`, and verification binds
+  only sensitive and restricted scopes. Do it when the test-user list
+  stops being the point. See
+  [google-sign-in](../recipes/google-sign-in.md).
 - **A doc sweep.** The same architecture is described in about five
   places and the retired generation is still present in most of them.
   `docs/tdd/infrastructure.md` is the worst: 444 lines, 26 references
