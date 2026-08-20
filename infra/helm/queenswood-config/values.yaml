@@ -34,10 +34,10 @@ keycloak:
 
 fdb:
   backup:
-    # Merged into the Secret the FDB backup agents and the operator
-    # mount, which the queenswood chart renders empty and the
-    # credentials Job writes the other half of. Merge rather than
-    # Owner: two writers, one Secret.
+    # Its own Secret, mounted beside the one holding the pair FDB
+    # presents to the proxy. No release prefix, because the FDB
+    # operator mounts it too and a subchart cannot see the release
+    # name.
     key:
       enabled: true
-      secretName: fdb-backup-credentials
+      secretName: fdb-backup-encryption-key

@@ -12,10 +12,14 @@
   under the key it was written with, so the entry withholds Delete and
   *is* the durable copy.
 
-  creationPolicy Merge, not Owner. The queenswood chart renders this
-  Secret and the credentials Job writes the pair FDB presents to the
-  proxy into it, so this owns one key of a Secret with two writers --
-  and Owner would take the whole object and drop the other half.
+  Its own Secret, not a key merged into the one holding the pair FDB
+  presents to the proxy. Merge reads well and does not work: it declines
+  to create the target, so on a first install -- where this Application
+  syncs a wave before the bank renders that Secret -- it lands on
+  `secret will not be created due to CreationPolicy=Merge` and does not
+  look again until the refresh interval, an hour later. Two writers on
+  one Secret bought that; one writer each removes it, and the agents
+  mount both.
 
   Wave 2, behind the store it names.
 */}}
@@ -33,7 +37,6 @@ spec:
     name: {{ printf "%s-recovery" (include "queenswood-config.instance" .) | quote }}
   target:
     name: {{ .Values.fdb.backup.key.secretName | quote }}
-    creationPolicy: Merge
   data:
     # The filename FoundationDBBackup mounts as encryptionKeyPath.
     - secretKey: encryption-key

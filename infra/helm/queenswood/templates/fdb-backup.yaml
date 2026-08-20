@@ -25,11 +25,17 @@
   leg that crosses a network is the proxy's own HTTPS to GCS, made by
   a client whose trust store works.
 
-  The Secret carries no data here. Both halves arrive against the
-  running cluster: the credentials pair from the Job in
-  templates/fdb-backup-credentials.yaml, and the encryption key from an
-  ExternalSecret merging into this same Secret. Rendering either would
-  put it in a values file, which under Argo is the repo-server and git.
+  Two Secrets, one writer each. This one carries no data here and is
+  filled by the Job in templates/fdb-backup-credentials.yaml; the
+  encryption key arrives in its own from an ExternalSecret. Rendering
+  either would put it in a values file, which under Argo is the
+  repo-server and git.
+
+  One Secret with both would be tidier and does not work: an
+  ExternalSecret merging into a Secret it does not own declines to
+  create it, so on a first install -- where the config chart syncs a
+  wave ahead of this one -- the key never arrives and nothing looks
+  again until the refresh interval.
 
   It is named without the release prefix because the FDB operator has
   to mount it too -- `fdbbackup start` runs in the operator pod, not in
@@ -40,6 +46,7 @@
 {{- $endpoint := include "queenswood.fdbBackupEndpoint" . -}}
 {{- $accountName := printf "%s@%s:%v" .Values.fdb.backup.accessKeyId $endpoint .Values.fdb.backup.port -}}
 {{- $secretName := "fdb-backup-credentials" -}}
+{{- $keySecretName := "fdb-backup-encryption-key" -}}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -65,7 +72,7 @@ spec:
   # to.
   backupMode: continuous
   snapshotPeriodSeconds: {{ .Values.fdb.backup.snapshotPeriodSeconds }}
-  encryptionKeyPath: /var/backup-credentials/encryption-key
+  encryptionKeyPath: /var/backup-key/encryption-key
   blobStoreConfiguration:
     accountName: {{ $accountName | quote }}
     bucket: {{ required "fdb.backup.bucket must be set when fdb.backup.enabled" .Values.fdb.backup.bucket | quote }}
@@ -87,6 +94,9 @@ spec:
         - name: backup-credentials
           secret:
             secretName: {{ $secretName }}
+        - name: backup-key
+          secret:
+            secretName: {{ $keySecretName }}
       containers:
         - name: foundationdb
           env:
@@ -95,6 +105,8 @@ spec:
           volumeMounts:
             - name: backup-credentials
               mountPath: /var/backup-credentials
+            - name: backup-key
+              mountPath: /var/backup-key
           {{- with .Values.fdb.backup.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
