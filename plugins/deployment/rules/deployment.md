@@ -107,7 +107,8 @@ See [queenswood-installation](../../../docs/recipes/queenswood-installation.md).
 ## Cloud infrastructure is Crossplane, not Terraform
 
 Cloud infrastructure is declared via Crossplane, not Terraform. A
-small local kind cluster (`xp-mp`, the management plane) runs
+small local kind cluster (`boot-mgmt`, the boot management plane)
+runs
 Crossplane plus the GCP upjet providers and `provider-helm`; every
 cloud resource is a Crossplane Managed Resource or a Composite of
 them (XRDs + Compositions). Argo CD on the same kind cluster applies

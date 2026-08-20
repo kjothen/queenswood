@@ -132,7 +132,7 @@ check "keycloak-operator vendored CRD accepts server schema" "yes" \
 # dependency, so that is the version this follows, and a bump that moves one
 # and not the other fails here rather than installing two Crossplanes a
 # release apart on the boot plane and the management plane.
-xpchart=infra/helm/xp-mp/Chart.yaml
+xpchart=infra/helm/boot-management-plane/Chart.yaml
 crossplane=$(awk '/^  - name: crossplane$/ {f = 1; next}
                   f && /version:/ {gsub(/["]/, "", $2); print $2; exit}' "$xpchart")
 

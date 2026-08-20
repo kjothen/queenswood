@@ -817,7 +817,7 @@ spec:
           # the CA, and the impersonated identity for the token.
           #
           # The chart version is pinned rather than floating, and
-          # scripts/check-versions.sh holds it to the one the xp-mp
+          # scripts/check-versions.sh holds it to the one the boot
           # chart resolves, which is what Renovate bumps.
           #
           # Observe unless the applying plane says otherwise, which only
