@@ -51,6 +51,18 @@ Extract it at the second call site rather than the first: what varies
 is guesswork from one example, and the invariants are the same either
 way. Keep the block contiguous until then, so the extraction is a move.
 
+The leverage has a discipline attached, and it is the same fact read
+from the other side: nothing can opt out. A version on an XRD is not a
+compatibility knob — no composite pins one, so `v1alpha1` is where a
+kind stays, and a second version is a different kind that existing
+composites reach by migration rather than by upgrade. Every edit to a
+Composition is therefore an edit every live composite takes on its next
+reconcile, whether or not anyone was ready. So make each one safe for a
+composite that already exists: add fields rather than repurpose them,
+default what a manifest does not yet set, and never make a field
+required in the same change that introduces it — the manifests are in
+another repository and reach the plane on their own schedule.
+
 `Required` also does more than mark a field: a Required patch whose
 source is absent drops the whole composed resource, rather than
 skipping the one field. So a block of resources becomes optional
@@ -228,6 +240,11 @@ Composition for a kind it no longer serves.
 - Give a kind composed from more than one place an XRD of its own,
   fixing the invariants and parameterising the rest, so tightening a
   policy is one edit rather than a version every caller must adopt.
+- Make every Composition edit safe for a composite that already
+  exists. Nothing pins a version, so every live composite takes it on
+  the next reconcile: add fields rather than repurpose them, default
+  what a manifest does not yet set, and never make a field required in
+  the change that introduces it.
 
 **MUST NOT:**
 

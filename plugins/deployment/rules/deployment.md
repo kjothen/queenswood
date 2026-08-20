@@ -149,7 +149,13 @@ every composite of its kind on the next reconcile, so tightening a
 policy centrally is one edit rather than a version each caller must
 adopt — and extract it at the second call site, since what varies is
 guesswork from one example while the invariants are the same either
-way. Withhold `Delete` from `managementPolicies` for anything whose loss
+way. Nothing opts out, so an XRD version is not a compatibility knob: no
+composite pins one, a second version is a different kind reached by
+migration rather than upgrade, and every Composition edit is taken by
+every live composite on its next reconcile — so add fields rather than
+repurpose them, default what a manifest does not yet set, and never make
+a field required in the change that introduces it.
+Withhold `Delete` from `managementPolicies` for anything whose loss
 is unrecoverable: deleting the managed resource then orphans the cloud
 resource rather than destroying it, and deleting a composite destroys
 whatever its resources permit. Install a provider for every kind the
