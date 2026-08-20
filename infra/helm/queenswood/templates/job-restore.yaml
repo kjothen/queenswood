@@ -110,14 +110,14 @@ spec:
                 exec fdbrestore start \
                   -r "$BACKUP_URL" \
                   -v "$RESTORE_VERSION" \
-                  --encryption-key-file /var/backup-credentials/encryption-key \
+                  --encryption-key-file /var/backup-key/encryption-key \
                   --dest-cluster-file "$FDB_CLUSTER_FILE" \
                   -w
               fi
               echo "no recorded version; restoring the latest restorable point"
               exec fdbrestore start \
                 -r "$BACKUP_URL" \
-                --encryption-key-file /var/backup-credentials/encryption-key \
+                --encryption-key-file /var/backup-key/encryption-key \
                 --dest-cluster-file "$FDB_CLUSTER_FILE" \
                 -w
           env:
@@ -135,6 +135,8 @@ spec:
               readOnly: true
             - name: backup-credentials
               mountPath: /var/backup-credentials
+            - name: backup-key
+              mountPath: /var/backup-key
           {{- with .Values.fdb.restore.resources }}
           resources:
             {{- toYaml . | nindent 12 }}
@@ -145,4 +147,7 @@ spec:
         - name: backup-credentials
           secret:
             secretName: fdb-backup-credentials
+        - name: backup-key
+          secret:
+            secretName: fdb-backup-encryption-key
 {{- end }}
