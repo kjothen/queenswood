@@ -104,6 +104,22 @@ an empty `access` mapping installs and capabilities may be added later;
 and one manifest per folder allows more than one installation.
 See [queenswood-installation](../../../docs/recipes/queenswood-installation.md).
 
+## A composite builds what an instance is, Argo installs what runs there
+
+The composite builds the project, network, cluster, identities, database
+and names an instance answers on. It does not install the workloads:
+those arrive through Argo, reading the chart from one repository and the
+values from another. The line is between a cloud API and a cluster — a
+composite creates the identity a controller runs as, and Argo installs
+the controller. Crossplane could do both, but that means a second
+delivery path with its own provider configuration and its own credential
+into every instance cluster, beside one that already works. Keeping them
+apart also keeps their failures apart: a composite that stops
+reconciling leaves the workloads running, an Application that fails to
+sync leaves the infrastructure standing, and each reports in its own
+place.
+See [ADR-0024](../../../docs/adr/0024-instances-are-their-own-composites.md).
+
 ## Cloud infrastructure is Crossplane, not Terraform
 
 Cloud infrastructure is declared via Crossplane, not Terraform. A

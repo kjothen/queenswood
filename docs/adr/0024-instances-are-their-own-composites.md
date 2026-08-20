@@ -180,6 +180,26 @@ It makes the *name* load-bearing, which is what
 derives from the four-character code, so the reference is derivable
 rather than configured.
 
+### Workloads arrive by Argo, not by the composite
+
+The composite builds what an instance *is* — the project, the network,
+the cluster, the identities, the database, the names it answers on. It
+does not install what runs there. That arrives through Argo, from an
+Application the plane holds, reading the chart from one repository and
+the values from another.
+
+The line is between a cloud API and a cluster. A composite creates the
+identity a controller runs as; Argo installs the controller. Crossplane
+could in principle do both — `provider-helm` exists — but doing so would
+mean a second delivery path, its own provider configuration and its own
+credential into every instance cluster, beside one that already works
+and is already how every service reaches the instance.
+
+It also keeps the failure modes apart. A composite that stops
+reconciling leaves the workloads running; an Application that fails to
+sync leaves the infrastructure standing. Neither takes the other down,
+and each reports in its own place.
+
 ### One manifest per composite, flat in the installation's directory
 
 ```
