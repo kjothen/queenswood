@@ -53,9 +53,13 @@ way. Keep the block contiguous until then, so the extraction is a move.
 
 The leverage has a discipline attached, and it is the same fact read
 from the other side: nothing can opt out. A version on an XRD is not a
-compatibility knob — no composite pins one, so `v1alpha1` is where a
-kind stays, and a second version is a different kind that existing
-composites reach by migration rather than by upgrade. Every edit to a
+compatibility knob — no composite pins one — so keep a kind versionless
+in practice and leave it at `v1alpha1` for good. Where a change is
+large enough to want a version, what it wants is a different kind, with
+a name of its own, that an installation moves to deliberately. A second
+version of the same kind promises an upgrade path that does not exist:
+existing composites would have to be migrated either way, and the
+version number is the only thing suggesting otherwise. Every edit to a
 Composition is therefore an edit every live composite takes on its next
 reconcile, whether or not anyone was ready. So make each one safe for a
 composite that already exists: add fields rather than repurpose them,
@@ -247,6 +251,9 @@ Composition for a kind it no longer serves.
   the change that introduces it.
 
 **MUST NOT:**
+
+- Add a version to an XRD. Where a change is that large it is a
+  different kind, named for what it is, adopted deliberately.
 
 - Patch a field the composition sets and expect it to hold.
 - Expect a composition to withhold a field. A patch always writes

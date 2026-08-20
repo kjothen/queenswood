@@ -150,9 +150,12 @@ policy centrally is one edit rather than a version each caller must
 adopt — and extract it at the second call site, since what varies is
 guesswork from one example while the invariants are the same either
 way. Nothing opts out, so an XRD version is not a compatibility knob: no
-composite pins one, a second version is a different kind reached by
-migration rather than upgrade, and every Composition edit is taken by
-every live composite on its next reconcile — so add fields rather than
+composite pins one, so keep a kind versionless and leave it at
+`v1alpha1` — where a change is large enough to want a version it is a
+different kind, named for what it is and adopted deliberately, since a
+second version of one kind promises an upgrade path that does not
+exist. Every Composition edit is taken by every live composite on its
+next reconcile — so add fields rather than
 repurpose them, default what a manifest does not yet set, and never make
 a field required in the change that introduces it.
 Withhold `Delete` from `managementPolicies` for anything whose loss
