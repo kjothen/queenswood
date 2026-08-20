@@ -24,310 +24,131 @@ created. This plan is that, and what follows it.
 
 ## Picking this up cold
 
-**The bank is up on the first instance, and nothing is blocked.** The
-pivot is done, `qw01-n-test` runs every service, and the deployment
-needs no more manual steps to repeat itself on a second instance. What
-remains is listed under [what is left](#what-is-left) and under
-[after the pivot](#after-the-pivot); none of it stops anything.
-
-Read those, then verify against the live account rather than against
-this line, because a sentence naming a step is the first thing here to
-go stale. `kubectl --context qw01-n-test -n queenswood get pods` is the
-fastest answer to "is it still up".
-
-**What to pick up next, in order.** The apex — a static address, its
-DNS record, a certificate, and the gateway turned on — which is what
-makes the instance reachable at all. It is a smaller change than it
-looks: `keycloak.host.domain` moves the issuer and both
-`expectedIssuer` values together, because the fold made them one
-derivation, and enabling the gateway resolves the NEG readiness gate
-rather than needing it worked around. Two things travel with it: the
-`queenswood-console` client's redirect URI, which must go in through
-the Admin API because a realm is imported once and never overwritten,
-and `image.tag`, which is `latest` and should not be for anything
-reachable.
-
-**The zone is settled, and the apex is what is left.** One public zone
-per installation, held in the management project, with each instance
-composing its own records into it. A child zone per environment was
-ruled out: the NS records naming it are a read across two composites,
-and it adds a second zone that can churn, which is where the risk
-lives — each fresh zone for a domain draws from a finite per-domain
-nameserver pool. What gates a create is ownership rather than wiring,
-because Cloud DNS refuses a public zone whose name the calling
-identity has not verified. See
-[cloud-dns](../recipes/cloud-dns.md).
-
-**What not to do yet.** FoundationDB backup stays off until the
-S3-to-GCS proxy replaces the HMAC path — a before-it-holds-data gate
-rather than a before-it-is-reachable one. There is still no
-external-secrets operator on an instance cluster, which the FDB
-encryption key will need.
-
-**The API was renamed after the pivot.** The composite is
-`XManagementPlane` in `platform.repldriven.com`, and `qw01` was
-re-adopted under it without a single GCP resource being touched. The
-narrative below still says `XQueenswoodInstallation` wherever it
-records how the pivot was done, and that is deliberate: it is what
-happened, not what to do. The kind and the group are the only things
-that changed.
-
-**The first instance exists, and the bank is deployed onto it.**
-`XQueenswoodInstance` in `queenswood.repldriven.com`, decided by
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md) and
-declared by `qw01/test.yml` beside the plane's own manifest. What it
-composes:
-
-- `prj-qw01-n-test-xxxxxx`, in `fldr-qw01`, billed from the
-  installation's `EnvironmentConfig`
-- seven `ProjectService`s — compute, container, iam,
-  cloudresourcemanager, serviceusage, sqladmin, servicenetworking
-- `vpc-qw01-n-test` and two subnets, plus the private services access
-  pair: a `GlobalAddress` range this VPC lends Google and the
-  `Connection` peering that consumes it
-- `qw01-n-test`, a zonal cluster, and `np-qw01-n-test-primary` under it
-- `sa-qw01-n-test-nodes` and `sa-qw01-n-test-sql`
-- `sql-qw01-n-test`, a Postgres instance with a private address and no
-  public one, and a `CLOUD_IAM_SERVICE_ACCOUNT` user
-- the Secret registering this cluster with Argo, and a
-  `rl_pod_log_reader` custom role bound to whoever the manifest names
-
-**Nothing in the design holds a database password, because none
-exists.** `cloudsql.iam_authentication` is on and the database user is
-the workload's service account, so a client presents a token from the
-metadata server and Cloud SQL checks IAM. `sslMode` is
-`ENCRYPTED_ONLY`: private IP settles who can reach the instance, not
-whether what they send is readable, and those are different properties.
-The instance is created `up` and stopped afterwards — Cloud SQL refuses
-to create one already stopped.
-
-**`state: up | down` is proven in both directions.** Down took four
-minutes to drain three nodes; up refilled in one. Everything survived —
-project, network, identities, cluster, and the pool itself stayed
-`Ready`, so nothing pages because an environment is deliberately off.
-Coming back, the pool and cluster were the same objects and the API
-server kept its address. The nodes are new, which is the one thing
-inside the boundary that does not survive, and the reason nothing
-stateful may sit on a node's disk.
-
-**Workloads arrive through Argo, not Crossplane.** Argo has its own
-identity, `sa-qw01-c-argo`, bound by Workload Identity to both the
-application controller and the server, and holding
-`roles/container.admin` on each instance project it must deploy to. It
-reaches the cluster through a composed Secret carrying an endpoint, a
-CA and an `execProviderConfig` — a token minted at call time, so no
-credential for cluster access exists anywhere, including in
-`installations`. `qw01/test-app.yml` is a multi-source `Application`:
-the chart from this repository, the values from `installations`, so no
-environment identifier is ever committed here.
-
-**Where the deployment got to.** FoundationDB is fully replicated
-(`RECONCILED`, `AVAILABLE`, `FULLREPLICATION`), Kafka and Jaeger run,
-and the migrator Job completed. The five services sit at `Init:1/2`:
-past `wait-for-fdb-cluster`, waiting on `wait-for-bootstrap`.
-
-**It was blocked on Keycloak, which is history now rather than state
-— kept because the shape it forced is what the deployment still is.**
-The bootstrap
-Job's `sync-admin-client-key` initContainer registers the admin
-client's public key *on Keycloak*, and retries forever against a
-Service that does not exist. So the Job never completes, so no service
-starts, and the console crash-loops for the same reason. Keycloak is
-two further charts — `infra/helm/keycloak-operator` and
-`infra/helm/queenswood-keycloak` — which the retired
-`queenswood-platform` chart used to wrap alongside this one. They are a
-hard dependency of the deployment rather than a follow-on to it.
-
-**Keycloak is now declared, and unproven.** It went in as two more
-Applications first, which was wrong. `keycloak-operator` is a vendored
-subchart of `queenswood` under a condition, exactly as `fdb-operator`
-already was, and what was the `queenswood-keycloak` chart is now that
-chart's `keycloak.mode: operator`. One Application, one values file,
-and `installations/qw01/` back to the three manifests and those two.
-Nothing has run: the instance is `state: down`, so proving it means
-bringing the environment up. What to expect when it goes up is under
-[what to do next](#after-the-pivot).
-
-**The separate chart was a fossil, not a decision.** `queenswood-platform`
-composed three Crossplane `Release` resources, so there were three
-charts; that composite is retired and the shape outlived it. Nothing in
-`queenswood-keycloak` was generically Keycloak's — the realms are the
-bank's own file, the admin client is the one the bootstrap Job registers
-a signing key on, the CoreDNS rewrite exists so the `iss` claim
-round-trips for bank-api, and the HTTPRoute attached to the bank chart's
-own Gateway. The bank chart had a second Keycloak in it already, for
-kind, importing the same two realm files.
-
-**What the fold actually buys is one issuer.** Split across two charts,
-the string Keycloak embeds in `iss` lived in one values file and the two
-strings verifying it lived in another, agreeing by review. They are now
-derived from the mode and the hostname in one helper, so supplying a
-domain moves the issuer and both expectations follow — a coupling that
-was previously three edits and a comment asking the reader to check.
-The Service name went the same way: the dev instance used to hardcode
-the name the other chart's operator would publish.
-
-**And the proxy is not Keycloak's.** A Cloud SQL instance hosts many
-databases — the composite already composes the instance and a
-`keycloak` database on it separately — so the Auth Proxy is
-instance-scoped and shared, `postgres.provider` rather than something
-nested under Keycloak. A second consumer names another database and
-reaches it through the same Service. The realm export and import moved
-the same way, to `job-realm-export.yaml` and `job-realm-import.yaml`
-beside the migrator and bootstrap Jobs: they are the application's own
-work, which happens to speak Keycloak's Admin API.
-
-**And it is the first thing to hold no password.** The chart's external
-mode had a username and a password pinned into a Secret by the retired
-release. It now renders a username alone, derived by dropping
-`.gserviceaccount.com` from the identity the Cloud SQL Auth Proxy runs
-as, and the proxy runs with `--auto-iam-authn` so what reaches the
-database is a token rather than a secret. One value spells the database
-user and the Workload Identity annotation, so the two cannot name
-different principals.
-
-**The composition's half of that binding names nothing of its own.**
-It was left out while the workload's Kubernetes service account was a
-guess, and what closed that gap is `keycloak.database.client` on the
-instance's manifest — the namespace and the account, declared beside
-the Application that installs them rather than copied into a
-composition that a rename elsewhere would make wrong without making
-anything say so. The XRD's fields are Kubernetes' vocabulary, not a
-cloud's, because every cloud has a way of trusting a service account
-and none of them agree on what it is called.
-
-**Where the chart is GCP's, it says so.** `postgres.provider` names
-whose managed database is meant, and anything unimplemented fails the
-render rather than quietly producing GCP's shape under another cloud's
-name — passwordless access is arranged differently everywhere, a proxy
-beside the workload here and a client minting its own token there, so
-the shape cannot be shared. It is unset in `values.yaml`, which names
-no cloud at all: what makes this a GCP install is `values-gcp.yaml`
-layered over it, carrying the proxy, the GKE health-check policy, the
-Gateway's Google kinds and the `gcloud` images. The Application lists
-the two in order, so a second cloud is a sibling file and one line
-changed there. The composition is already `xqueenswoodinstance.gcp`,
-so it is the same move one layer down: a second composition against
-the same XRD, rather than an edit to either.
-
-What that does not make portable is the realm export and its restore,
-which shell out to `gcloud storage`. Only their images moved, because
-a second cloud needs those Jobs rewritten rather than re-pointed —
-said in both files rather than papered over by a rename.
-
-`XPlatform`'s resources were the port list, and what is left of it is
-the apex address, its DNS record and the certificate — with the DNS
-**zone** the open question, since it is unrecreatable on any useful
-timescale. That question is now reopened rather than settled: it was
-blocked on a zone not belonging to a disposable instance, and an
-instance project is no longer disposable.
-
-**And no chart holds a domain.** The domain moved — the old
-`<env>.repldriven.com` gives way to `queenswood.io`, nested for
-non-production and at the apex for production — which is the kind of
-change that finds every place a domain was written down.
-The Keycloak half had one as a default, and derived from it both its
-own hostname and the bank console's. It now takes
-`keycloak.host.domain` with no default and the console's origin whole,
-which is how the bank chart's gateway hostnames already worked. So the
-only thing the chart says about where it lives is the subdomain
-Keycloak occupies.
-
-Where the domain does belong is
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md)'s answer
-already: the apex address, its record and the certificate are the
-instance's composed resources, so the domain is a field on the
-instance's manifest, arriving when there is something to compose from
-it. Declaring it before then buys nothing and costs a copy, because an
-Argo values file cannot read an XR's status — which is the real seam.
-Applications live in `installations` beside the manifest rather than
-being composed by the instance, and
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md) left that
-choice open; taking the Argo path is what makes a hostname something
-written once in the manifest and again in each values file that needs
-it. Composing the Applications from the instance is what would collapse
-them, and that is the trade to weigh when the zone question is
-answered, not a defect in either.
-
-Read "How the machinery fits together" below before touching the
-composition. It is the hour that does not need spending twice.
-
-The names, so a session starting fresh does not rediscover them.
-`xxxxxx` stands for a project id's random suffix, and the numeric
-organisation and folder ids are not written down at all. Neither is
-withheld to be difficult: the recipes discover every one of them from
-whoever is logged in locally, so writing them here would add a second
-copy that can only go stale — and for the reason
-[cloud-naming](../recipes/cloud-naming.md) gives, a public document
-should carry names, where an account identifier is what somebody
-pretexting a support call would want. `just gcp-preflight` and
-`just gcp-boot-status` print the real values.
-
-- domain `queenswood.io`
-- folder `fldr-qw01`, the installation
-- management project `prj-qw01-c-mgmt-xxxxxx`
-- seed project `prj-b-seed-xxxxxx`, holding `sa-qw01-boot`. Outside the
-  folder, created by `gcloud` rather than by the composite, and not the
-  composite's to adopt
-- kubectl context `qw01-mgmt`, added by `just gcp-mgmt-cluster-ctx`
-
-The files this plan acts on:
-
-- `infra/platform/crossplane-xrds/xqueenswoodinstallation-xrd.yml` and
-  `-composition.yml` — the API and what it builds
-- `infra/platform/crossplane-providers/providers.yml` — the package set
-- `infra/helm/xp-mp/` — Crossplane and Argo, as a chart, for the boot
-  plane only
-- `infra/helm/management-plane-config/` — the configurations whose kinds
-  arrive with the packages, kept out of the parent so a missing kind
-  fails one Application rather than all of them
-- `infra/helm/management-plane/` — what the management plane reconciles
-  about itself, delivered by Argo
-- `justfiles/gcp.just` — the new recipes
-- `justfiles/cloud.just` — the ones being retired
-
-To re-read the live state rather than trusting this document:
-`just gcp-preflight`, `just gcp-boot-status`, `just gcp-platform-status`,
-`kubectl --context qw01-mgmt get crd`, and
-`gcloud resource-manager folders get-iam-policy <folder-id>`. Who is in
-which access group is read in the Admin console, not here — see
-[cloud-account](../recipes/cloud-account.md).
-
-To get back to a boot plane — which is now a recovery act rather than
-part of running the installation — join `grp-gcp-qw01-platform-admin`
-and:
+**The bank is reachable at a real domain, and nothing is blocked.** The
+instance serves `console.`, `api.` and `keycloak.test.queenswood.io`
+over certificates it composed itself, the whole DNS path is declared
+from manifests, and the release was renamed while FoundationDB still
+held nothing anyone wanted. Verify against the account rather than
+against this line:
 
 ```
-just gcp-adc-boot                 # interactive, opens a browser
-just gcp-plane-up
-just gcp-plane-apply
+kubectl --context qw01-n-test -n queenswood get pods
+curl -o /dev/null -w '%{http_code}\n' https://console.test.queenswood.io/
 ```
 
-`gcp-plane-apply` takes no arguments because the committed manifest
-holds them: the folder and project it adopts, the parent, the code,
-the access mapping. Adoption rather than a second installation is a
-property of that file, not of what somebody remembered to type. Then
-`just gcp-plane-down`, `just gcp-adc-revoke`, and leave the group.
+**What is left is Google sign-in, and it is one piece of plumbing.**
+Keycloak accepts the console's redirect. Google refuses, because the
+realm carries a placeholder client id and the secret has nowhere to
+live. Closing that needs external-secrets on the instance cluster,
+which is the next build and is fully specified below.
 
-You should not need any of it. The management plane reconciles
-continuously now, and a change to the installation is a merge to
-`installations` rather than a plane raised to apply it. Raise one to
-rebuild a management cluster that is gone, or to grant the platform
-identity something it cannot grant itself — which is a real category,
-since the binding that repairs project IAM is itself a project IAM
-binding.
+### The next build: external-secrets on an instance
 
-A *first* installation has no such file, and mints one:
+The GCP half is done and applied — the API, `sa-qw01-n-test-secrets`,
+`roles/secretmanager.secretAccessor`, both halves of Workload Identity
+pinned to `external-secrets/external-secrets`, and
+`sec-qw01-n-test-google-oauth` as a container holding no value.
 
-```
-just gcp-plane-manifest organizations/<org-id> \
-  > ../installations/qw01/installation.yml
-```
+Three things remain, and they mirror the plane exactly. The plane
+splits its own cluster into an app-of-apps chart and a config chart;
+an instance has only the first half, with Applications living directly
+in `installations/qw01/`.
 
-Committed before it is applied, deliberately. The ids in it are
-consumed permanently, so a manifest generated and then lost strands
-them.
+- **`infra/helm/queenswood-config/`** — a new chart, holding the
+  `ClusterSecretStore` (provider `gcpsm`, `projectID` the instance
+  project, **no auth block**: the controller's pod carries the
+  annotated service account) and the `ExternalSecret` producing
+  `queenswood-keycloak-vault` with key
+  `queenswood_google-client-secret`. That is `<realm>_<key>`, which the
+  realm already references as `${vault.google-client-secret}`.
+- **`installations/qw01/test-external-secrets.yml`** — an Application
+  installing the operator onto the instance cluster. Needs
+  `ServerSideApply=true`: those CRDs exceed 256KB and client-side apply
+  writes the whole resource into an annotation the API server rejects,
+  so the CRDs never install and the controller crash-loops looking for
+  kinds nothing registered. The plane's own Application records this.
+- **`installations/qw01/test-config.yml`** — an Application deploying
+  the chart above.
 
+Then `keycloak.vault.enabled: true` in `test-values.yml`, so the mount
+exists and the committed vault expression resolves; and the Google
+identity provider's `clientId`, still `REPLACE-ME-GOOGLE-CLIENT-ID`,
+reconciled by the realm-import Job beside the console redirect — with
+the value in the Job's name hash, or a changed id leaves the same
+completed Job and nothing applies it.
+
+The client secret is written into `sec-qw01-n-test-google-oauth` by
+hand, once. That does not become automated by any of the above:
+Crossplane composes containers, never values, and somebody put the
+GitHub App key into Secret Manager by hand too. What external-secrets
+buys is that the secret survives a cluster rebuild and lives somewhere
+auditable rather than only in etcd.
+
+The OAuth client itself is a console act — see
+[google-sign-in](../recipes/google-sign-in.md). The right to create one
+is `roles/oauthconfig.editor`, held by `platformAdmin` and by no
+automation, because Google exposes no API for a web client with a
+chosen redirect URI.
+
+### Also outstanding
+
+- **A doc sweep.** The same architecture is described in about five
+  places and the retired generation is still present in most of them.
+  `docs/tdd/infrastructure.md` is the worst: 444 lines, 26 references
+  to composites that no longer exist, and whole sections on
+  `XPlatform`, `XQueenswoodApex` and workload delivery through
+  `provider-helm`. Fixing it piecemeal leaves it half-true; it wants
+  one deliberate pass, at the end, together with
+  [cloud-deployment](../recipes/cloud-deployment.md) and this plan.
+- **Statements in this plan that nothing durable records.** "Workloads
+  arrive through Argo, not Crossplane" was one and now lives in
+  ADR-0024. Two more are still plan-only: what the Keycloak fold buys
+  (one issuer rather than an agreement between two values files), and
+  that the Cloud SQL proxy is the instance's rather than Keycloak's.
+  Test the rest the same way — grep `docs/adr docs/recipes docs/tdd`
+  for each and rehome what only this file says.
+- **Five deployment-labelled docs with no rule section**:
+  `cloud-account`, `cloud-naming`, `security-scanning`, ADR-0023 and
+  ADR-0024. They were invisible to discovery until the label parser was
+  fixed, and authoring their sections is its own pass.
+- **`image.tag` is `latest`.** It cannot be fixed in values: GHCR holds
+  only `latest`, `latest-amd64` and `latest-arm64` for these images, so
+  there is no version to pin to. Build-pipeline work.
+- **FoundationDB backup** stays off until the S3-to-GCS proxy replaces
+  the HMAC path. Its encryption key is the other thing waiting on
+  external-secrets.
+
+### What cost the most, across two days
+
+**Nothing re-evaluates, and the thing that reports it lies.** An Argo
+operation pins the revision it started with and replays it on every
+retry, so a merged fix never arrives — twice — while
+`status.sync.revisions` shows the new commit and
+`.operation.sync.revisions` shows what is actually being applied. One
+rejected object fails a whole sync and leaves every well-formed
+resource beside it `OutOfSync`. A composite behaves the same way: one
+bad resource stops it composing anything, while `Ready` stays `True` on
+everything already built. Read the condition that carries the failure,
+not the one that looks relevant.
+
+**Read the CRD, not the shape you expect.** Three separate resources
+failed on fields that do not exist —
+`KeycloakOIDCClient.spec.client.clientId`, a `projectRef` on a
+`ServiceAccount`, and `secretId` with a list-shaped `replication` on a
+Secret Manager entry. Server-side apply refuses an undeclared field
+rather than dropping it, and `helm template` and `crossplane render`
+both pass it happily. Only the API server has the schema.
+
+**A fixture that differs from reality in the one respect that matters
+will pass.** The validation record renders correctly against a
+placeholder with no trailing dot and wrongly against the real value.
+
+**Deleting a Keycloak CR while its database survives strands the admin
+credential**, because the operator owns the Secret and regenerates it.
+It presents as an instance that will not start, and only Keycloak's own
+log names the cause.
+
+## How the machinery fits together
 ## How the machinery fits together
 
 Written down because reconstructing it from the manifests takes an hour
