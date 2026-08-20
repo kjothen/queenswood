@@ -80,6 +80,22 @@ field that destroys on every reconcile, which is the hazard ADR-0022
 names from the other end — *a live plane watching its resources vanish
 through a prune and doing what it was told.*
 
+**Retention is one number, and everything else is derived from it.**
+An installation says how far back it can recover — thirty days — and
+nothing else is stated. `fdbbackup expire` takes a cutoff and a floor
+as separate flags, and two flags that must agree is how a configuration
+ends up cutting at thirty and guaranteeing seven, which nobody notices
+until the day it matters. Both come from the one value.
+
+That the two are the same number is what makes the floor useful rather
+than decorative: it stops being a second decision and becomes a check
+on the first. Expire deletes what is not needed to restore across the
+window, and the floor asserts the window survived. Where FDB's two
+approximations of *approximately NUM_DAYS worth of versions* disagree
+at the boundary, expire refuses and that run deletes nothing — which is
+the direction a destructive operation should fail in, and it corrects
+itself on the next one.
+
 **States belong to parts, not only to instances.** `state: up | down`
 is instance-wide, and the parts of an instance have independent
 lifecycles: the data tier, the database behind Keycloak, the services.
@@ -161,9 +177,11 @@ supplies the mechanism: `--min-restorable-days`, and the
 `--restorable-after` pair, set a floor below which expire refuses. That
 is the self-limiting property, built in rather than invented, and a
 schedule that omits it is a schedule that can be told to delete
-everything. `--delete-before-days` is the retention cutoff to pair with
-it, and it is anchored to the latest log version in the backup rather
-than to wall clock, so it cannot misfire on a clock nobody checked.
+everything. `--delete-before-days` is the cutoff it pairs with, and it
+is anchored to the latest log version in the backup rather than to wall
+clock, so it cannot misfire on a clock nobody checked. Neither is a
+value an installation sets: both come from the retention period, per
+the decision above.
 
 How often it runs is a smaller question than it looks, and answerable
 later with evidence rather than now by guess. Each run deletes what has
