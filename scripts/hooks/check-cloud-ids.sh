@@ -17,10 +17,10 @@
 # belongs, put `cloud-id-ok` in a comment on the same line.
 #
 # A commit message is checked too, and carries one rule of its own --
-# see the bottom of this file. A pull request's title and body go
-# through the same mode, from .github/workflows/check-cloud-ids.yml:
-# they are written outside git, so no hook reaches them, and they are
-# as public as the tree.
+# see the bottom of this file. Everything written outside git goes
+# through the same mode, from .github/workflows/check-cloud-ids.yml: a
+# pull request's title and body, an issue's, a comment, a review. No
+# hook reaches any of them and all of them are as public as the tree.
 #
 #   bash check-cloud-ids.sh                 # every tracked file
 #   bash check-cloud-ids.sh --staged        # staged changes (pre-commit)

@@ -1,37 +1,74 @@
-# The identifier guard reaches commits and the tree. It does not reach
-# a pull request's title or body, which are written outside git and are
-# just as public -- a real project id suffix went into four descriptions
-# before anyone noticed, in a repository anyone can read.
+# The identifier guard reaches commits and the tree, from pre-commit and
+# commit-msg. It reaches nothing written outside git -- a description, a
+# comment, a review -- which are as public as the tree and, being typed
+# rather than committed, are where a real name gets pasted.
 #
-# Same script, same rules, so there is one definition of what an
-# identifier is rather than a second that drifts.
+# Same script and same rules through its --message mode, so there is one
+# definition of what an identifier is rather than a second that drifts.
+#
+# What this is and is not: on a pull request it is a check, and can hold
+# a merge. On a comment, an issue or a review it is detection only --
+# the text is public the moment it is posted, and no workflow unposts
+# it. It says so early, which is the whole of what is available.
+#
+# The comment, issue and review triggers run the copy of this file on
+# the default branch rather than the one in a branch, so a change to
+# them does nothing until it is merged.
 name: Cloud identifiers
 
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
+    types: [created, edited]
 
 permissions:
   contents: read
 
 concurrency:
-  group: cloud-ids-${{ github.event.pull_request.number }}
+  # An issue event carries no pull_request.number, and a comment event
+  # carries issue.number for both kinds. run_id is the fallback so two
+  # unrelated events never share a group.
+  group: >-
+    cloud-ids-${{ github.event.pull_request.number
+      || github.event.issue.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
-  description:
+  text:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
-      # Through the environment rather than an expression: a title or
-      # body is attacker-controlled text, and interpolating it into a
-      # shell line is how that text becomes a command.
-      - name: Check the title and body
+      # Through the environment rather than an expression. Every value
+      # here is attacker-controlled text, and interpolating any of them
+      # into a shell line is how that text becomes a command.
+      #
+      # Everything the event carries, not only what it changed: a
+      # comment on a pull request whose body holds a real name should
+      # say so, and the script names the line it found it on.
+      - name: Check what this event carries
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          REVIEW_BODY: ${{ github.event.review.body }}
         run: |
           set -euo pipefail
-          printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" > pr-description.txt
-          bash scripts/hooks/check-cloud-ids.sh --message pr-description.txt
+          {
+            printf '%s\n' "${PR_TITLE:-}"
+            printf '%s\n' "${PR_BODY:-}"
+            printf '%s\n' "${ISSUE_TITLE:-}"
+            printf '%s\n' "${ISSUE_BODY:-}"
+            printf '%s\n' "${COMMENT_BODY:-}"
+            printf '%s\n' "${REVIEW_BODY:-}"
+          } > event-text.txt
+          bash scripts/hooks/check-cloud-ids.sh --message event-text.txt

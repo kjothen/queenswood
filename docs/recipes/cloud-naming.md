@@ -343,10 +343,13 @@ installation is that field and nothing else.
 - Bake an environment name, a domain or a customer name into a resource
   name. The code and the environment letter are the only identifiers a
   name carries.
-- Put a realised suffix anywhere public, including a pull request's
-  title or body. `scripts/hooks/check-cloud-ids.sh` covers the tree and
-  the commit message from a hook and the description from a workflow;
-  write `xxxxxx` instead.
+- Put a realised suffix anywhere public — a pull request's title or
+  body, an issue, a comment, a review.
+  `scripts/hooks/check-cloud-ids.sh` covers the tree and the commit
+  message from a hook, and everything written outside git from a
+  workflow; write `xxxxxx` instead. On a pull request that check can
+  hold a merge. On a comment it is detection only: the text is public
+  the moment it is posted, and no workflow unposts it.
 - Rename a project id, a folder or a bucket in place. None of them
   supports it — the id is consumed and the resource is rebuilt.
 - Invent a prefix where the inventory already has one.
