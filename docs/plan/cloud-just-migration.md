@@ -426,6 +426,18 @@ Small, and none of it blocking:
   declares any, so the scheduler reads the node as two-thirds empty
   while it is nearly full, and eviction order is backwards — the pods
   that matter are `BestEffort` and go first.
+- **Argo holds `container.admin` on every instance project**, which is
+  what lets it write the RBAC any chart shipping an operator carries —
+  the FoundationDB operator is what proved a deployer that cannot is a
+  deployer that cannot deploy one at all. The same role carries
+  `container.pods.create`, so that identity can port-forward and exec
+  into any pod, and create and delete clusters in the project. The
+  narrower shape is `container.clusterViewer` plus a Kubernetes
+  `ClusterRoleBinding` on the cluster itself, which moves the authority
+  into RBAC where a diff shows it — and needs something able to write
+  RBAC on an instance cluster before it can be built, which is the
+  machinery this defers. Before a production instance, and only
+  recorded until now in a comment in the composition.
 - **`sa-qw01-nodes` renamed but the cluster not.** `gke-qw01-c-mgmt` and
   `np-qw01-c-mgmt` keep names that predate the rule in
   [cloud-naming](../recipes/cloud-naming.md), because renaming either
