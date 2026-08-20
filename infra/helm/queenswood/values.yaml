@@ -197,9 +197,11 @@ keycloak:
     schedule: "0 * * * *"
     bucket: ""
     project: ""
-    # Made by `just gcp-keycloak-backup-sa-create` -- needs only object
-    # write on the backup bucket. GCP-named for the same reason as the
-    # import's. See values-gcp.yaml.
+    # The instance composite's backup identity, which the s3proxy also
+    # runs as: both write this instance's backups to the same bucket, so
+    # a second account would carry the same grants and draw no boundary.
+    # The composite binds Workload Identity to this CronJob's own
+    # Kubernetes service account by name.
     gcpServiceAccount: ""
     # Empty means the image the Keycloak instance runs, so the export is
     # always produced by the version that wrote the data.

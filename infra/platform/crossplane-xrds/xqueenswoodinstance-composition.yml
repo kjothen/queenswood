@@ -2709,6 +2709,38 @@ spec:
                   name: {{ printf "sa-%s-backup" $name }}
                 member: {{ printf "serviceAccount:%s.svc.id.goog[queenswood/queenswood-s3proxy]" $xr.spec.projectId | quote }}
             ---
+            # The realm export's half of Workload Identity, onto the
+            # same GCP account the proxy uses.
+            #
+            # One identity, not two. Both write this instance's backups
+            # to the same bucket, so a second account would carry the
+            # same grants and draw no boundary -- and one GCP account
+            # binds to as many Kubernetes ones as name it. objectAdmin
+            # is what the export needs rather than objectCreator,
+            # incidentally: it rewrites LATEST, and overwriting an
+            # object in GCS is a delete and a create.
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ServiceAccountIAMMember
+            metadata:
+              name: {{ printf "sa-%s-backup-wi-realm-export" $name }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-backup-identity-wi-realm-export
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                role: roles/iam.workloadIdentityUser
+                serviceAccountIdRef:
+                  name: {{ printf "sa-%s-backup" $name }}
+                member: {{ printf "serviceAccount:%s.svc.id.goog[queenswood/queenswood-realm-export]" $xr.spec.projectId | quote }}
+            ---
             # The composite's own kind, which is how this function
             # writes composite status.
             apiVersion: queenswood.repldriven.com/v1alpha1
