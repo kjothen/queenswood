@@ -37,8 +37,7 @@ spec:
           env:
             # nginx upstreams. KEYCLOAK_UPSTREAM is what the
             # `/keycloak/*` location reverse-proxies to; defaults to
-            # the bundled dev Keycloak's Service in-cluster, and
-            # GKE overrides via queenswood-platform.
+            # the bundled dev Keycloak's Service in-cluster.
             - name: API_UPSTREAM
               value: {{ tpl .Values.console.apiUpstream . | quote }}
             - name: KEYCLOAK_UPSTREAM

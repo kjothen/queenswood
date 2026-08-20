@@ -138,8 +138,8 @@ those in full before non-trivial work on their topic.
   a `QUEENSWOOD_ENV` and `pass` model that has. See
   [recipes/recovery-procedures.md](docs/recipes/recovery-procedures.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
-  plane; Argo CD wires the bootstrap chain; queenswood-platform
-  Composites + Releases drive everything else. See
+  plane; Argo CD wires the bootstrap chain; the installation's
+  composites drive everything else. See
   [tdd/infrastructure.md](docs/tdd/infrastructure.md) and
   [ADR-0016](docs/adr/0016-crossplane-over-terraform.md).
 - **Cloud foundation** — the folder/seed/hub-and-spoke project
