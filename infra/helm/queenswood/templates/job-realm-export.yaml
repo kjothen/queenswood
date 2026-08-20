@@ -24,7 +24,16 @@
   Keycloak stays up throughout -- the management port is moved aside
   because the running server holds the default.
 */ -}}
-{{- $realms := list (.Files.Get "files/queenswood-realm.json" | fromJson).realm (.Files.Get "files/queenswood-ops-realm.json" | fromJson).realm -}}
+{{- /* The files as they are named here, not as the import writes them
+       out. `<realm>-realm.json` is the derived name the import Job
+       reads from its ConfigMap; the source is keycloak-realm.json, and
+       asking for the derived one returns nothing -- which `fromJson`
+       turns into an empty realm rather than an error, so the loop below
+       ran zero times and the upload failed on an unmatched glob. */ -}}
+{{- $realms := list (.Files.Get "files/keycloak-realm.json" | fromJson).realm (.Files.Get "files/keycloak-realm-ops.json" | fromJson).realm -}}
+{{- if or (not (first $realms)) (not (last $realms)) -}}
+{{- fail "realm export could not read a realm name from files/keycloak-realm.json or files/keycloak-realm-ops.json" -}}
+{{- end -}}
 apiVersion: v1
 kind: ServiceAccount
 metadata:
