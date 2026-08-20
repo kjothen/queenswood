@@ -200,7 +200,7 @@ spec:
         {{- if has $svcName $.Values.keycloak.consumers }}
         - name: keycloak-admin-key
           secret:
-            secretName: {{ $.Release.Name }}-keycloak-admin
+            secretName: {{ include "queenswood.keycloakAdminKeySecret" $ }}
             defaultMode: 0400
         {{- end }}
 {{- end }}

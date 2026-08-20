@@ -12,6 +12,7 @@ imagePullSecrets:
   {{- toYaml . | nindent 8 }}
 {{- end }}
 restartPolicy: OnFailure
+serviceAccountName: {{ include "queenswood.bootstrapServiceAccount" . }}
 initContainers:
   - name: wait-for-fdb-cluster
     image: alpine/k8s:1.30.14
@@ -84,8 +85,68 @@ initContainers:
         fi
         kubectl wait --for=condition=complete --timeout=30m job -l "$SEL"
   {{- end }}
-  # Register the public half of this release's signing key on the
-  # queenswood-admin client, and switch it to client-jwt.
+  # The private_key_jwt signing pair, in three steps: carry forward
+  # whatever the Secret holds, generate one where it held nothing,
+  # then store it and register the public half on the
+  # queenswood-admin client.
+  #
+  # Generated here rather than rendered by the chart because Argo CD
+  # renders with `helm template`, where `lookup` returns nothing: a
+  # pair minted in a template is a fresh pair on every render, applied
+  # over the one Keycloak was told about. Owning both acts in one Job
+  # is what keeps the registered certificate and the mounted key the
+  # same pair.
+  #
+  # It belongs here rather than in a helm hook because the gate above
+  # orders it ahead of every consumer, including bootstrap's own
+  # container.
+  - name: read-admin-client-key
+    image: alpine/k8s:1.30.14
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        S={{ include "queenswood.keycloakAdminKeySecret" . }}
+        # Both halves or neither: a key carried forward without the
+        # certificate Keycloak holds no longer matches it.
+        pem=$(kubectl get secret "$S" \
+          -o jsonpath='{.data.admin-client\.pem}' 2>/dev/null || true)
+        crt=$(kubectl get secret "$S" \
+          -o jsonpath='{.data.admin-client\.crt}' 2>/dev/null || true)
+        if [ -n "$pem" ] && [ -n "$crt" ]; then
+          printf '%s' "$pem" | base64 -d > /keys/admin-client.pem
+          printf '%s' "$crt" | base64 -d > /keys/admin-client.crt
+          touch /keys/.stored
+          echo "carrying forward the signing pair in $S"
+        else
+          echo "no signing pair in $S yet"
+        fi
+    volumeMounts:
+      - name: admin-client-key
+        mountPath: /keys
+  # openssl, because alpine/k8s carries curl, jq, kubectl and helm but
+  # not openssl. Only runs where the Secret held nothing.
+  - name: generate-admin-client-key
+    image: alpine/openssl:3.5.7
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        if [ -f /keys/.stored ]; then
+          exit 0
+        fi
+        openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+          -keyout /keys/admin-client.pem \
+          -out /keys/admin-client.crt \
+          -subj "/CN={{ .Release.Name }}-admin"
+        echo "generated a signing pair"
+    volumeMounts:
+      - name: admin-client-key
+        mountPath: /keys
+  # Store the pair, then register the public half on the
+  # queenswood-admin client and switch it to client-jwt.
   #
   # Only public material crosses the wire -- the private half never
   # leaves the pods that mount it, and Keycloak never holds a copy
@@ -94,9 +155,9 @@ initContainers:
   # service Deployment blocks on this Job, so bank-api can't be
   # serving a JWKS at the moment Keycloak would need to fetch it.
   #
-  # It belongs here rather than in a helm hook because that same
-  # gate orders it ahead of every consumer, including bootstrap's
-  # own container.
+  # `kubectl patch` rather than `apply`: it writes `data` without
+  # becoming the manager of the whole object, which the chart's own
+  # server-side apply owns.
   - name: sync-admin-client-key
     image: alpine/k8s:1.30.14
     env:
@@ -107,7 +168,9 @@ initContainers:
       - name: KC_REALMS
         value: {{ printf "%s %s" .Values.keycloak.realm .Values.keycloak.opsRealm | quote }}
       - name: KC_CERT_FILE
-        value: /etc/queenswood/keycloak/admin-client.crt
+        value: /keys/admin-client.crt
+      - name: KC_SECRET
+        value: {{ include "queenswood.keycloakAdminKeySecret" . | quote }}
       {{- if include "queenswood.keycloakAdminSecret" . }}
       - name: KC_ADMIN_USER
         valueFrom:
@@ -126,14 +189,20 @@ initContainers:
         value: {{ .Values.keycloak.dev.adminPassword | quote }}
       {{- end }}
     volumeMounts:
-      - name: keycloak-admin-key
-        mountPath: /etc/queenswood/keycloak
-        readOnly: true
+      - name: admin-client-key
+        mountPath: /keys
     command:
       - sh
       - -c
       - |
         set -eu
+        if [ ! -f /keys/.stored ]; then
+          kubectl patch secret "$KC_SECRET" --type merge -p "$(
+            printf '{"data":{"admin-client.pem":"%s","admin-client.crt":"%s"}}' \
+              "$(base64 -w0 < /keys/admin-client.pem)" \
+              "$(base64 -w0 < /keys/admin-client.crt)")" > /dev/null
+          echo "stored the signing pair in $KC_SECRET"
+        fi
         for i in $(seq 1 120); do
           if curl -sf -o /dev/null "$KC_BASE_URL/realms/master/.well-known/openid-configuration"; then
             break
@@ -142,9 +211,7 @@ initContainers:
           sleep 5
         done
         # Keycloak wants the base64 DER of the certificate, without
-        # the PEM armour or newlines. Helm generated it alongside
-        # the key, so there is nothing to derive here -- which is
-        # just as well, since this image has no openssl.
+        # the PEM armour or newlines.
         CRT=$(grep -v '^-----' "$KC_CERT_FILE" | tr -d '\n')
         if [ -z "$CRT" ]; then
           echo "no certificate body in $KC_CERT_FILE" >&2
@@ -216,7 +283,11 @@ containers:
       - name: fdb-cluster-file
         mountPath: /etc/fdb
         readOnly: true
-      - name: keycloak-admin-key
+      # The pair the initContainers wrote, from the shared volume
+      # rather than from the Secret. A Secret volume is refreshed on
+      # the kubelet's sync period, so a mount made when the pod started
+      # need not yet show what an initContainer stored.
+      - name: admin-client-key
         mountPath: /etc/queenswood/keycloak
         readOnly: true
     {{- with .Values.bootstrap.resources }}
@@ -226,10 +297,8 @@ containers:
 volumes:
   - name: fdb-cluster-file
     emptyDir: {}
-  - name: keycloak-admin-key
-    secret:
-      secretName: {{ .Release.Name }}-keycloak-admin
-      defaultMode: 0400
+  - name: admin-client-key
+    emptyDir: {}
 {{- end -}}
 
 {{- if .Values.bootstrap.enabled }}

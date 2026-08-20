@@ -44,6 +44,35 @@ into `last-applied-configuration`, which the API server rejects as
 its own kinds do not exist, not a failed CRD. Set
 `ServerSideApply=true`.
 
+### A rendered chart holds no generated value
+
+Argo renders with `helm template`, where `lookup` returns nothing. A
+chart that mints a value and preserves it by looking up the live object
+therefore mints a fresh one on every render, and the sync applies it —
+so the "generate once" branch is the only branch that ever runs.
+
+The damage is quiet where the value has a counterpart somewhere else.
+A self-signed keypair whose public half was registered on another
+system keeps verifying against the half that was registered, while the
+pods sign with the half that was rendered last, and the two only ever
+meet at a failed authentication. Nothing reports a drifted secret,
+because from Argo's side the Secret is exactly what git says.
+
+Generate such a value in the cluster instead, from a Job that reads
+what is stored before it makes anything, and let the chart declare the
+Secret with no `data` at all. Server-side apply then leaves the
+contents to whichever manager wrote them: Argo never declares that
+field, so it never owns it and never clears it. Where the value has a
+counterpart, generating and registering it belong to the same Job, or
+they drift apart again for a different reason.
+
+Rendering key material has a second cost even where nothing drifts —
+the private half exists in the repo-server, in whatever the render is
+cached in, and in the Application's live manifest view. See
+[external-secrets](external-secrets.md) for the values that come from
+outside and belong in Secret Manager, and for why a value you can
+regenerate belongs in neither place.
+
 ### Retries
 
 `selfHeal` corrects drift. It does not retry a failed sync — those are
@@ -117,6 +146,9 @@ field the manifest can set.
   file should not delete.
 - Merge a change before expecting Argo to apply it. It reads the
   revision an Application names, never a working tree.
+- Generate a value in the cluster, not in a chart Argo renders, and
+  let the chart declare the Secret without `data` so server-side apply
+  leaves the contents to the Job that writes them.
 
 **MUST NOT:**
 
@@ -124,6 +156,9 @@ field the manifest can set.
 - Expect `SkipDryRunOnMissingResource` to make an apply succeed.
 - Expect a merged fix to reach an Application whose retries have
   already been exhausted.
+- Rely on `lookup` to preserve anything. Argo renders with `helm
+  template`, where it returns nothing and the generate branch always
+  wins.
 
 ## References
 
