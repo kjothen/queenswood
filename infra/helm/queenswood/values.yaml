@@ -482,13 +482,42 @@ fdb:
   # in a cloud environment. See templates/fdb-backup.yaml.
   backup:
     enabled: false
-    # S3-compatible endpoint. GCS serves one for interop; the access
-    # key id is prefixed onto this to form `accountName`.
-    endpoint: storage.googleapis.com
-    # Plaintext, because FDB's blobstore cannot be given a CA through
-    # the operator -- see templates/fdb-backup.yaml. The backup files
-    # are encrypted instead.
+    # The S3-compatible endpoint, which is the in-cluster proxy rather
+    # than storage.googleapis.com. Empty resolves to the proxy's own
+    # Service. See templates/s3proxy.yaml for why the agents do not
+    # reach GCS directly.
+    endpoint: ""
+    # Plaintext, and now a pod-to-pod hop: FDB's blobstore cannot be
+    # given a CA through the operator, so the leg that crosses a
+    # network is the proxy's own HTTPS to GCS, made by a client whose
+    # trust store works. The files are encrypted either way.
     port: 80
+    # An access key id is not a secret -- it names which credential is
+    # being presented. The matching secret is generated in the cluster
+    # and never stated here.
+    accessKeyId: queenswood
+    # S3-to-GCS proxy. The agents speak the only protocol they know and
+    # the proxy speaks GCS, authenticating by Workload Identity, so no
+    # exportable Google credential exists anywhere in the path and the
+    # organisation's ban on service-account keys stops being something
+    # to get exempted from.
+    proxy:
+      image: andrewgaul/s3proxy:4.0.0
+      # The project the bucket is in, which is the recovery project
+      # rather than this instance's. Set per instance.
+      projectId: ""
+      # Named by the composite, and what the proxy's identity is bound
+      # to. Empty disables the annotation, for a cluster with no
+      # Workload Identity.
+      serviceAccount: ""
+      replicas: 1
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "512Mi"
+        limits:
+          cpu: "1000m"
+          memory: "1Gi"
     bucket: ""
     # The bucket's region, which the SigV4 signature is computed over.
     region: ""
@@ -509,11 +538,10 @@ fdb:
     # two-segment default here is the single-generation case -- a
     # standalone install that is never rebuilt.
     backupName: fdb/continuous
-    accessKeyId: ""
-    secretAccessKey: ""
-    # Base64 AES-256 key from `just gcp-backup-key-create`. Lose it and
-    # the bucket is undecryptable.
-    encryptionKey: ""
+    # No secretAccessKey and no encryptionKey. The first is generated in
+    # the cluster, the second is read from Secret Manager by an
+    # ExternalSecret -- neither reaches a values file, which under Argo
+    # means neither reaches the repo-server or git.
     # Extra blobstore URL parameters (e.g. request timeouts), beyond
     # the region and secure_connection the template always sets.
     urlParameters: []

@@ -1,0 +1,44 @@
+{{- if and .Values.recoveryProjectId .Values.fdb.backup.key.enabled }}
+{{- /*
+  The key this instance's backups are encrypted under, fetched rather
+  than placed. FDB reads it as raw bytes at `encryptionKeyPath`, so
+  what Secret Manager holds is those bytes and nothing decodes them on
+  the way.
+
+  The entry is a container the instance composite made and a version a
+  person writes into it once, from `secretsAdmin`. Nothing automates
+  that and nothing should -- but unlike the Google client secret, this
+  one is not rotatable at all: an existing backup is readable only
+  under the key it was written with, so the entry withholds Delete and
+  *is* the durable copy.
+
+  creationPolicy Merge, not Owner. The queenswood chart renders this
+  Secret and the credentials Job writes the pair FDB presents to the
+  proxy into it, so this owns one key of a Secret with two writers --
+  and Owner would take the whole object and drop the other half.
+
+  Wave 2, behind the store it names.
+*/}}
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: fdb-backup-key
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: {{ printf "%s-recovery" (include "queenswood-config.instance" .) | quote }}
+  target:
+    name: {{ .Values.fdb.backup.key.secretName | quote }}
+    creationPolicy: Merge
+  data:
+    # The filename FoundationDBBackup mounts as encryptionKeyPath.
+    - secretKey: encryption-key
+      remoteRef:
+        # The external name the composite gave the entry, which is what
+        # Secret Manager knows it by.
+        key: {{ printf "sec-%s-fdb-backup-key" (include "queenswood-config.instance" .) | quote }}
+{{- end }}

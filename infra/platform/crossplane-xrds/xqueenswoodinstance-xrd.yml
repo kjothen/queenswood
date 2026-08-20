@@ -580,6 +580,11 @@ spec:
                     recovery project. A workload writing to it cannot
                     derive the name: the suffix belongs to that project
                     rather than to this instance.
+                backupServiceAccount:
+                  type: string
+                  description: |
+                    The identity the S3-to-GCS proxy runs as, which the
+                    chart's service account annotation has to spell.
                 fdbBackupKeySecret:
                   type: string
                   description: |

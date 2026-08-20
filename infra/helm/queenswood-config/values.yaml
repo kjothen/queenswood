@@ -11,6 +11,13 @@ label: ""
 # grants the instance's secrets identity accessor on this project.
 projectId: ""
 
+# The installation's recovery project, where this instance's backups
+# and the key they are encrypted under live. A different project, so it
+# needs a store of its own: the instance's secrets identity is granted
+# on that one entry rather than project-wide. Empty renders neither the
+# store nor what reads through it.
+recoveryProjectId: ""
+
 keycloak:
   # Keycloak's files-plaintext vault, materialised from Secret Manager.
   # Each key becomes a file in the mount named <realm>_<key>, so the
@@ -24,3 +31,13 @@ keycloak:
     enabled: true
     secretName: queenswood-keycloak-vault
     realm: queenswood
+
+fdb:
+  backup:
+    # Merged into the Secret the FDB backup agents and the operator
+    # mount, which the queenswood chart renders empty and the
+    # credentials Job writes the other half of. Merge rather than
+    # Owner: two writers, one Secret.
+    key:
+      enabled: true
+      secretName: fdb-backup-credentials

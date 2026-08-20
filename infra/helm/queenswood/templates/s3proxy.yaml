@@ -1,0 +1,127 @@
+{{- if and .Values.fdb.enabled .Values.fdb.backup.enabled }}
+{{- /*
+  S3-to-GCS proxy, between FDB's backup agents and the bucket.
+
+  FDB's backup agent speaks `blobstore://`, which is S3, so reaching
+  GCS directly means its interop endpoint and an HMAC key -- which GCP
+  counts as a service-account key, banned by org policy, and exempting
+  a project needs orgpolicy.policyAdmin, granted at the organisation
+  and nowhere else. An installation inside an organisation we do not
+  own cannot have it.
+
+  So the transport changes rather than the permission. The agents keep
+  speaking the only protocol they know, the proxy speaks GCS's own API
+  and authenticates through Workload Identity, and no exportable Google
+  credential exists anywhere in the path.
+
+  What FDB presents to the proxy is a locally generated pair that
+  grants nothing in GCP -- a credential the organisation's key policy
+  has no opinion about, whose blast radius is one proxy in one cluster.
+
+  It also retires the plaintext hop to the public internet. FDB's
+  blobstore client has no usable trust store, so the agent leg is HTTP
+  either way; with the proxy in the cluster that leg is pod to pod, and
+  the leg that crosses a network is the proxy's own HTTPS to GCS.
+*/ -}}
+{{- $name := printf "%s-s3proxy" .Release.Name -}}
+{{- $secretName := "fdb-backup-credentials" -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+  {{- with .Values.fdb.backup.proxy.serviceAccount }}
+  annotations:
+    # Both halves of Workload Identity: this, and the GCP binding the
+    # instance composite makes. The composite names this service
+    # account literally, so the two agree by being written down rather
+    # than by being derived twice.
+    iam.gke.io/gcp-service-account: {{ . | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "queenswood.podLabels" . | nindent 4 }}
+    app.kubernetes.io/component: s3proxy
+  ports:
+    - name: http
+      port: {{ .Values.fdb.backup.port }}
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "queenswood.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.fdb.backup.proxy.replicas }}
+  selector:
+    matchLabels:
+      {{- include "queenswood.podLabels" . | nindent 6 }}
+      app.kubernetes.io/component: s3proxy
+  template:
+    metadata:
+      labels:
+        {{- include "queenswood.podLabels" . | nindent 8 }}
+        app.kubernetes.io/component: s3proxy
+    spec:
+      serviceAccountName: {{ $name }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: s3proxy
+          image: {{ .Values.fdb.backup.proxy.image | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.fdb.backup.port }}
+          env:
+            - name: S3PROXY_ENDPOINT
+              value: {{ printf "http://0.0.0.0:%v" .Values.fdb.backup.port | quote }}
+            # SigV4, which is what the agent signs with.
+            - name: S3PROXY_AUTHORIZATION
+              value: aws-v4
+            - name: S3PROXY_IDENTITY
+              value: {{ .Values.fdb.backup.accessKeyId | quote }}
+            - name: S3PROXY_CREDENTIAL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $secretName }}
+                  key: secret-access-key
+            - name: JCLOUDS_PROVIDER
+              value: google-cloud-storage-sdk
+            - name: JCLOUDS_IDENTITY
+              value: {{ required "fdb.backup.proxy.projectId is set by the composite" .Values.fdb.backup.proxy.projectId | quote }}
+            # Deliberately not a credential, and deliberately not empty.
+            # The SDK backend reaches Application Default Credentials
+            # only by failing to parse what it is given: an IOException
+            # from the parse lands on getApplicationDefault(), while an
+            # empty value means NoCredentials, which is for an
+            # emulator. Verified against 4.0.0 -- the stack shows
+            # GCloudBlobStore.<init> calling getApplicationDefault --
+            # so the image tag is pinned, and an upstream change making
+            # this an explicit option is worth proposing.
+            - name: JCLOUDS_CREDENTIAL
+              value: use-application-default-credentials
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 30
+          {{- with .Values.fdb.backup.proxy.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
