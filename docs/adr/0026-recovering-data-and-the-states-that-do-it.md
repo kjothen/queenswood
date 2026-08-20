@@ -151,11 +151,29 @@ Expiring everything older than thirty days is not tidying: it is
 declaring that this installation cannot restore to thirty-one days ago,
 which is a statement about what the bank can recover from and belongs
 beside the others here rather than in a values file nobody reads twice.
-Whatever runs it inherits the rule two sections up — a destructive act
-must be self-limiting. A window computed from now can only ever remove
-what has aged out of it, and a retention of zero removes everything,
-irreversibly, on a schedule. The floor wants to be refused rather than
-documented.
+It deletes rather than marks — `fdbbackup expire --help` says so of
+both cutoffs, *deletes data files containing no data at or after* a
+version — so on a blobstore container it is one DELETE per object and
+there is nothing to sweep up afterwards.
+
+Whatever runs it inherits the rule two sections up, and FDB already
+supplies the mechanism: `--min-restorable-days`, and the
+`--restorable-after` pair, set a floor below which expire refuses. That
+is the self-limiting property, built in rather than invented, and a
+schedule that omits it is a schedule that can be told to delete
+everything. `--delete-before-days` is the retention cutoff to pair with
+it, and it is anchored to the latest log version in the backup rather
+than to wall clock, so it cannot misfire on a clock nobody checked.
+
+How often it runs is a smaller question than it looks, and answerable
+later with evidence rather than now by guess. Each run deletes what has
+aged out since the last, so the interval sets the batch size — a day is
+around 4,700 objects, an hour around 195 — while the cost of deciding
+what to delete is a pass over the container either way, which favours
+running less often. Nothing here is urgent: a backup started today has
+nothing thirty days old, so the first run that removes anything is a
+month away, and the cadence can be chosen from what the first one
+costs.
 
 **Keycloak and FoundationDB recover to different points.** Restoring
 one and not the other leaves a user who exists in the realm with no
