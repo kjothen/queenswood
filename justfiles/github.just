@@ -74,4 +74,26 @@ gh-merge:
     # --squash because the org ruleset requires linear history; --admin to
     # bypass the review rule, which a solo author cannot satisfy.
     gh pr merge "$num" --squash --admin
+    # The commit the merge produced, which is the string Argo names when
+    # it syncs -- so "merged" and "applied" stop being the same word.
+    # Not populated the instant merge returns, hence the wait; `|| true`
+    # because a bare capture that fails would end the recipe here, after
+    # the merge and before saying so.
+    sha=""
+    for i in $(seq 1 10); do
+      sha=$(gh pr view "$num" --json mergeCommit -q '.mergeCommit.oid' 2>/dev/null || true)
+      if [[ -n "$sha" && "$sha" != "null" ]]; then break; fi
+      sleep 2
+    done
     echo "Merged #$num into main."
+    if [[ -n "$sha" && "$sha" != "null" ]]; then
+      echo "  $sha"
+      echo
+      echo "Applied when a completed operation names it:"
+      echo "  kubectl --context <plane> -n argocd get application <app> \\"
+      echo "    -o jsonpath='{.status.operationState.phase} {.status.operationState.syncResult.revisions}'"
+      echo
+      echo "syncResult is what the last finished sync applied."
+      echo "status.sync.revisions is only what Argo would sync next, and"
+      echo "a retrying operation replays the revision it started with."
+    fi
