@@ -122,10 +122,26 @@ expects — `<realm>_<key>` — so the realm's committed
 `${vault.google-client-secret}` resolves. Rotatable. See
 [google-sign-in](google-sign-in.md).
 
-**The FoundationDB backup encryption key**, on an instance, and not yet
-composed. It is the not-rotatable case: an existing backup is only
-readable with the key it was written under. Today it lives in `pass` in
-the previous generation, which is precisely what this replaces.
+**`sec-<code>-<env>-<label>-fdb-backup-key`**, one per instance, and
+the not-rotatable case: an existing backup is readable only under the
+key it was written with, so losing the entry loses every backup taken
+before it — silently, and only at a restore. Its `managementPolicies`
+withhold `Delete`, and the entry *is* the durable copy rather than a
+convenience beside one.
+
+It sits in the installation's **recovery project**, not the instance's,
+because it has to survive whatever loses the instance: a key in the
+project whose data it protects is not a second copy of anything. So it
+is the one entry whose name and whose home disagree — named for the
+instance that owns it, living where that instance does not. `just
+gcp-secret-version` looks there when the derived project does not have
+it, and says which one it used.
+
+One per instance rather than one per installation, for the reason each
+instance has its own bucket: a key that opens every instance's backups
+makes that separation decorative. Reading it is granted on the entry
+alone, so an instance's identity reaches its own key and no other's,
+where the entries in its own project take a project-wide accessor.
 
 ### Where it goes wrong quietly
 

@@ -2401,6 +2401,51 @@ spec:
             {{- end }}
             {{- end }}
             {{- end }}
+            {{- /* secretsAdmin again, on the recovery project. It is a
+                   second project and a binding on the management one
+                   reaches nothing in it, so without this the entries
+                   the instances compose there are containers nobody
+                   may write a version to.
+
+                   Two narrow roles rather than the secretmanager.admin
+                   the management project grants: viewer sees the
+                   container, secretVersionAdder adds to it, and
+                   neither carries versions.access -- so whoever writes
+                   a backup key here cannot read one back, which is the
+                   shape an instance's own entries already take. */}}
+            {{- $recoveryProject := dig "recovery" "projectId" "" $xr.spec }}
+            {{- if $recoveryProject }}
+            {{- range $member := dig "secretsAdmin" list $access }}
+            {{- range $role := (list "roles/secretmanager.viewer" "roles/secretmanager.secretVersionAdder") }}
+            {{- $slug := printf "%s-%s"
+                  ($role | splitList "/" | last | replace "." "-" | lower)
+                  (sha256sum $member | trunc 8) }}
+            {{- $resource := printf "access-recovery-secrets-admin-%s" $slug }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectIAMMember
+            metadata:
+              name: {{ printf "%s-%s" $code $resource }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+                - Delete
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $recoveryProject | quote }}
+                role: {{ $role | quote }}
+                member: {{ $member | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
     # =======================================================================
     # Readiness for whatever the template steps composed. Last, and not
     # optional: patch-and-transform sets readiness only for the resources

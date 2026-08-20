@@ -1190,6 +1190,26 @@ gcp-plane-down:
 # the throwaway one above, which exists only long enough to create it.
 # =========================================================================
 
+# Print the recovery project's id, found by id prefix. Empty where the
+# installation has none.
+[private]
+_gcp-recovery-project:
+    #!/usr/bin/env zsh
+    set -e
+    # Same id-prefix lookup as the management project below, for the
+    # same reason: the suffix is random and nothing labels the project.
+    # Empty rather than an error where there is none -- an installation
+    # that keeps nothing has no recovery project, and a caller that can
+    # do without it should not be stopped.
+    if ! OUT=$(gcloud projects list \
+                 --filter="projectId ~ ^prj-{{ CODE }}-c-recovery-" \
+                 --format='value(projectId)' 2>&1); then
+      echo "cannot list projects:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    printf '%s\n' "${OUT%%$'\n'*}"
+
 # Print the management project's id, found by id prefix.
 [private]
 _gcp-mgmt-project:
@@ -1287,10 +1307,25 @@ gcp-secret-version secret project="" file="":
       fi
     fi
 
+    # An instance owns entries that do not live in its project: a
+    # backup key is named for the instance whose backups it opens and
+    # composed into the recovery project, because a key in the project
+    # whose data it protects is not a second copy of anything. The name
+    # cannot say both, so a miss where the name points is a look in the
+    # recovery project rather than a failure -- and it says which one it
+    # used, since a value written to the wrong project is a container
+    # nothing reads and a failure much later.
     if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
-      echo "no secret $SECRET in $PROJECT" >&2
-      echo "the composite makes the container -- apply it first" >&2
-      exit 1
+      RECOVERY=$(just _gcp-recovery-project || true)
+      if [[ -n "$RECOVERY" && "$RECOVERY" != "$PROJECT" ]] \
+         && gcloud secrets describe "$SECRET" --project="$RECOVERY" >/dev/null 2>&1; then
+        PROJECT="$RECOVERY"
+        echo ">>> $SECRET is in the recovery project $PROJECT" >&2
+      else
+        echo "no secret $SECRET in $PROJECT" >&2
+        echo "the composite makes the container -- apply it first" >&2
+        exit 1
+      fi
     fi
 
     if [[ -n "{{ file }}" ]]; then

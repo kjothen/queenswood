@@ -221,11 +221,17 @@ controller's pod already carries the annotated service account. That is
 what keeps the value out of git and out of Argo, and what makes a
 rebuilt cluster re-read rather than re-upload. Name the entry
 `sec-<code>-c-<what>` on a plane and `sec-<code>-<env>-<label>-<what>`
-on an instance, pin the release name and the service account name that
-binding spells literally rather than letting Argo derive either from an
-Application's name, and withhold `Delete` where the value cannot be
-regenerated. Put a version in with `just gcp-secret-version`, which
-refuses to create a container the composite has not made and strips the
+on an instance. The FoundationDB backup key is the one whose name and
+home disagree: named for the instance whose backups it opens, composed
+into the installation's recovery project because a key in the project
+whose data it protects is not a second copy of anything, one per
+instance so a single key does not open every instance's backups, and
+granted on that entry alone rather than project-wide. Pin the release
+name and the service account name that binding spells literally rather
+than letting Argo derive either from an Application's name, and
+withhold `Delete` where the value cannot be regenerated. Put a version
+in with `just gcp-secret-version`, which refuses to create a container
+the composite has not made and strips the
 trailing newline from anything typed or piped: Secret Manager stores the
 bytes it is given, and a consumer reading the value whole sends that
 newline as part of the credential, failing as a rejected secret rather

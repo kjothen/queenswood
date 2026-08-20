@@ -580,6 +580,13 @@ spec:
                     recovery project. A workload writing to it cannot
                     derive the name: the suffix belongs to that project
                     rather than to this instance.
+                fdbBackupKeySecret:
+                  type: string
+                  description: |
+                    The Secret Manager entry holding the key this
+                    instance's backups are encrypted under, in the
+                    recovery project. A container with no version until
+                    somebody writes one.
                 projectId:
                   type: string
                   description: |
