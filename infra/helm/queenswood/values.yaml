@@ -623,9 +623,15 @@ fdbOperator:
       secret:
         secretName: fdb-backup-credentials
         optional: true
+    - name: backup-key
+      secret:
+        secretName: fdb-backup-encryption-key
+        optional: true
   volumeMounts:
     - name: backup-credentials
       mountPath: /var/backup-credentials
+    - name: backup-key
+      mountPath: /var/backup-key
   # Helm merges submap entries rather than replacing the map, so
   # we have to explicitly null the unused 7.1 and 7.3 keys to keep
   # only the 7.4 monitor binaries the chart actually uses.

@@ -164,6 +164,17 @@ where the entries in its own project take a project-wide accessor.
 
 ### Where it goes wrong quietly
 
+**`creationPolicy: Merge` on a Secret that does not exist yet.** Merge
+adds keys to a Secret something else owns, which is the right shape
+where two things write to one Secret — and it declines to create the
+target, reporting `secret will not be created due to
+CreationPolicy=Merge` while the `ExternalSecret` still says `Ready:
+True`. On a first install the Application carrying the `ExternalSecret`
+syncs a wave ahead of the chart that renders the Secret, so it always
+misses, and nothing looks again until the refresh interval. Give each
+`ExternalSecret` a Secret of its own and mount both instead: one writer
+per Secret has no ordering to get right.
+
 **A container with no version.** The composite composes the entry and
 the operator syncs it, both successfully, and what reaches the cluster
 is empty. The failure then surfaces wherever the value was used — a

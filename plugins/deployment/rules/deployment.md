@@ -254,7 +254,13 @@ newline as part of the credential, failing as a rejected secret rather
 than as a newline. Never commit a credential, private repository or not,
 and never keep a second durable copy of one that can be regenerated —
 `rm` is not deletion on a copy-on-write filesystem, and a local store is
-a second authority on one machine with no audit trail. A container with
+a second authority on one machine with no audit trail. Give each
+`ExternalSecret` a Secret of its own rather than merging into one
+another chart renders: `creationPolicy: Merge` declines to create a
+missing target and says so while still reporting `Ready`, and the
+Application carrying it syncs a wave ahead of the chart that renders
+that Secret, so a first install always misses and nothing looks again
+until the refresh interval. A container with
 no version fails wherever the value was used rather than as a credential
 nobody wrote, and a version added after the `ExternalSecret` synced
 waits out the refresh interval, so delete the controller's pod and
