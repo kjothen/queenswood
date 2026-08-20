@@ -97,6 +97,23 @@ afternoon* has no answer today: mapping wall-clock to version needs
 person holding the incident does not have. Whichever shape is built,
 this is the part that decides whether it can be used under pressure.
 
+**A restored cluster writes to a new generation, or it poisons the one
+it read from.** FoundationDB numbers versions from near zero on a
+rebuild, so a restored cluster's first versions are *lower* than the
+ones already in the container — and `fdbbackup describe` picks the
+highest restorable version, which is the dead cluster's. The chart
+records this from the last time it happened: a restore point belonging
+to a cluster two rebuilds back. So `fdb.restore.backupName` names where
+to read and `fdb.backup.backupName` names where to write, and after a
+recovery they must differ. Nothing enforces that today, and both
+default to `fdb/continuous`.
+
+That makes a generation the unit of the whole procedure rather than a
+path segment: recovering means reading from one and starting another,
+and the bucket accumulates them. It also settles what the naming means
+— `<service>/<backup-type>/<generation>` has a slot for it precisely
+because a container holds one cluster's life.
+
 **Cutting over is unbuilt, and larger than it looks.** DNS, the realm
 the console signs into, the Keycloak user ids that FDB records
 reference. ADR-0024 already defers `draining` for a related reason —
