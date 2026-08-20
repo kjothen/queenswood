@@ -145,9 +145,27 @@ itself out of, which are enabled by definition. The first composite
 that reaches for a kind the plane has never used is where it appears.
 
 
+### A role named for objects grants nothing about the bucket
+
+`roles/storage.objectAdmin` carries only `storage.objects.*` and
+`storage.folders.*`. It does not carry `storage.buckets.get`, so a
+client that asks about the bucket before it touches an object — which
+an S3-compatible one does, since HEAD-bucket is how S3 says "does this
+exist" — fails 403 against a name that plainly has write access.
+
+The message names the permission rather than the role, which is the
+useful half: read `does not have storage.buckets.get access` as a
+missing second binding rather than as the first one being wrong.
+`roles/storage.legacyBucketReader` supplies it and is the role meant to
+be bound on a bucket; `roles/storage.bucketViewer` carries the same
+permission and is meant for a project.
+
 ## Rules
 
 **MUST:**
+- Grant bucket-metadata read alongside object access where the client
+  is S3-compatible. `storage.objectAdmin` has no `storage.buckets.get`,
+  and a HEAD-bucket is the first thing such a client sends.
 
 - Give every node pool its own service account with
   `roles/container.defaultNodeServiceAccount`.
