@@ -22,6 +22,16 @@ service MAY listen on more than one port, with `port` the primary
 (probes and the Service's `http` port target it) and further
 listeners in `extraPorts`; a service MAY set `replicas > 1` if it's
 HTTP-fronted or a processor that doesn't own a changelog cursor.
+Never delete a `Keycloak` resource while its database survives: the
+operator owns the admin Secret and regenerates the password on the way
+back, while the database keeps the old admin user, so Keycloak serves
+the realm and nothing can administer it — the realm import fails to
+obtain a token, bootstrap waits on the import, and every service waits
+on bootstrap. Resetting the schema fixes that only where FoundationDB is
+rebuilt in the same act: the realm returns from the committed JSON with
+fresh user ids, and FDB records referencing the old ones are orphaned
+silently. Where FDB survives, restore the realm from its export and
+reset the credential in place instead.
 `exclusive-dispatchers-service` stays at 1 — it owns every changelog
 cursor and every cron trigger, and each admits exactly one
 dispatcher; scale the relay tier by sharding stores across
