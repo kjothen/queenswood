@@ -37,8 +37,15 @@
   wave ahead of this one -- the key never arrives and nothing looks
   again until the refresh interval.
 
-  It is named without the release prefix because the FDB operator has
-  to mount it too -- `fdbbackup start` runs in the operator pod, not in
+  `fdbbackup start` runs in the operator pod, and the operator kills it
+  after ten seconds. A blobstore that refuses or hangs takes longer, so
+  the failure reaches the log as `signal: killed` with nothing on stdout
+  or stderr -- an error with no cause, on the resource least able to
+  explain it. Read it as "the fault is downstream" and look in the
+  proxy's log, which is where it says what it actually was.
+
+  The Secret is named without the release prefix because the FDB
+  operator has to mount it too -- `fdbbackup start` runs in the operator pod, not in
   an agent -- and subchart values cannot see `.Release.Name`. It is
   mounted there as an optional volume, so an install with backup
   disabled still starts.
