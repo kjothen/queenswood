@@ -91,10 +91,11 @@ resource and belongs in the catalogue like any other.
 ### Cloud APIs are composed, cluster workloads are delivered
 
 A catalogue of cloud building blocks does not make Crossplane the way
-to install software on a cluster. The composite creates the identity a
-controller runs as; Argo installs the controller. That line already
-exists — an instance's workloads arrive through Argo — and a catalogue
-is a reason to keep it rather than to cross it.
+to install software on a cluster. That line is
+[ADR-0024](0024-instances-are-their-own-composites.md)'s, not this
+one's: the composite creates the identity a controller runs as, and
+Argo installs the controller. A catalogue is a reason to keep it rather
+than to cross it.
 
 The practical case is the same as the principled one. `provider-helm`
 has no provider configuration on the plane at all, and its only
