@@ -59,7 +59,9 @@ Three acts remain, and none of them becomes automated:
   `just gcp-secret-version`. Crossplane composes containers, never
   values, and the GitHub App key went in by hand the same way. What
   external-secrets buys is that it survives a cluster rebuild and
-  lives somewhere auditable rather than only in etcd.
+  lives somewhere auditable rather than only in etcd. The general
+  shape, and where a value must not go on the way in, is
+  [external-secrets](../recipes/external-secrets.md).
 - **The id**, set on `keycloak.googleClientId` in
   `qw01/test-values.yml`. Empty today, which leaves the realm's
   placeholder and returns `401 invalid_client`.

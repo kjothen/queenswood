@@ -193,6 +193,34 @@ assume a role can be granted at the scope its feature acts on.
 `gcloud auth login` does not refresh ADC.
 See [gcp-iam](../../../docs/recipes/gcp-iam.md).
 
+## A credential is a declared container and a written version
+
+A composite composes the Secret Manager entry and never a value, a
+person adds the version once from `secretsAdmin`, and external-secrets
+reads it on the destination cluster — authenticated by Workload
+Identity, through a `ClusterSecretStore` with no auth block, because the
+controller's pod already carries the annotated service account. That is
+what keeps the value out of git and out of Argo, and what makes a
+rebuilt cluster re-read rather than re-upload. Name the entry
+`sec-<code>-c-<what>` on a plane and `sec-<code>-<env>-<label>-<what>`
+on an instance, pin the release name and the service account name that
+binding spells literally rather than letting Argo derive either from an
+Application's name, and withhold `Delete` where the value cannot be
+regenerated. Put a version in with `just gcp-secret-version`, which
+refuses to create a container the composite has not made and strips the
+trailing newline from anything typed or piped: Secret Manager stores the
+bytes it is given, and a consumer reading the value whole sends that
+newline as part of the credential, failing as a rejected secret rather
+than as a newline. Never commit a credential, private repository or not,
+and never keep a second durable copy of one that can be regenerated —
+`rm` is not deletion on a copy-on-write filesystem, and a local store is
+a second authority on one machine with no audit trail. A container with
+no version fails wherever the value was used rather than as a credential
+nobody wrote, and a version added after the `ExternalSecret` synced
+waits out the refresh interval, so delete the controller's pod and
+restart whatever reads the value at startup.
+See [external-secrets](../../../docs/recipes/external-secrets.md).
+
 ## Google sign-in is two console acts and an Admin API call
 
 Create the OAuth client by hand, as a Web application: no API makes one
@@ -220,12 +248,22 @@ than a person — it is shown to users, while the contact addresses are
 Google notifying you, and neither wants a personal account.
 
 The realm keeps the placeholder pair it was imported with, whatever the
-chart later says, so both values go in over the Admin API against the
-running realm. Send the client id, and send a vault expression rather
-than the secret, so the identity provider holds a reference; place the
-secret in the mount and restart Keycloak, which reads it at startup.
-Never read `401 invalid_client` on a rebuilt environment as evidence the
-rebuild failed — it is the likelier cause and the wrong conclusion.
+chart later says, so both values reach the running realm afterwards and
+by different routes. The client id goes in over the Admin API, from the
+realm-import Job, driven by the installation's `keycloak.googleClientId`
+and carried in that Job's name — or a changed id leaves the same
+completed Job and nothing applies it. The secret is never sent there at
+all: the identity provider holds a vault expression, restored from the
+committed definition rather than written back from what was read, since
+the Admin API returns a configured secret masked and asterisks would
+leave a realm looking entirely correct. Write the secret by hand into
+`sec-<code>-<env>-<label>-google-oauth` and let an `ExternalSecret`
+materialise it into the mount as `<realm>_<key>`, since Keycloak reads
+that mount at startup — so install the operator and the store in earlier
+sync waves than the bank, and restart Keycloak where a secret is stored
+after the pod. Never read `401 invalid_client` on a rebuilt environment
+as evidence the rebuild failed — it is the likelier cause and the wrong
+conclusion.
 See [google-sign-in](../../../docs/recipes/google-sign-in.md).
 
 ## A public zone needs proven ownership, and the registrar is touched once

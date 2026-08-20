@@ -248,3 +248,5 @@ Sign in. A failure is legible if you know which half produced it:
   list, which is reconciled rather than manual.
 - [argocd](argocd.md) — why an operator's CRDs need server-side apply,
   and how the waves that order this are read.
+- [external-secrets](external-secrets.md) — the general shape this is
+  one case of, and where a value must not go on the way in.

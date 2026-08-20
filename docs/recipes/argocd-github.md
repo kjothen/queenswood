@@ -103,3 +103,5 @@ refresh, which is up to an hour after everything looks correct.
 - [queenswood-installation](queenswood-installation.md) — the private
   repository this reads for Queenswood, and where its three values are
   stored.
+- [external-secrets](external-secrets.md) — how the key gets into that
+  store, and out of it onto a cluster.
