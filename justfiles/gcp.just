@@ -1239,6 +1239,80 @@ gcp-platform-billing-role billing="":
     echo ">>> granted. The platform identity can now bill the projects"
     echo ">>> it creates, which is what an instance needs."
 
+# Add a version to a Secret Manager entry, reading the value off stdin.
+gcp-secret-version secret project="" file="":
+    #!/usr/bin/env zsh
+    set -e
+    # The general form of what every credential here needs. The
+    # container is composed and the value is a person's, so this adds a
+    # version to something that already exists and refuses to create
+    # one: a missing container means the composite has not reconciled,
+    # and making it by hand leaves an entry nothing declares.
+    #
+    # The value never reaches the command line, so it stays out of the
+    # shell's history and out of the process table.
+    SECRET="{{ secret }}"
+
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      # From the name, which carries the installation and the instance:
+      # sec-<code>-c-<what> is the plane's, and
+      # sec-<code>-<env>-<label>-<what> an instance's. Anything else has
+      # to be named, rather than guessed at.
+      REST=${SECRET#sec-{{ CODE }}-}
+      if [[ "$REST" == "$SECRET" ]]; then
+        echo "cannot tell which project $SECRET is in" >&2
+        echo "name it: just gcp-secret-version $SECRET <project-id>" >&2
+        exit 1
+      fi
+      SECRET_ENV=${REST%%-*}
+      if [[ "$SECRET_ENV" == "c" ]]; then
+        PROJECT=$(just _gcp-mgmt-project)
+      else
+        REST=${REST#*-}
+        PROJECT=$(just _gcp-instance-project "$SECRET_ENV" "${REST%%-*}")
+      fi
+    fi
+
+    if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
+      echo "no secret $SECRET in $PROJECT" >&2
+      echo "the composite makes the container -- apply it first" >&2
+      exit 1
+    fi
+
+    if [[ -n "{{ file }}" ]]; then
+      if [[ ! -f "{{ file }}" ]]; then
+        echo "no file at {{ file }}" >&2
+        exit 1
+      fi
+      # Byte for byte. A key or a certificate is not text to be tidied,
+      # and a file is how a multi-line value gets here at all.
+      gcloud secrets versions add "$SECRET" --project="$PROJECT" \
+        --data-file="{{ file }}"
+    else
+      if [[ -t 0 ]]; then
+        printf 'Value for %s (not echoed): ' "$SECRET"
+        read -rs VALUE
+        echo
+      else
+        VALUE=$(cat)
+      fi
+      if [[ -z "$VALUE" ]]; then
+        echo "no value given" >&2
+        exit 1
+      fi
+      # No trailing newline. Secret Manager stores the bytes it is
+      # given, and a consumer that reads the value whole -- Keycloak's
+      # file vault does -- sends the newline as part of the credential.
+      # That surfaces as the provider rejecting the client, which reads
+      # as a wrong secret rather than as a newline.
+      printf '%s' "$VALUE" \
+        | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=-
+    fi
+
+    echo ">>> added a version to $SECRET in $PROJECT"
+    echo ">>> external-secrets refreshes hourly; delete its pod to hurry it"
+
 # Store the GitHub App credentials the management plane reads the manifest with.
 gcp-github-app-secret pem app_id installation_id:
     #!/usr/bin/env zsh
@@ -1256,14 +1330,6 @@ gcp-github-app-secret pem app_id installation_id:
       echo "no private key at {{ pem }}" >&2
       exit 1
     fi
-    PROJECT=$(just _gcp-mgmt-project)
-    SECRET=sec-{{ CODE }}-c-github-app
-    if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
-      echo "no secret $SECRET in $PROJECT" >&2
-      echo "the installation composes it -- apply the composite first" >&2
-      exit 1
-    fi
-
     # All three together, so the identifiers travel with the key rather
     # than through a second channel. --rawfile because a PEM is
     # multi-line and has to be JSON-escaped, and because it keeps the
@@ -1271,9 +1337,7 @@ gcp-github-app-secret pem app_id installation_id:
     jq -n --arg app "{{ app_id }}" --arg inst "{{ installation_id }}" \
       --rawfile key "{{ pem }}" \
       '{appID: $app, installationID: $inst, privateKey: $key}' \
-      | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=-
-    echo ">>> added a version to $SECRET"
-    echo ">>> external-secrets refreshes hourly; delete the pod to hurry it"
+      | just gcp-secret-version sec-{{ CODE }}-c-github-app
 
 # Show what the platform identity may do, and where.
 gcp-platform-status:

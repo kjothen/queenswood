@@ -1,0 +1,40 @@
+{{- if .Values.keycloak.vault.enabled }}
+{{- /*
+  The Google OAuth client secret, fetched rather than placed. Keycloak's
+  file vault reads a directory whose filenames are <realm>_<key>, so the
+  key below is what makes the realm's committed
+  ${vault.google-client-secret} resolve -- rename either and the
+  expression stays unresolved, which presents as Google refusing the
+  client rather than as anything about a mount.
+
+  The Secret Manager entry is a container the instance composite makes
+  and a version a person writes into it, once. Nothing automates that
+  and nothing should: the secret is issued by Google to whoever created
+  the OAuth client, which is a console act no API can perform. What this
+  buys is that the value survives a cluster rebuild and is auditable
+  where it lives, rather than existing only in etcd.
+
+  Wave 2, behind the store it names.
+*/}}
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: keycloak-vault
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: {{ printf "%s-%s-%s" .Values.code .Values.env .Values.label | quote }}
+  target:
+    name: {{ .Values.keycloak.vault.secretName | quote }}
+  data:
+    - secretKey: {{ printf "%s_google-client-secret" .Values.keycloak.vault.realm | quote }}
+      remoteRef:
+        # The external name the composite gave the entry, which is what
+        # Secret Manager knows it by. The CRD declares no secretId, so
+        # there is no second spelling to disagree with this one.
+        key: {{ printf "sec-%s-%s-%s-google-oauth" .Values.code .Values.env .Values.label | quote }}
+{{- end }}

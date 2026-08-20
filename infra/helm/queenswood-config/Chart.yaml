@@ -1,0 +1,14 @@
+apiVersion: v2
+name: queenswood-config
+description: |
+  The custom resources an instance cluster is configured by: where it
+  reads secrets from, and the credentials it materialises out of Secret
+  Manager for the queenswood chart to consume.
+
+  Separate from queenswood because every kind here is registered by an
+  operator installed alongside it. A missing kind fails one Application
+  rather than the release that would have used it.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"

@@ -36,59 +36,40 @@ kubectl --context qw01-n-test -n queenswood get pods
 curl -o /dev/null -w '%{http_code}\n' https://console.test.queenswood.io/
 ```
 
-**What is left is Google sign-in, and it is one piece of plumbing.**
-Keycloak accepts the console's redirect. Google refuses, because the
-realm carries a placeholder client id and the secret has nowhere to
-live. Closing that needs external-secrets on the instance cluster,
-which is the next build and is fully specified below.
+**What is left is Google sign-in, and what remains of it is manual by
+design.** The plumbing is built. external-secrets runs on the instance
+cluster, a `ClusterSecretStore` reads the instance project with no auth
+block — the controller's pod carries the annotated service account —
+and an `ExternalSecret` materialises `queenswood_google-client-secret`
+into the vault Keycloak mounts. That name is `<realm>_<key>`, which is
+what makes the realm's committed `${vault.google-client-secret}`
+resolve. The realm-import Job reconciles the identity provider's client
+id from `keycloak.googleClientId`, and carries it in its own name, so a
+changed id produces a Job that runs rather than a completed one nothing
+re-applies.
 
-### The next build: external-secrets on an instance
+Three acts remain, and none of them becomes automated:
 
-The GCP half is done and applied — the API, `sa-qw01-n-test-secrets`,
-`roles/secretmanager.secretAccessor`, both halves of Workload Identity
-pinned to `external-secrets/external-secrets`, and
-`sec-qw01-n-test-google-oauth` as a container holding no value.
+- **The OAuth client**, created by hand in the console. No API makes a
+  web client with a chosen redirect URI, so no automation holds the
+  right — it is `roles/oauthconfig.editor`, granted through
+  `platformAdmin`. See
+  [google-sign-in](../recipes/google-sign-in.md).
+- **The secret**, written once into `sec-qw01-n-test-google-oauth` with
+  `just gcp-secret-version`. Crossplane composes containers, never
+  values, and the GitHub App key went in by hand the same way. What
+  external-secrets buys is that it survives a cluster rebuild and
+  lives somewhere auditable rather than only in etcd. The general
+  shape, and where a value must not go on the way in, is
+  [external-secrets](../recipes/external-secrets.md).
+- **The id**, set on `keycloak.googleClientId` in
+  `qw01/test-values.yml`. Empty today, which leaves the realm's
+  placeholder and returns `401 invalid_client`.
 
-Three things remain, and they mirror the plane exactly. The plane
-splits its own cluster into an app-of-apps chart and a config chart;
-an instance has only the first half, with Applications living directly
-in `installations/qw01/`.
-
-- **`infra/helm/queenswood-config/`** — a new chart, holding the
-  `ClusterSecretStore` (provider `gcpsm`, `projectID` the instance
-  project, **no auth block**: the controller's pod carries the
-  annotated service account) and the `ExternalSecret` producing
-  `queenswood-keycloak-vault` with key
-  `queenswood_google-client-secret`. That is `<realm>_<key>`, which the
-  realm already references as `${vault.google-client-secret}`.
-- **`installations/qw01/test-external-secrets.yml`** — an Application
-  installing the operator onto the instance cluster. Needs
-  `ServerSideApply=true`: those CRDs exceed 256KB and client-side apply
-  writes the whole resource into an annotation the API server rejects,
-  so the CRDs never install and the controller crash-loops looking for
-  kinds nothing registered. The plane's own Application records this.
-- **`installations/qw01/test-config.yml`** — an Application deploying
-  the chart above.
-
-Then `keycloak.vault.enabled: true` in `test-values.yml`, so the mount
-exists and the committed vault expression resolves; and the Google
-identity provider's `clientId`, still `REPLACE-ME-GOOGLE-CLIENT-ID`,
-reconciled by the realm-import Job beside the console redirect — with
-the value in the Job's name hash, or a changed id leaves the same
-completed Job and nothing applies it.
-
-The client secret is written into `sec-qw01-n-test-google-oauth` by
-hand, once. That does not become automated by any of the above:
-Crossplane composes containers, never values, and somebody put the
-GitHub App key into Secret Manager by hand too. What external-secrets
-buys is that the secret survives a cluster rebuild and lives somewhere
-auditable rather than only in etcd.
-
-The OAuth client itself is a console act — see
-[google-sign-in](../recipes/google-sign-in.md). The right to create one
-is `roles/oauthconfig.editor`, held by `platformAdmin` and by no
-automation, because Google exposes no API for a web client with a
-chosen redirect URI.
+Keycloak reads the vault at startup, so this instance — up before the
+store existed — needs one Keycloak restart after the secret is stored.
+A rebuilt instance does not: the operator and the config chart sit in
+sync waves ahead of the bank's own Application.
 
 ### Also outstanding
 
@@ -115,8 +96,9 @@ chosen redirect URI.
   only `latest`, `latest-amd64` and `latest-arm64` for these images, so
   there is no version to pin to. Build-pipeline work.
 - **FoundationDB backup** stays off until the S3-to-GCS proxy replaces
-  the HMAC path. Its encryption key is the other thing waiting on
-  external-secrets.
+  the HMAC path. Its encryption key is no longer blocked: it is another
+  entry beside the OAuth secret, and another `ExternalSecret` in
+  `queenswood-config`.
 
 ### What cost the most, across two days
 
@@ -1716,7 +1698,8 @@ open, and the Argo path has now answered it in practice.
 **What is not yet true, and should not be assumed.** There is no
 external-secrets operator on an instance cluster, so a workload needing
 a real credential has nowhere to read one — which the FDB backup
-encryption key will need. FDB backup stays off until the proxy above is
+encryption key will need. (Built since, for Google sign-in: see
+*Picking this up cold*.) FDB backup stays off until the proxy above is
 built and a restore proven through it: an instance with no data loses
 nothing by waiting, and the HMAC path it would otherwise run on is the
 one being retired. `image.tag` is `latest`, which is the wrong
@@ -1921,10 +1904,17 @@ in-cluster actions, which have no declarative equivalent because they
 act on a running system rather than on its shape:
 `gcp-fdb-restore-points`, `gcp-fdb-export`,
 `gcp-keycloak-restore-points`, `gcp-keycloak-export`,
-`gcp-keycloak-idp`, `gcp-keycloak-vault-secret`,
 `gcp-k8s-redeploy-svc`, `gcp-dns-check`, `gcp-health-check`. Each loses
 its `pass` lookups in favour of Secret Manager and the manifest, and
 each gains the installation code in place of `QUEENSWOOD_ENV`.
+
+**Dies with `pass`.** `gcp-keycloak-idp` and
+`gcp-keycloak-vault-secret`, which read a client id and a secret out of
+`pass` and pushed both at a cluster. The realm-import Job reconciles the
+id from the installation's values, and `external-secrets` materialises
+the secret out of Secret Manager, so what is left of either is
+`gcp-secret-version` putting one value into one entry — general, and
+named for what it acts on rather than for Keycloak.
 
 **Never migrates.** The directory work in
 [cloud-account](../recipes/cloud-account.md) — the organisation, the

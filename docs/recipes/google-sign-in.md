@@ -27,6 +27,9 @@ surface after a user has already left the site.
 - The identity provider's alias as the realm defines it — `google`
   below, and the same string the console SPA sends as its
   `keycloakIdpHint`.
+- An external-secrets operator on the instance cluster, and the Secret
+  Manager entry the instance composite made for this client. Step 4
+  puts the secret there; nothing else can reach it.
 
 The right is granted through the installation's `platformAdmin`
 capability, so it reaches a person through group membership rather than
@@ -116,22 +119,55 @@ discovering the difference during an incident.
 ### 4. Put the pair where the realm can reach it
 
 The realm was imported with a placeholder and cannot be re-imported —
-the operator creates realms and never overwrites them, so a chart
-change never reaches a realm that exists. Both values therefore go in
-over the Admin API, against the running realm:
+Keycloak creates realms and never overwrites them, so a chart change
+never reaches a realm that exists. Both values therefore arrive against
+the running realm, and by different routes.
+
+**The id goes in over the Admin API**, on this endpoint:
 
 ```
 PUT /admin/realms/<realm>/identity-provider/instances/<alias>
 ```
 
-Send the client id directly. **Do not send the secret.** Send a vault
-expression — `${vault.<alias>-client-secret}` — and place the secret
-in the vault Keycloak mounts, so what is stored on the identity
-provider is a reference rather than a credential. Keycloak resolves it
-from the mounted file at token exchange.
+That call is the realm-import Job's rather than yours. Set
+`keycloak.googleClientId` in the installation's values and the Job
+reconciles it — and carries it in its own name, so a changed id
+produces a Job that runs rather than a completed one nothing
+re-applies.
 
-Keycloak reads that mount at startup, so a secret placed after the pod
-started is not seen until it restarts.
+**The secret is never sent there at all.** What is stored on the
+identity provider is a vault expression —
+`${vault.<alias>-client-secret}` — which the committed realm already
+carries and the Job restores from that definition rather than writing
+back what it read: the Admin API returns a configured secret masked, so
+a read-modify-write replaces the expression with asterisks and leaves a
+realm that looks entirely correct.
+
+The secret itself is written by hand into one Secret Manager entry,
+`sec-<code>-<env>-<label>-google-oauth`, which the instance composite
+creates as a container and never fills:
+
+```
+just gcp-secret-version sec-<code>-<env>-<label>-google-oauth
+```
+
+It prompts, does not echo, and never puts the value on a command line.
+An `ExternalSecret` on the instance cluster then materialises it into
+the vault Keycloak mounts, under the filename that vault expects:
+`<realm>_<key>`, so `${vault.google-client-secret}` in realm
+`queenswood` reads `queenswood_google-client-secret`. Rename either
+half and the expression stays unresolved, which presents as Google
+refusing the client rather than as anything about a mount.
+
+Nothing automates the writing, and nothing should — the secret is
+issued by Google to whoever created the client, which is the console
+act above. What the entry buys is that the value survives a cluster
+rebuild and is auditable where it lives.
+
+Keycloak reads that mount at startup, so a secret stored after the pod
+started is not seen until it restarts. A fresh build is ordered so that
+it does not arise: the operator and the store install ahead of the bank
+in earlier sync waves.
 
 ### 5. Check
 
@@ -142,9 +178,13 @@ Sign in. A failure is legible if you know which half produced it:
   form above, character for character, including the scheme.
 - **`401 invalid_client`, from Google** — the id or the secret is
   wrong, or the secret never resolved and Keycloak sent the literal
-  vault expression. On a restored or rebuilt environment this is
-  indistinguishable from the restore itself having failed, which is
-  what makes it worth ruling out first.
+  vault expression. A trailing newline is the version of "wrong" worth
+  knowing about: Secret Manager stores the bytes it is given and the
+  vault reads the file whole, so `echo secret | gcloud …` sends the
+  newline as part of the credential and fails here rather than
+  anywhere that mentions one. On a restored or rebuilt environment
+  this is indistinguishable from the restore itself having failed,
+  which is what makes it worth ruling out first.
 - **`Invalid parameter: redirect_uri`, from Keycloak** — nothing to do
   with Google. That is the console client's own redirect list, which
   the realm import reconciles; see
@@ -164,10 +204,19 @@ Sign in. A failure is legible if you know which half produced it:
 - Create one client per environment.
 - Grant `roles/oauthconfig.editor` through `platformAdmin`, not
   `platformViewer`. Creating a client mints a credential.
-- Put the id and the secret in over the Admin API. A realm that exists
-  keeps the placeholder it was imported with, whatever the chart says.
-- Send a vault expression as the secret, never the secret itself.
-- Restart Keycloak after placing a secret in the vault mount.
+- Put the id in through the installation's `keycloak.googleClientId`.
+  A realm that exists keeps the placeholder it was imported with,
+  whatever the chart's committed definition says, so the value has to
+  reach it over the Admin API — and the Job that makes that call has to
+  carry the id in its name, or a changed id leaves the same completed
+  Job and nothing applies it.
+- Leave a vault expression stored as the secret, never the secret
+  itself, and restore it from the committed definition rather than from
+  what the Admin API returned — a configured secret comes back masked.
+- Write the secret into `sec-<code>-<env>-<label>-google-oauth` by
+  hand, with no trailing newline, and name the vault key
+  `<realm>_<key>` so the realm's expression resolves.
+- Restart Keycloak where a secret is stored after the pod started.
 
 **MUST NOT:**
 
@@ -197,3 +246,7 @@ Sign in. A failure is legible if you know which half produced it:
   what it was first imported with, and what that costs on a restore.
 - [deployment](deployment.md) — the console client's own redirect
   list, which is reconciled rather than manual.
+- [argocd](argocd.md) — why an operator's CRDs need server-side apply,
+  and how the waves that order this are read.
+- [external-secrets](external-secrets.md) — the general shape this is
+  one case of, and where a value must not go on the way in.
