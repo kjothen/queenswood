@@ -2487,6 +2487,44 @@ spec:
                 role: roles/oauthconfig.editor
                 member: {{ $member | quote }}
             {{- end }}
+            {{- range $member := dig "access" "secretsAdmin" (list) $xr.spec }}
+            {{- $slug := sha256sum $member | trunc 8 }}
+            {{- range $role := (list "roles/secretmanager.viewer" "roles/secretmanager.secretVersionAdder") }}
+            {{- $roleSlug := sha256sum $role | trunc 6 }}
+            ---
+            # Writing the version a composed entry holds no value until
+            # somebody adds. Two narrow roles rather than
+            # secretmanager.admin, which the plane's own secretsAdmin
+            # takes: viewer sees the container, secretVersionAdder adds
+            # to it, and neither carries versions.access -- so whoever
+            # writes a secret here cannot read one back, and nothing
+            # anybody holds can destroy a version or an entry.
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectIAMMember
+            metadata:
+              name: {{ $name }}-secrets-admin-{{ $slug }}-{{ $roleSlug }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-secrets-admin-{{ $slug }}-{{ $roleSlug }}
+            spec:
+              # With Delete, as the OAuth binding above has: a principal
+              # dropped from the mapping loses the binding in GCP, not
+              # merely the resource that names it.
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+                - Delete
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project }}
+                role: {{ $role | quote }}
+                member: {{ $member | quote }}
+            {{- end }}
+            {{- end }}
     - step: auto-ready
       functionRef:
         name: function-auto-ready

@@ -231,6 +231,16 @@ environment in the group: `grp-gcp-qw01-p-cluster-admin` beside
 resource name already carries. A capability that reads or administers
 one instance is granted on that instance and expires with it.
 
+`secretsAdmin` binds there too, and for a sharper reason than
+narrowness: the installation's own is on the management project, so an
+instance's entries — composed in its own project, and holding no value
+until somebody writes one — had no writer at all. The instance's
+resolves to two narrow roles rather than the management project's
+`secretmanager.admin`: viewer to see the container, `secretVersionAdder`
+to add to it. Neither carries `versions.access`, so writing a secret and
+reading one back are separate rights, which is the distinction the wider
+role gives up.
+
 A project-scoped custom role follows the same seam by construction: it
 may only be granted on the project that defines it, so an instance
 wanting one gets its own rather than inheriting the management
