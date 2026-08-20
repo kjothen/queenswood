@@ -1,8 +1,7 @@
 {{- if eq (include "queenswood.keycloakMode" .) "operator" }}
-# `Keycloak` CR consumed by the operator (installed cluster-wide by
-# the keycloak-operator chart — see queenswood-platform's
-# `templates/keycloak-operator-release.yaml`). The operator
-# reconciles this into a StatefulSet + Service + everything else a
+# `Keycloak` CR consumed by the operator, which this chart installs
+# cluster-wide as a subchart. The operator reconciles this into a
+# StatefulSet + Service + everything else a
 # running Keycloak needs. Database is parameterised through the
 # `postgresql.mode` switch in values.yaml — see _helpers.tpl.
 apiVersion: k8s.keycloak.org/v2beta1
