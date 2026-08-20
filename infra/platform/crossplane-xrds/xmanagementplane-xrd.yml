@@ -274,11 +274,25 @@ spec:
                     that the identity able to destroy a primary cannot
                     reach the copy, and rather than an instance's so
                     that a rebuilt instance does not take its own
-                    backups with it. Absent composes nothing, which is
-                    an installation not yet keeping anything.
+                    backups with it. Inside the folder rather than
+                    beside it: a folder is the installation and its IAM
+                    boundary, and creating a project above one needs
+                    rights an installation hosted in somebody else's
+                    organisation will not have.
 
-                    Not audit or evidence, which want a different
-                    retention regime and a different set of readers.
+                    The plane composes the project and leaves it empty.
+                    Each instance composes its own bucket in it and is
+                    granted on that bucket alone, so one instance's
+                    identity does not reach another's backups.
+
+                    Absent composes nothing, which is an installation
+                    not yet keeping anything. Optional only because
+                    qw01 predates the field: a manifest minted from
+                    gcp-plane-manifest always carries it.
+
+                    Not audit or evidence, which want a locked
+                    retention policy and a different set of readers, so
+                    want a project of their own.
                   properties:
                     projectId:
                       type: string
@@ -406,12 +420,6 @@ spec:
                 recoveryProjectId:
                   type: string
                   description: The recovery project, once it exists.
-                backupsBucket:
-                  type: string
-                  description: |
-                    The backups bucket's name, which is what a workload
-                    writing to it needs and cannot derive: the suffix
-                    comes from the recovery project's id.
                 clusterEndpoint:
                   type: string
                   description: The management cluster's API endpoint.

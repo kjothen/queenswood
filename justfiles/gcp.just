@@ -973,7 +973,7 @@ gcp-plane-up:
     echo ">>> plane ready. Next: just gcp-plane-apply <parent> [display-name]"
 
 # Print the installation manifest, resolved, e.g. just gcp-plane-manifest organizations/<org-id>
-gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
+gcp-plane-manifest parent name="" folder="" mgmt="" billing="" recovery="":
     #!/usr/bin/env zsh
     set -e
     # stdout carries the manifest and nothing else, so this can be
@@ -1035,6 +1035,17 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
       echo ">>> naming the management project $MGMT" >&2
     fi
 
+    # Minted here rather than added when backups are first wanted, so a
+    # from-scratch installation has somewhere to keep what it would be
+    # rebuilt from without anyone deciding to. Its own id for the same
+    # reason the management project's is minted once: consumed
+    # permanently, and not derivable afterwards.
+    RECOVERY="{{ recovery }}"
+    if [[ -z "$RECOVERY" ]]; then
+      RECOVERY="prj-{{ CODE }}-c-recovery-$(openssl rand -hex 3)"
+      echo ">>> naming the recovery project $RECOVERY" >&2
+    fi
+
     # Set only when the project already exists, for the same reason the
     # folder's adoption field is: a pre-set external name turns a
     # first-run create into a failed observe.
@@ -1094,6 +1105,8 @@ gcp-plane-manifest parent name="" folder="" mgmt="" billing="":
         platformAdmin: ["group:{{ PLATFORM_ADMIN_GROUP }}@${DOMAIN}"]
         clusterAdmin: ["group:{{ CLUSTER_ADMIN_GROUP }}@${DOMAIN}"]
         secretsAdmin: ["group:{{ SECRETS_ADMIN_GROUP }}@${DOMAIN}"]
+      recovery:
+        projectId: "$RECOVERY"
       management:
         projectId: "$MGMT"
         $MGMT_ADOPT

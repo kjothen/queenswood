@@ -143,8 +143,14 @@ because nothing links them but a `compositeTypeRef`. Where the
 Application carrying the XRD prunes, deleting the file is the removal;
 where it does not, the plane goes on serving the kind and the edit reads
 as a change that did nothing.
-Withhold `Delete` from `managementPolicies` for anything whose loss is
-unrecoverable: deleting the managed resource then orphans the cloud
+Give a kind composed from more than one place an XRD of its own, fixing
+the invariants and parameterising the rest: a Composition is read by
+every composite of its kind on the next reconcile, so tightening a
+policy centrally is one edit rather than a version each caller must
+adopt — and extract it at the second call site, since what varies is
+guesswork from one example while the invariants are the same either
+way. Withhold `Delete` from `managementPolicies` for anything whose loss
+is unrecoverable: deleting the managed resource then orphans the cloud
 resource rather than destroying it, and deleting a composite destroys
 whatever its resources permit. Install a provider for every kind the
 composite composes, on every plane that composes it, and never compose

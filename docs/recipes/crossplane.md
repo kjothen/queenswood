@@ -29,6 +29,28 @@ makes an optional manifest field work, and what turns an unapplied XRD
 into an empty value nothing complains about. Where absence is a
 mistake rather than a meaning, set `policy.fromFieldPath: Required`.
 
+### One definition, or one per caller
+
+A Composition is a definition every composite of its kind reads on the
+next reconcile. Edit it and every one of them changes — which is what a
+building-block XRD buys, and it is not the same thing as removing
+duplication. A shared module in a tool where callers pin a version
+leaves each caller to adopt the change, so a policy tightened centrally
+is a policy that has to be chased, and an estate divides into the ones
+that took v27 and the ones that did not.
+
+So a kind worth composing from more than one place wants an XRD of its
+own — one that fixes the invariants (uniform access, no public access,
+the recovery window) and parameterises only what genuinely differs.
+The cost is a CRD on every plane that composes it, and a failure inside
+the child reporting on the child rather than on the composite that
+asked for it, which is one more hop in the direction that already
+misleads.
+
+Extract it at the second call site rather than the first: what varies
+is guesswork from one example, and the invariants are the same either
+way. Keep the block contiguous until then, so the extraction is a move.
+
 `Required` also does more than mark a field: a Required patch whose
 source is absent drops the whole composed resource, rather than
 skipping the one field. So a block of resources becomes optional
@@ -203,6 +225,9 @@ Composition for a kind it no longer serves.
 - Withhold `Delete` from `managementPolicies` for anything whose loss
   is not recoverable. Deleting the managed resource then orphans the
   cloud resource rather than destroying it.
+- Give a kind composed from more than one place an XRD of its own,
+  fixing the invariants and parameterising the rest, so tightening a
+  policy is one edit rather than a version every caller must adopt.
 
 **MUST NOT:**
 
