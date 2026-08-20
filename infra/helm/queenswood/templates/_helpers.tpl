@@ -392,3 +392,17 @@ above and that grant must not reach every pod in the namespace.
 {{- define "queenswood.bootstrapServiceAccount" -}}
 {{ .Release.Name }}-bootstrap
 {{- end -}}
+
+{{- /*
+Where the FDB backup agents send their requests: the in-cluster proxy
+rather than storage.googleapis.com. An explicit endpoint wins, for a
+cluster reaching a proxy of its own; otherwise the Service this chart
+renders. See templates/s3proxy.yaml.
+*/ -}}
+{{- define "queenswood.fdbBackupEndpoint" -}}
+{{- if .Values.fdb.backup.endpoint -}}
+{{ .Values.fdb.backup.endpoint }}
+{{- else -}}
+{{ .Release.Name }}-s3proxy
+{{- end -}}
+{{- end -}}

@@ -2597,6 +2597,85 @@ spec:
                 role: roles/secretmanager.secretAccessor
                 member: {{ printf "serviceAccount:sa-%s-secrets@%s.iam.gserviceaccount.com" $name $xr.spec.projectId | quote }}
             ---
+            # The identity the S3-to-GCS proxy runs as. It is what
+            # keeps an exportable Google credential out of the backup
+            # path entirely: the agents present a locally generated
+            # pair to the proxy, and the proxy authenticates to GCS as
+            # this account through Workload Identity.
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ServiceAccount
+            metadata:
+              name: {{ printf "sa-%s-backup" $name }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-backup-identity
+                crossplane.io/external-name: {{ printf "sa-%s-backup" $name }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $xr.spec.projectId | quote }}
+                displayName: {{ printf "sa-%s-backup" $name | quote }}
+            ---
+            # On this bucket alone, not on the recovery project: the
+            # project holds every instance's backups, and objectAdmin
+            # there would let one instance read and delete another's.
+            apiVersion: storage.gcp.m.upbound.io/v1beta1
+            kind: BucketIAMMember
+            metadata:
+              name: {{ printf "%s-backup-writer" $bucket }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-backups-bucket-writer
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                bucket: {{ $bucket | quote }}
+                # objectAdmin rather than objectCreator: `fdbbackup
+                # expire` deletes the objects it has aged out, so a
+                # writer that cannot delete leaves the backup growing
+                # without bound.
+                role: roles/storage.objectAdmin
+                member: {{ printf "serviceAccount:sa-%s-backup@%s.iam.gserviceaccount.com" $name $xr.spec.projectId | quote }}
+            ---
+            # Both halves of Workload Identity. The chart pins the
+            # Kubernetes service account name, so the member string is
+            # spelled rather than derived twice.
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ServiceAccountIAMMember
+            metadata:
+              name: {{ printf "sa-%s-backup-wi" $name }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-backup-identity-wi
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                role: roles/iam.workloadIdentityUser
+                serviceAccountIdRef:
+                  name: {{ printf "sa-%s-backup" $name }}
+                member: {{ printf "serviceAccount:%s.svc.id.goog[queenswood/queenswood-s3proxy]" $xr.spec.projectId | quote }}
+            ---
             # The composite's own kind, which is how this function
             # writes composite status.
             apiVersion: queenswood.repldriven.com/v1alpha1
@@ -2604,6 +2683,7 @@ spec:
             status:
               backupsBucket: {{ $bucket | quote }}
               fdbBackupKeySecret: {{ $key | quote }}
+              backupServiceAccount: {{ printf "sa-%s-backup@%s.iam.gserviceaccount.com" $name $xr.spec.projectId | quote }}
             {{- end }}
     - step: access
       functionRef:
