@@ -177,9 +177,13 @@ a field required in the change that introduces it.
 Withhold `Delete` from `managementPolicies` for anything whose loss
 is unrecoverable: deleting the managed resource then orphans the cloud
 resource rather than destroying it, and deleting a composite destroys
-whatever its resources permit. Install a provider for every kind the
-composite composes, on every plane that composes it, and never compose
-a cluster-scoped kind from a namespaced composite. Neither failure
+whatever its resources permit. Enable an API before composing a kind
+that needs it — Cloud Storage is on by default in a new project and
+Secret Manager is not, so an entry composed into a fresh one fails
+observe with a 403 naming the API, on the managed resource, while the
+composite goes on reporting `Ready`. Install a provider for every kind
+the composite composes, on every plane that composes it, and never
+compose a cluster-scoped kind from a namespaced composite. Neither failure
 belongs to the resource it names: one pipeline step failing — an
 unparseable template, a kind with no CRD — stops every composed
 resource and reports on the composite. Read `Synced`, `Ready` and
@@ -239,19 +243,28 @@ reads it on the destination cluster — authenticated by Workload
 Identity, through a `ClusterSecretStore` with no auth block, because the
 controller's pod already carries the annotated service account. That is
 what keeps the value out of git and out of Argo, and what makes a
-rebuilt cluster re-read rather than re-upload. Name the entry
-`sec-<code>-c-<what>` on a plane and `sec-<code>-<env>-<label>-<what>`
-on an instance. The FoundationDB backup key is the one whose name and
-home disagree: named for the instance whose backups it opens, composed
-into the installation's recovery project because a key in the project
-whose data it protects is not a second copy of anything, one per
-instance so a single key does not open every instance's backups, and
-granted on that entry alone rather than project-wide. Pin the release
-name and the service account name that binding spells literally rather
-than letting Argo derive either from an Application's name, and
-withhold `Delete` where the value cannot be regenerated. Put a version
-in with `just gcp-secret-version`, which refuses to create a container
-the composite has not made and strips the
+rebuilt cluster re-read rather than re-upload. Grant the writer on the
+project the entry is in: a capability bound on one project reaches
+nothing in another, so an entry composed into a second project is a
+container nobody may write a version to. Write what the consumer reads,
+byte for byte — an `ExternalSecret` base64s the payload on its way into
+a Secret, so an entry read as bytes holds those bytes and not the text
+of them, which `just gcp-fdb-backup-key` settles for the one that
+matters. Never add a second version to an entry that is not rotatable: a
+later key strands every backup written under the first, and rotation is
+a new generation under a new entry. Overwrite the clipboard after
+pasting a value. Name the entry `sec-<code>-c-<what>` on a plane and
+`sec-<code>-<env>-<label>-<what>` on an instance. The FoundationDB
+backup key is the one whose name and home disagree: named for the
+instance whose backups it opens, composed into the installation's
+recovery project because a key in the project whose data it protects is
+not a second copy of anything, one per instance so a single key does not
+open every instance's backups, and granted on that entry alone rather
+than project-wide. Pin the release name and the service account name
+that binding spells literally rather than letting Argo derive either
+from an Application's name, and withhold `Delete` where the value cannot
+be regenerated. Put a version in with `just gcp-secret-version`, which
+refuses to create a container the composite has not made and strips the
 trailing newline from anything typed or piped: Secret Manager stores the
 bytes it is given, and a consumer reading the value whole sends that
 newline as part of the credential, failing as a rejected secret rather
@@ -264,12 +277,12 @@ another chart renders: `creationPolicy: Merge` declines to create a
 missing target and says so while still reporting `Ready`, and the
 Application carrying it syncs a wave ahead of the chart that renders
 that Secret, so a first install always misses and nothing looks again
-until the refresh interval. A container with
-no version fails wherever the value was used rather than as a credential
-nobody wrote, and a version added after the `ExternalSecret` synced
-waits out the refresh interval, so delete the controller's pod and
-restart whatever reads the value at startup.
-See [external-secrets](../../../docs/recipes/external-secrets.md).
+until the refresh interval. A container with no version fails wherever
+the value was used rather than as a credential nobody wrote, and a
+version added after the `ExternalSecret` synced waits out the refresh
+interval, so delete the controller's pod and restart whatever reads the
+value at startup. See
+[external-secrets](../../../docs/recipes/external-secrets.md).
 
 ## Google sign-in is two console acts and an Admin API call
 
