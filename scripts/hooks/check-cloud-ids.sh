@@ -105,9 +105,36 @@ else
     | grep -E '^(docs|justfiles|scripts|infra|\.github)/' || true)
 fi
 if [ -n "$prose" ]; then
+  # A FoundationDB version is nine to twelve digits, which is a project
+  # number's shape exactly. It is also the answer this project's own
+  # support procedures print, so it appears in descriptions and commit
+  # messages constantly and cannot be a per-line exemption without the
+  # guard becoming something people route around.
+  #
+  # The word is what separates them. A version is written beside one --
+  # `version: 88324522515`, `--expire-before-version N` -- and an
+  # account identifier is not. Kept tight enough that a line naming both
+  # still blocks: `folder 722335109164 in version 3` does not match,
+  # because the digits after the word are what has to be long.
+  # The trailing class excludes a dot so that 10.128.0.0 and 1.2.3.4 do
+  # not match, and that also excluded the end of a sentence -- `the
+  # folder is 722335109164.` never matched at all, which is why
+  # enabling this in message mode did not catch what it was enabled
+  # for. A dot before whitespace or end of line is punctuation, not a
+  # delimiter.
+  #
+  # A FoundationDB version is nine to twelve digits, which is a project
+  # number's shape exactly, and it is what this project's own support
+  # procedures print -- so it appears in descriptions and messages
+  # constantly. A line mentioning a version is exempt: crude, and the
+  # alternative is an exemption per line, which is how a guard becomes
+  # something people route around. `folders/<id>` on such a line is
+  # still caught by the rule above it, and a bare one is the gap that
+  # buys.
   hits=$(printf '%s\n' "$prose" | xargs grep -nHE \
-    '(^|[^0-9A-Za-z_./=-])[0-9]{9,12}([^0-9A-Za-z_./-]|$)' 2>/dev/null \
-    | grep -v 'cloud-id-ok' || true)
+    '(^|[^0-9A-Za-z_./=-])[0-9]{9,12}([^0-9A-Za-z_./-]|\.[[:space:]]|\.$|$)' 2>/dev/null \
+    | grep -v 'cloud-id-ok' \
+    | grep -viE 'versions?' || true)
   [ -n "$hits" ] && report "bare account-length number" "$hits"
 fi
 
