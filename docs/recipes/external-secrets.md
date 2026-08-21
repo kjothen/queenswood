@@ -207,6 +207,13 @@ does, needs a restart after that.
   Identity binding spells, rather than letting either be derived.
 - Withhold `Delete` from the entry's `managementPolicies` where the
   value cannot be regenerated.
+- Write what the consumer reads, byte for byte. An `ExternalSecret`
+  base64s the payload on its way into a Secret, so an entry a workload
+  reads as bytes holds those bytes and not the text of them — the
+  FoundationDB backup key is raw, where the previous generation stored
+  base64 because a chart writing into `data` needed it. Use
+  `just gcp-fdb-backup-key` for that one, so the encoding is not a
+  decision.
 - Put a version in with `just gcp-secret-version`, and let it strip the
   trailing newline from anything typed or piped.
 - Grant the writer on the project the entry is in. A capability bound
@@ -218,6 +225,9 @@ does, needs a restart after that.
 - Commit a credential, private repository or not.
 - Keep a second durable copy of a credential that can be regenerated —
   not in a local store, and not in a file deleted afterwards.
+- Add a second version to an entry that is not rotatable. A later key
+  does not rotate a backup, it strands every one written under the
+  first — rotate by starting a new generation under a new entry.
 - Create a missing container by hand. Its absence means the composite
   has not reconciled, and one made here is one nothing declares.
 
