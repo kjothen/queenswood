@@ -411,6 +411,35 @@ several repositories in the same organisation where the same reader
 should reach all of them.
 See [argocd-github](../../../docs/recipes/argocd-github.md).
 
+## Name the shape, never the instance
+
+Write how a thing is named and mask what identifies the one in front of
+you: `xxxxxx` for a project id's suffix, `<folder-id>`, `<org-id>`,
+`<project-number>`. A shape is what a reader needs; a realised one is
+what somebody pretexting a support call wants, and none of these is a
+credential — which is exactly why they get written down without anyone
+feeling they have done anything.
+
+Mask while writing, with the real value still on screen, rather than
+after a check fails. That applies to text you did not write and are
+only quoting: a pasted error message names the project it came from,
+and an example illustrating the rule with a real identifier is still a
+real identifier — which is how the last one got out, in a pull request
+fixing the guard.
+
+Everywhere it can be read counts: the tree, a commit message, a pull
+request's title and body, an issue, a comment, a review. Real ids
+belong in the private manifests repository, because that is what it is
+for, and a description of a change to it does not.
+
+A private range, a FoundationDB version, a git sha and a Job's
+name-hash identify no account and may be written. Where a real value
+genuinely belongs, `cloud-id-ok` on the line makes it deliberate rather
+than missed. `scripts/hooks/check-cloud-ids.sh` is the detection half
+and the one definition of what an identifier is; it points forward,
+since what reached merged history stays there.
+See [cloud-identifiers](../../../docs/recipes/cloud-identifiers.md).
+
 ## A recipe fails loudly or not at all
 
 Under `set -e`, `cmd && break`, `[[ test ]] && cmd` and a bare
