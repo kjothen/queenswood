@@ -22,6 +22,13 @@
 # pull request's title and body, an issue's, a comment, a review. No
 # hook reaches any of them and all of them are as public as the tree.
 #
+# It points forward. Identifiers from before it reached commit messages
+# are in merged history on a public repository and are left there: the
+# alternative is rewriting published history, which changes every sha
+# after the earliest and diverges every clone, to withhold something
+# that grants nothing on its own. What it buys is that nothing joins
+# them.
+#
 #   bash check-cloud-ids.sh                 # every tracked file
 #   bash check-cloud-ids.sh --staged        # staged changes (pre-commit)
 #   bash check-cloud-ids.sh --message FILE  # a commit message (commit-msg)
@@ -88,27 +95,85 @@ hits=$(printf '%s\n' "$files" | xargs grep -nHE \
   | grep -v 'cloud-id-ok' || true)
 [ -n "$hits" ] && report "project id suffix" "$hits"
 
-# Bare digit runs, in the trees that describe infrastructure. Not
-# repo-wide: a minor-unit money amount in a UI fixture is the same shape
-# and means something entirely different. A value after = is a setting,
-# not an identifier -- retries=2147483647 is Integer.MAX_VALUE.
-# A message is always prose: it is a commit message or the text of a
-# pull request, an issue or a comment, and none of those carries a
-# balance fixture. Restricting this check to infra paths left it never
-# running in that mode at all, which is how a bare folder id sat in
-# three descriptions that a scan of the same descriptions reported
-# clean.
-if [ -n "$message" ]; then
-  prose="$message"
-else
+# Bare digit runs. In a tree, restricted to what describes
+# infrastructure and written carefully, because a minor-unit money
+# amount in a UI fixture is the same shape and means something entirely
+# different, and a value after = is a setting rather than an identifier.
+if [ -z "$message" ]; then
   prose=$(printf '%s\n' "$files" \
     | grep -E '^(docs|justfiles|scripts|infra|\.github)/' || true)
+  if [ -n "$prose" ]; then
+    hits=$(printf '%s\n' "$prose" | xargs grep -nHE \
+      '(^|[^0-9A-Za-z_./=-])[0-9]{9,12}([^0-9A-Za-z_./-]|$)' 2>/dev/null \
+      | grep -v 'cloud-id-ok' || true)
+    [ -n "$hits" ] && report "bare account-length number" "$hits"
+  fi
 fi
-if [ -n "$prose" ]; then
-  hits=$(printf '%s\n' "$prose" | xargs grep -nHE \
-    '(^|[^0-9A-Za-z_./=-])[0-9]{9,12}([^0-9A-Za-z_./-]|$)' 2>/dev/null \
-    | grep -v 'cloud-id-ok' || true)
-  [ -n "$hits" ] && report "bare account-length number" "$hits"
+
+# In a message, bluntly, and this is the whole of the difference. The
+# careful version above cannot see a number at the end of a sentence --
+# `the folder is 722335109164.` never matched, because the trailing
+# class excludes a dot so that 10.128.0.0 does not -- and every attempt
+# to keep the cleverness and add the case has left another one out.
+#
+# A message is prose written by a person. It has no fixtures in it, and
+# there is almost no reason for a long number, an address or a hex run
+# to appear in one at all. So they are all refused and the exceptions
+# are stated: a version, which this project's own support procedures
+# print, and `cloud-id-ok` for anything else that genuinely belongs.
+#
+# The cost of being wrong in each direction decides this. A false
+# positive is one placeholder. A false negative is an identifier in a
+# public description that nobody will look at again.
+if [ -n "$message" ]; then
+  # `|| true` closes each substitution rather than living inside the
+  # function: under pipefail a pipeline takes the first non-zero status,
+  # and grep finding nothing is one -- so a message with no hits at all
+  # ended the script rather than passing it, which is the shape every
+  # recipe in justfile-recipes warns about and this is not a recipe.
+  # Two exemptions beyond cloud-id-ok, both measured rather than
+  # imagined. A version, because this project's own support procedures
+  # print one. And a line carrying a GitHub no-reply address, which is
+  # the Co-authored-by trailer every Renovate commit ends with -- 66 of
+  # the 130 messages a first cut of this rejected, all of them the same
+  # bot on the same line.
+  exempt() {
+    grep -viE 'versions?' \
+      | grep -v 'noreply.github.com' \
+      | grep -v 'cloud-id-ok'
+  }
+
+  hits=$(grep -nHE '(^|[^0-9A-Za-z_.=-])[0-9]{9,12}([^0-9A-Za-z_-]|$)' \
+    "$message" 2>/dev/null | exempt || true)
+  [ -n "$hits" ] && report "account-length number in a message" "$hits"
+
+  # A dotted quad, but only one that could name something. A public
+  # address is the installation's front door and belongs in a
+  # description no more than a project id does. A private range says
+  # how a network is cut, which is a thing this repository discusses
+  # constantly and which identifies nobody -- 10.10.0.0 is 10.10.0.0
+  # everywhere. Same for a loopback, an unspecified address, and the
+  # ranges reserved for documentation.
+  #
+  # Measured: flagging every quad rejected subnet arithmetic, `0.0.0.0`
+  # as a bind address and `8.8.8.8` as a resolver, and found two real
+  # public addresses. Only the second kind is worth a refusal.
+  hits=$(grep -nHE '(^|[^0-9.])[0-9]{1,3}(\.[0-9]{1,3}){3}([^0-9.]|$)' \
+    "$message" 2>/dev/null \
+    | grep -vE '(^|[^0-9.])(10\.|127\.|0\.0\.0\.0|169\.254\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|192\.0\.2\.|198\.51\.100\.|203\.0\.113\.|8\.8\.8\.8|8\.8\.4\.4)' \
+    | exempt || true)
+  [ -n "$hits" ] && report "IP address in a message" "$hits"
+
+  # No hex sweep here, and it was tried. Six or more hex characters is
+  # a git sha, and a message is where a git sha belongs -- a Renovate
+  # body is mostly changelog links, each one a sha. It also matched
+  # `facade`, `b64dec`, a decimal's digits, and the ClearBank
+  # simulator's documented magic value. What it caught that nothing
+  # else did was nothing.
+  #
+  # The suffix shape that actually identifies a project -- a name
+  # character, a hyphen, six hex -- is already refused above, in every
+  # mode.
 fi
 
 # A realised resource, named in prose that is permanent. Not an account
