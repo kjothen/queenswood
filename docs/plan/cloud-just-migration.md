@@ -36,6 +36,25 @@ kubectl --context qw01-n-test -n queenswood get pods
 curl -o /dev/null -w '%{http_code}\n' https://console.test.queenswood.io/
 ```
 
+**It is also backing itself up, continuously, and nothing has ever been
+restored from it.** FoundationDB ships snapshots and a mutation log
+through an in-cluster S3-to-GCS proxy into a bucket the instance cannot
+delete, encrypted under a key that never touched git; Keycloak exports
+both realms hourly beside them. Every piece of that was built this
+week, and the half that reads it back has been run by nobody:
+
+```
+just sop-fdb-list-backups n test
+just sop-fdb-version-at n test <YYYY-MM-DDTHH:MM:SSZ>
+gcloud storage cat gs://<bucket>/keycloak/realms/LATEST
+```
+
+`running: true` on the `FoundationDBBackup` says the agents are
+shipping. It does not say a restore works, and today it demonstrably
+would not have: the restore Job was reading the encryption key from a
+mount that had moved, found by reading the path rather than by anything
+failing. Treat "the backup is green" as evidence about writing only.
+
 **Google sign-in is done, and the three acts it took are the three
 that never become automated.** external-secrets runs on the instance
 cluster, a `ClusterSecretStore` reads the instance project with no auth
@@ -70,6 +89,34 @@ store existed — needed one Keycloak restart after the secret was
 stored. A rebuilt instance does not: the operator and the config chart
 sit in sync waves ahead of the bank's own Application.
 
+### What to do first, on a fresh context
+
+In this order, because each one tells you whether the next is worth
+doing:
+
+1. **Check what is running**, with the commands above. `gcloud auth
+   application-default login` first if a `kubectl` call asks to
+   reauthenticate — `gcloud auth login` alone does not refresh ADC.
+2. **Read [ADR-0026](../adr/0026-recovering-data-and-the-states-that-do-it.md)**
+   before touching anything about recovery. It is the only place the
+   position is written down, and the machinery it describes does not
+   exist.
+3. **Pick from `Also outstanding`.** The list is ordered by what would
+   embarrass this installation soonest, not by effort: a restore
+   nobody has run, then a bucket that grows without bound, then
+   credentials in the clear.
+
+Two habits this week paid for, both cheap:
+
+- **Render before believing.** `helm template` against the real values
+  files, and `crossplane render` against the function versions the
+  plane actually runs, caught a composite that composed nothing, a
+  chart that rendered a fresh keypair every time, and an export that
+  exported no realms. None of them failed loudly.
+- **Ask which half has never been run.** Every fault this week was on
+  a path nothing exercises: the restore, the export, the history
+  nobody scanned. The green half is not evidence about the other one.
+
 ### Also outstanding
 
 - **The consent screen is in Testing mode**, and publishing it is a
@@ -97,17 +144,42 @@ sit in sync waves ahead of the bank's own Application.
   that the Cloud SQL proxy is the instance's rather than Keycloak's.
   Test the rest the same way — grep `docs/adr docs/recipes docs/tdd`
   for each and rehome what only this file says.
-- **Five deployment-labelled docs with no rule section**:
-  `cloud-account`, `cloud-naming`, `security-scanning`, ADR-0023 and
-  ADR-0024. They were invisible to discovery until the label parser was
-  fixed, and authoring their sections is its own pass.
+- **Six deployment-labelled docs with no rule section**:
+  `cloud-account`, `cloud-naming`, `security-scanning`, ADR-0023,
+  ADR-0025 and ADR-0026. Authoring them would roughly double the
+  longest rule file here, so it stays its own pass. `sync-rules-from-docs`
+  also reports a structural error on ADR-0022 and ADR-0024 that is not
+  a doc fault: both have a `## Decision`, opening with `###`
+  subsections the extractor cannot parse. The docs recipe already says
+  which side is wrong — if discovery cannot find a labelled doc, the
+  script is.
 - **`image.tag` is `latest`.** It cannot be fixed in values: GHCR holds
   only `latest`, `latest-amd64` and `latest-arm64` for these images, so
   there is no version to pin to. Build-pipeline work.
-- **FoundationDB backup** stays off until the S3-to-GCS proxy replaces
-  the HMAC path. Its encryption key is no longer blocked: it is another
-  entry beside the OAuth secret, and another `ExternalSecret` in
-  `queenswood-config`.
+- **A restore, which is the only thing that would make any of the
+  backup work evidence.** ADR-0026 records the position rather than the
+  machinery: for corruption, restore *beside* the damage rather than
+  over it, because the corrupted data is the only record of what
+  happened and in-place commits the moment the volumes go. Nothing is
+  built for either shape, and `state: down` deliberately does not empty
+  anything, so the destructive half the old cycle depended on has no
+  successor.
+- **Nothing expires a backup.** Around 4,700 objects a day, almost all
+  zero-byte mutation logs. `fdbbackup expire` is the only thing that
+  may delete — a lifecycle rule deleting behind FDB's back leaves
+  metadata describing what is gone — and it takes a retention period
+  and a floor, both derived from one number in days. A backup started
+  this week has nothing thirty days old, so the first run that removes
+  anything is a month away and the cadence can be chosen from what it
+  costs.
+- **CMEK on the backups bucket.** The realm export carries user
+  credential records and client secrets as plain JSON, where the bank's
+  own data beside it is encrypted. One key covers both kinds of object,
+  makes rotation transparent, and answers "can we revoke access to
+  backups" — which nothing does today.
+- **Argo holds `roles/container.admin` on every instance project**, in
+  [what is left](#what-is-left) with the narrower shape and its
+  trigger.
 
 ### What cost the most, across two days
 
@@ -133,6 +205,29 @@ both pass it happily. Only the API server has the schema.
 **A fixture that differs from reality in the one respect that matters
 will pass.** The validation record renders correctly against a
 placeholder with no trailing dot and wrongly against the real value.
+
+**A green path says nothing about the path that reads it.** The backup
+went entirely green — agents shipping, objects landing,
+`file_level_encryption` written — while the restore Job read the
+encryption key from a mount that had moved under it two commits
+earlier. Nothing exercises a restore until one is needed, so the half
+that writes and the half that reads drift apart silently, and only the
+writing half has a status to look at.
+
+**A missing file is reported by everything except its name.** The realm
+export asked for a filename that does not exist. `Files.Get` returns
+nothing, `fromJson` turns nothing into an empty map rather than an
+error, `.realm` on that is empty, the loop runs zero times and the
+upload dies on an unmatched glob. Five symptoms, none of them naming
+the file, and the template two directories away had it right all along.
+
+**A guard's reach is not its rule.** Identifiers were scrubbed from
+pull request descriptions and left in commit messages, because the scan
+that found them was a scan of descriptions. The same guard could not
+match a number at the end of a sentence, was widened three times, and
+on the third the widening arrived in a description carrying a real
+folder id as an example. Detection reports afterwards; the recipe that
+stops it being written is the half that was missing.
 
 **Deleting a Keycloak CR while its database survives strands the admin
 credential**, because the operator owns the Secret and regenerates it.
