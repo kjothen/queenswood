@@ -20,8 +20,12 @@ a public repository is where that person looks first.
 There is a guard, and it is detection. It has caught real identifiers
 and it has also been extended, by somebody who had read it that
 morning, in a pull request whose own description carried a folder id.
-Detection tells you afterwards. This is the half that is meant to stop
-it being written.
+Detection tells you afterwards, and afterwards is a value that has been
+public for as long as it took somebody to notice.
+
+So the aim is not to write one and be caught. It is to have nothing to
+catch, which is easier than it sounds: a description almost never needs
+a literal number at all.
 
 ## Solution
 
@@ -42,23 +46,33 @@ bkt-qw01-n-test-backups-xxxxxx
 placeholders, they cannot be mistaken for real, and `x` is not a hex
 digit so the guard cannot match one either.
 
-### What counts
+### Mask every number and every hex run
 
-- **A project id's suffix** — six hex characters closing a name.
-- **A folder, organisation or project number** — nine to twelve digits,
-  with or without the `folders/` in front.
-- **A billing account id** — three hex groups.
-- **A public IP address.** The installation's front door. A private
-  range is not one of these: `10.10.0.0` is `10.10.0.0` everywhere and
-  says only how a network is cut.
+Not a list of dangerous shapes to remember. A description explains what
+changed and why, and almost never needs a literal number to do it — so
+the default is that numbers and hex runs do not go in, and the few that
+must are named below rather than argued for one at a time.
 
-### What does not
+That is deliberately stricter than the check. A check has to tolerate a
+version and a git sha or it cries wolf, and 4.1% of this repository's
+history already trips it; guidance has no such constraint. Being told
+which shapes are safe is what produces a description with a folder id
+in it, because the writer was busy deciding whether their number was
+one of them.
 
-Name shapes, and the rest of a name. Private ranges, loopback, the
-documentation ranges. A FoundationDB version, which is nine to twelve
-digits and is what this project's own support procedures print. A git
-sha. A Job's name-hash, which describes one afternoon's state and reads
-as though it meant something, but identifies no account.
+The two exceptions, which are exceptions because they name nothing:
+
+- **A public resolver or nameserver.** `8.8.8.8`, and the
+  `ns-cloud-*.googledomains.com` set a zone is delegated to. Checking a
+  delegation is a thing this repository documents and the addresses are
+  the same for everybody.
+- **Loopback and the unspecified address.** `127.0.0.1`, `0.0.0.0` as
+  a bind address, and `localhost`.
+
+Everything else goes in as a placeholder. A version, a git sha, a Job's
+name-hash and a private range will all pass the check, and none of them
+needs to be real to make a point: `<version>` and `<sha>` say what the
+sentence is about, where the literal only says which afternoon.
 
 ### The habit that actually prevents it
 
@@ -95,23 +109,23 @@ it makes the exception visible and attributable rather than silent.
 
 **MUST:**
 
-- Write a name's shape and mask what identifies the instance —
-  `xxxxxx`, `<folder-id>`, `<org-id>`, `<project-number>`.
+- Mask every number and every hex run — a name's suffix, an id, an
+  address, a version, a sha. Write `xxxxxx`, `<folder-id>`, `<org-id>`,
+  `<project-number>`, `<version>`, `<sha>`.
 - Mask while writing, with the real value still in front of you.
 - Mask a pasted error message and a worked example the same way. Both
   are text somebody else produced, and both carry ids verbatim.
 
 **MUST NOT:**
 
-- Put a project id suffix, a folder, organisation or project number, a
-  billing account id or a public address into anything public,
-  including a pull request's description and a comment.
+- Rely on the check to catch it. It is deliberately more permissive
+  than this, so that it does not cry wolf, and it reports afterwards.
 - Use a real identifier as an example of a masked one.
 
 **MAY:**
 
-- Name a private range, a version, a git sha or a Job's name-hash.
-  None of them identifies an account.
+- Name a public resolver or nameserver, and loopback. They identify
+  nobody and a delegation cannot be documented without them.
 - Mark a line `cloud-id-ok` where a real value genuinely belongs, which
   makes it deliberate rather than missed.
 

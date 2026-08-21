@@ -432,12 +432,21 @@ request's title and body, an issue, a comment, a review. Real ids
 belong in the private manifests repository, because that is what it is
 for, and a description of a change to it does not.
 
-A private range, a FoundationDB version, a git sha and a Job's
-name-hash identify no account and may be written. Where a real value
-genuinely belongs, `cloud-id-ok` on the line makes it deliberate rather
-than missed. `scripts/hooks/check-cloud-ids.sh` is the detection half
-and the one definition of what an identifier is; it points forward,
-since what reached merged history stays there.
+Mask every number and every hex run rather than remembering which
+shapes are dangerous — a description explains what changed and why, and
+almost never needs a literal to do it, so `<version>` and `<sha>` say
+what the sentence is about where the literal only says which afternoon.
+Two exceptions, because they name nobody: a public resolver or
+nameserver, without which a delegation cannot be documented, and
+loopback. That is stricter than
+`scripts/hooks/check-cloud-ids.sh` on purpose — a check must tolerate a
+version and a sha or it cries wolf, and being told which shapes are safe
+is what produces a description with an id in it. Never rely on it to
+catch one: it is the detection half and the one definition of what an
+identifier is, it reports afterwards, and it points forward, since what
+reached merged history stays there. Where a real value genuinely
+belongs, `cloud-id-ok` on the line makes it deliberate rather than
+missed.
 See [cloud-identifiers](../../../docs/recipes/cloud-identifiers.md).
 
 ## A recipe fails loudly or not at all
