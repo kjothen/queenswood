@@ -15,9 +15,10 @@ CLAUDE.md is the routing layer. Every `docs/recipes/*.md` and
 and that plugin's rule (always loaded via `AGENTS.md`) already
 distills its `## Rules` / `## Decision` — you don't need to open the
 doc to rediscover that. Open it for the *why* behind the rule instead:
-Context, Consequences, Discussion. `docs/tdd/`, `docs/prd/`, and
-`docs/plan/` docs are the exception — nothing distills them, so open
-those in full before non-trivial work on their topic.
+Context, Consequences, Discussion. `docs/tdd/`, `docs/prd/`,
+`docs/plan/` and `docs/compliance/` docs are the exception — nothing
+distills them, so open those in full before non-trivial work on their
+topic.
 
 ### Code
 
@@ -133,6 +134,14 @@ those in full before non-trivial work on their topic.
   `cloud.just` still runs. Superseded by the installation model; read
   it for what the old path does, never for what to do now. See
   [recipes/cloud-deployment.md](docs/recipes/cloud-deployment.md).
+- **Recovering FoundationDB** — the scenario matrix, restore mode
+  against destination state, RPO per scenario, why scale-to-zero is not
+  a recovery scenario, and the CIS and DORA controls each open item
+  lands on. See [recipes/fdb-recovery.md](docs/recipes/fdb-recovery.md).
+- **Obligations, and how they are met** — a register of what an outside
+  body requires and which recipe addresses it, gaps included. Recipes
+  themselves carry no regulation; the citation lives here. See
+  [compliance/readme.md](docs/compliance/readme.md).
 - **Recovery (previous generation's environment model)** — how
   FoundationDB and Keycloak restore, which has not changed, wrapped in
   a `QUEENSWOOD_ENV` and `pass` model that has. See
