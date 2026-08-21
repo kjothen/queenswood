@@ -28,6 +28,32 @@ Companies House in production, and the simulator services in dev and
 test. The adapter cannot tell the two apart, so it stays one box rather
 than two.
 
+## Infrastructure diagram
+
+<picture>
+  <source media="(prefers-color-scheme: dark)"  srcset="infrastructure-diagram-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="infrastructure-diagram-light.svg">
+  <img alt="Queenswood infrastructure diagram" src="infrastructure-diagram-light.svg">
+</picture>
+
+Google's palette, by resource kind: blue compute, green data and
+storage, amber identity and secrets, red networking, grey for anything
+outside the installation boundary.
+
+Fill carries the same distinction as the system diagram. Solid boxes are
+things that exist; cross-hatch is a boundary rather than a participant,
+so the folder, each project and both clusters are drawn as regions. A
+dashed outline marks something nothing in this repository creates: the
+private manifests repository, and the Google OAuth client, which no API
+can make with a chosen redirect URI.
+
+The vertical split is lifetime, not topology. The durable tier across
+the top is never torn down — the management project reconciles the
+installation, the recovery project holds backups and the key they are
+encrypted under, and the DNS zone is expensive enough to recreate that
+it lives apart from anything disposable. The instance project below it
+is rebuilt whenever an instance is.
+
 ## Regenerating the SVGs
 
 The exports are produced headlessly from the `.excalidraw` sources by the

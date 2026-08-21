@@ -13,6 +13,11 @@ the HMAC key this describes, because the org-policy exemption it needs
 is not available in an organisation we do not own. See
 [the plan](../plan/cloud-just-migration.md).
 
+The FoundationDB half is superseded by
+[fdb-recovery](fdb-recovery.md), which covers the same ground for the
+current installation: the recovery scenarios, their RPO, and what to
+set for each. What remains authoritative here is Keycloak.
+
 This document carries no plugin label, so nothing here becomes a rule.
 
 ## What to run
