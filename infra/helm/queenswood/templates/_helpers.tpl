@@ -150,12 +150,14 @@ generations must not collide on one name.
 {{- end -}}
 
 {{/*
-Whether a restore is being asked for at all. A container with no
-version means "this container's latest point", so the version alone no
-longer answers the question.
+Whether a restore is being asked for at all. The flag rather than the
+target, so the target can be left behind as a record of where this
+cluster's data came from without being live -- and so that switching it
+off does not mean deleting keys, which is how a null `restore:` block
+took the whole render down.
 */}}
 {{- define "queenswood.fdbRestoreRequested" -}}
-{{- if or .Values.fdb.restore.version .Values.fdb.restore.backupName -}}true{{- end -}}
+{{- if .Values.fdb.restore.enabled -}}true{{- end -}}
 {{- end -}}
 
 {{- /*

@@ -461,6 +461,15 @@ services:
 fdb:
   enabled: true
   version: "7.3.75"
+  # Passed to every general process. Two are worth setting anywhere the
+  # container limit is below FoundationDB's own defaults, which is
+  # everywhere: --cache_memory sizes the page cache, which defaults to
+  # 2GiB regardless of how much data exists, and --memory is the total
+  # the process holds itself to, defaulting to 8GiB. Left unset, a
+  # storage server allocates toward figures nothing told it it could
+  # not have, and the kernel ends it with exit 137 and no explanation.
+  # Keep both below `resources.limits.memory`.
+  customParameters: []
   storageEngine: "ssd-redwood-1"
   processCounts:
     cluster_controller: 1
@@ -569,6 +578,22 @@ fdb:
   # what a fresh environment with no prior backup wants.
   # `just gcp-fdb-export` records the version to use.
   restore:
+    # The mode, where the fields below are the target. Inferring the
+    # mode from whether a target was set made the two inseparable: the
+    # values could not be left in place as a record of where this
+    # cluster's data came from without also being live, and commenting
+    # them out left a null `restore:` key that Helm reads as deleting
+    # the block, so `fdbRestoreRequested` dereferenced a nil and the
+    # whole chart stopped rendering.
+    #
+    # False by default, and it stays false afterwards. A rebuilt
+    # cluster comes up empty, so a stale target left enabled is a
+    # silent restore to whenever that was.
+    #
+    # Enabled with no `backupName` reads from `backup.backupName`,
+    # which is right only where there has been one generation -- after
+    # a rebuild that is the new and empty container.
+    enabled: false
     version: ""
     # Container the restore reads from, which is NOT the one this
     # cluster backs up to. A rebuilt cluster starts its version numbers
