@@ -734,6 +734,34 @@ spec:
                   # dropped.
                   gatewayApiConfig:
                     channel: CHANNEL_STANDARD
+                  # Encryption in transit, for the ten paths inside the
+                  # cluster that are not TLS: the backup agents to
+                  # s3proxy, the Gateway to console, api and Keycloak,
+                  # the services to Kafka and to FoundationDB,
+                  # FoundationDB between its own processes, Keycloak and
+                  # the realm exporter to the Cloud SQL proxy, and
+                  # everything to Jaeger. The control asks whether data
+                  # in transit is encrypted rather than whether it is
+                  # TLS, so this answers all ten at once.
+                  #
+                  # Both fields or neither: the encryption is a
+                  # Dataplane V2 feature and inert on LEGACY_DATAPATH,
+                  # which is what GKE defaults to.
+                  #
+                  # Neither can be applied to a live cluster. The
+                  # dataplane is fixed at creation, so the provider
+                  # refuses the diff rather than performing it and the
+                  # refusal lands in LastAsyncOperation -- Synced alone
+                  # does not say. The cluster takes this when it is next
+                  # rebuilt; see docs/recipes/cluster-rebuild.md.
+                  #
+                  # It forecloses enableFqdnNetworkPolicy, which cannot
+                  # coexist with inter-node encryption, so egress
+                  # control has to be a Cloud NAT and CIDRs rather than
+                  # names. And it does not cover two pods on one node,
+                  # because that traffic never reaches a network.
+                  datapathProvider: ADVANCED_DATAPATH
+                  inTransitEncryptionConfig: IN_TRANSIT_ENCRYPTION_INTER_NODE_TRANSPARENT
                 # A kubeconfig for this cluster, written by the provider
                 # on every reconcile. It carries the endpoint and the CA
                 # and no credential: the token comes from the identity

@@ -134,6 +134,10 @@ topic.
   `cloud.just` still runs. Superseded by the installation model; read
   it for what the old path does, never for what to do now. See
   [recipes/cloud-deployment.md](docs/recipes/cloud-deployment.md).
+- **Rebuilding an instance's cluster** — the runbook for a planned
+  cluster rebuild: why a ForceNew field reports `Synced` and does
+  nothing, the order, and what it leaves standing. See
+  [recipes/cluster-rebuild.md](docs/recipes/cluster-rebuild.md).
 - **Recovering FoundationDB** — the scenario matrix, restore mode
   against destination state, RPO per scenario, why scale-to-zero is not
   a recovery scenario, and the CIS and DORA controls each open item

@@ -172,7 +172,63 @@ Two habits this week paid for, both cheap:
   this week has nothing thirty days old, so the first run that removes
   anything is a month away and the cadence can be chosen from what it
   costs.
-- **CMEK on the backups bucket.** The realm export carries user
+- **Encryption in transit, decided: Dataplane V2.** Everything crossing
+  a network boundary is already TLS — the load balancer, both paths to
+  GCS, Cloud SQL, GitHub, the Google APIs, the payment and KYC
+  providers. What is not encrypted is ten paths inside the cluster: the
+  backup agents to s3proxy, the Gateway to console, api and Keycloak,
+  the bank services to Kafka and to FoundationDB, FoundationDB between
+  its own processes, Keycloak and the realm exporter to the Cloud SQL
+  proxy, and everything to Jaeger.
+
+  The control asks whether data in transit is encrypted, not whether it
+  is TLS, so the answer is one field rather than ten pieces of work.
+  `datapathProvider: ADVANCED_DATAPATH` and
+  `inTransitEncryptionConfig: IN_TRANSIT_ENCRYPTION_INTER_NODE_TRANSPARENT`
+  on the composed `Cluster`, both supported by the GCP provider already
+  installed. It is WireGuard, over the encryption Google's VM NICs
+  already apply.
+
+  Two consequences. It is a create-time setting, so it arrives with a
+  cluster rebuild rather than an edit — routine for an instance, the
+  pivot for the plane. And it cannot coexist with
+  `enableFqdnNetworkPolicy`, so egress control becomes IP-based: a
+  Cloud NAT with a reserved address, and policies written against
+  CIDRs rather than names. That is the poorer half of the trade and it
+  is the half that matters for a payment provider that allowlists a
+  source IP, which nothing can be given today because traffic leaves
+  via whichever node runs the adapter.
+
+  Worth stating before anyone asks: traffic between two pods on the
+  same node is not encrypted by this, because it never reaches a
+  network. On a small cluster that is a large share of the traffic.
+
+  Reachability is the other half of the same subject and stays
+  unbuilt. Nothing restricts pod-to-pod today, and a `NetworkPolicy` is
+  deny-by-default only for the pods it selects — so one policy for one
+  service leaves everything else open while the repository starts to
+  look as though it has coverage. Done properly it is a default-deny
+  baseline and an explicit allow per flow, which cannot be added
+  without enumerating every legitimate connection at once.
+  `enableCiliumClusterwideNetworkPolicy` is how the baseline gets
+  stated once rather than per namespace. `cloud-naming` already
+  reserves `nat-<code>-<env>-<region>`; nothing composes it, and the
+  publicly reachable cluster accepted as CIS 4.9 belongs here too.
+
+  Superseded by this: enabling TLS on the s3proxy leg on its own. The
+  chart's claim that FoundationDB's blobstore client "has no usable
+  trust store and the operator cannot pass it a CA" is still wrong and
+  worth correcting where it appears in `_helpers.tpl` and
+  `s3proxy.yaml` — upstream documents `FDB_TLS_CA_FILE` alongside a
+  cert and key that must be parseable even though they are unused,
+  which is the likeliest reason an attempt failed and the note got
+  written.
+
+- **CMEK on the backups bucket**, which is a layer above the control
+  rather than a gap in it: Google encrypts GCS, persistent disks and
+  Cloud SQL by default, so data at rest is already encrypted
+  everywhere. What CMEK adds is keys this installation holds and can
+  revoke. The realm export carries user
   credential records as plain JSON, where the bank's own data beside it
   is encrypted. Keycloak cannot close this itself: `kc.sh export` takes
   a directory, a realm and a user strategy, and has no encryption
