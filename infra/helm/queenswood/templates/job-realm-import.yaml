@@ -85,8 +85,12 @@ metadata:
          client leaves the same name, the same completed Job, and
          nothing to apply the change -- while Argo tries to patch an
          immutable spec and fails the sync for every resource beside
-         it. What the Job acts on belongs in what names it. */}}
-  name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") (include "queenswood.consoleRedirectUri" .) .Values.keycloak.googleClientId .Values.keycloak.googleIdpAlias | sha256sum | trunc 8 }}
+         it. What the Job acts on belongs in what names it -- and so
+         does what it reads: the bootstrap admin Secret is named in
+         two env vars, so an instance adopting a supplied credential
+         changed this template and left the name alone, and the sync
+         wedged until somebody deleted the Job by hand. */}}
+  name: {{ .Release.Name }}-realm-import-{{ printf "%s|%s|%s|%s|%s|%s|%s|%s" $restore .Chart.Version (get $realmFiles "queenswood-realm.json") (get $realmFiles "queenswood-ops-realm.json") (include "queenswood.consoleRedirectUri" .) .Values.keycloak.googleClientId .Values.keycloak.googleIdpAlias (include "queenswood.keycloakBootstrapAdminSecret" .) | sha256sum | trunc 8 }}
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
     app.kubernetes.io/component: keycloak-realm-import
