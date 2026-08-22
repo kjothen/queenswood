@@ -14,6 +14,16 @@ spec:
     {{- toYaml .Values.fdb.processCounts | nindent 4 }}
   processes:
     general:
+      {{- /* Arguments to fdbserver itself, as distinct from the
+             container's limits below. Without them the process takes
+             FoundationDB's defaults -- a 2GiB page cache sized by
+             configuration rather than by dataset, inside whatever the
+             limit happens to be -- and is killed by the kernel rather
+             than exiting with something a reader can act on. */}}
+      {{- with .Values.fdb.customParameters }}
+      customParameters:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       volumeClaimTemplate:
         spec:
           accessModes: ["ReadWriteOnce"]

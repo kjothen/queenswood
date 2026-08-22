@@ -36,6 +36,11 @@ sop-fdb-list-backups env label count="20":
     # two snapshots restorable as well, which is what continuous means
     # and why the newest snapshot is a floor rather than the only
     # choice.
+    #
+    # Newest first, because the question this answers is almost always
+    # "is it still running" -- and an ascending list of the newest N
+    # puts a row from N periods ago at the top, which reads as a backup
+    # that stopped.
     BUCKET=$(just _sop-backup-bucket "{{ env }}" "{{ label }}")
     if [[ -z "$BUCKET" ]]; then
       echo "no backups bucket for {{ CODE }}-{{ env }}-{{ label }}" >&2
@@ -77,11 +82,17 @@ sop-fdb-list-backups env label count="20":
             n = split($NF, p, "/"); split(p[n], f, ",")
             printf "%s/%s\t%s\t%s\t%s\n", p[n-3], p[n-2], f[3], when, f[4]
           }' \
-      | sort -k2 -n \
-      | tail -n {{ count }} \
-      | awk 'BEGIN { printf "%-14s %-22s %-22s %s\n",
+      | sort -k2 -rn \
+      | head -n {{ count }} \
+      | awk -v total="$(printf '%s\n' "$ROWS" | wc -l | tr -d ' ')" \
+            -v shown={{ count }} '
+             BEGIN { printf "%-14s %-22s %-22s %s\n",
                        "GENERATION", "VERSION", "WRITTEN", "BYTES" }
-             { printf "%-14s %-22s %-22s %s\n", $1, $2, $3, $4 }'
+             { printf "%-14s %-22s %-22s %s\n", $1, $2, $3, $4 }
+             END { if (total > shown)
+                     printf "-- newest first, %d of %d snapshots\n", shown, total
+                   else
+                     printf "-- newest first, all %d snapshots\n", total }'
     # The window, which is what "how far back can I go" actually asks.
     # From the log rather than the snapshots: every version between two
     # snapshots is restorable, so the log's span is the answer and the

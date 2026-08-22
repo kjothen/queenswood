@@ -1,4 +1,4 @@
-{{- if or .Values.bootstrap.enabled (and .Values.fdb.backup.enabled .Values.fdb.restore.version) }}
+{{- if or .Values.bootstrap.enabled (and .Values.fdb.backup.enabled (include "queenswood.fdbRestoreRequested" .)) }}
 ---
 # Service deployments use a `kubectl wait --for=condition=complete
 # job/...` initContainer to gate startup on bootstrap success, and the
