@@ -148,6 +148,35 @@ anything. Where FDB survives, the realm has to survive with it: restore
 from the export rather than resetting, and reset the credential in
 place.
 
+**Resetting it in place** is a Keycloak command rather than a database
+edit — the password is hashed, so there is nothing useful to `UPDATE`.
+`kc.sh bootstrap-admin user` reaches the same database the pod is
+already configured for and adds an admin account, which is the
+supported way back into an installation whose admin is stranded:
+
+```bash
+kubectl -n <ns> exec -i <release>-keycloak-0 -c keycloak -- sh -s <<'EOF'
+export KCU=<username> KCP=<password>
+export KC_HTTP_MANAGEMENT_PORT=9001 KC_HTTP_PORT=8081 KC_HTTPS_PORT=8444
+/opt/keycloak/bin/kc.sh bootstrap-admin user \
+  --username:env KCU --password:env KCP --no-prompt --optimized
+EOF
+```
+
+Three things about that. The ports have to move: the command starts a
+second, non-serving instance in a pod where the running server already
+holds 9000, and without them it dies on `Address already in use` rather
+than on anything to do with credentials. The values arrive by stdin and
+are read from the environment, so neither the pod's process table nor a
+shell history ever holds the password. And it *adds* an account rather
+than repairing the old one — `temp-admin` stays where it is with a
+password nobody knows, which is worth removing once the new account
+works.
+
+Give it the value the instance's Secret Manager entry already holds, or
+this is a credential that lives nowhere and strands the same way at the
+next rebuild.
+
 Where both are going, the reset goes through Postgres rather than the
 Cloud SQL API. The database resource withholds `Delete` deliberately and
 no identity holds `cloudsql.databases.delete`, but the workload's own

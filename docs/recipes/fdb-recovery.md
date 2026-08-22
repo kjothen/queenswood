@@ -154,8 +154,12 @@ unchanged, and the refusal appears only in `LastAsyncOperation`. The
 managed resource has to be deleted for the rebuild to happen at all.
 
 **RPO:** zero if writes stop before the version is taken; otherwise
-everything after it. **RTO:** a full rebuild plus the restore, which is
-hours rather than minutes and has never been measured here.
+everything after it. **RTO:** a full rebuild plus the restore. Measured
+once, on the test instance: about half an hour from the cluster being
+recomposed to the data being back, five minutes of which was the
+restore. The dataset was around 137KB, so that is evidence the path
+works rather than a figure to plan against, and delete-to-sign-in has
+still not been measured cleanly.
 
 Restoring *beside* the instance instead would need a second label, and
 every per-instance name follows it — including the backups bucket and

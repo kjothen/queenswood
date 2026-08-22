@@ -111,8 +111,11 @@ sop-fdb-list-backups env label count="20":
     fi
     echo
     echo ">>> restore to one of these by setting, in the instance's values:"
+    echo "      fdb.restore.enabled:    true"
     echo "      fdb.restore.backupName: <generation>"
     echo "      fdb.restore.version:    <version>"
+    echo ">>> the flag renders the Job; the target on its own does nothing,"
+    echo ">>> which is what lets it stay behind afterwards as a record."
     echo ">>> a version without a generation is refused: version numbers"
     echo ">>> restart near zero on a rebuild, so they only mean anything"
     echo ">>> inside the generation that wrote them."
