@@ -11,6 +11,18 @@ metadata:
   labels:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
+  {{- /* Supplied rather than generated, because the operator ties this
+         credential's lifetime to the Keycloak resource and the database
+         outlives it. Keycloak honours a bootstrap admin only while the
+         master realm does not exist, so a rebuilt cluster otherwise
+         regenerates a password the database will never accept -- and an
+         instance that cannot administer the realm it is serving looks
+         exactly like an instance that will not start. */}}
+  {{- with .Values.keycloak.bootstrapAdmin.secretName }}
+  bootstrapAdmin:
+    user:
+      secret: {{ . | quote }}
+  {{- end }}
   instances: {{ .Values.keycloak.instances }}
   image: {{ .Values.keycloak.image | quote }}
   # The upstream `quay.io/keycloak/keycloak` image ships

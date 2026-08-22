@@ -32,6 +32,14 @@ keycloak:
     secretName: queenswood-keycloak-vault
     realm: queenswood
 
+  # Keycloak's bootstrap admin, materialised from Secret Manager so the
+  # credential outlives the cluster. The name has to match what the
+  # queenswood chart puts in `spec.bootstrapAdmin.user.secret` and what
+  # the realm-import Job reads.
+  bootstrapAdmin:
+    enabled: true
+    secretName: queenswood-keycloak-admin
+
 fdb:
   backup:
     # Its own Secret, mounted beside the one holding the pair FDB

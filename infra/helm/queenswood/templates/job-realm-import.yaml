@@ -460,15 +460,22 @@ spec:
               value: {{ .Values.keycloak.realm | quote }}
             - name: KC
               value: "http://{{ .Release.Name }}-keycloak-service:8080"
+            {{- /* The supplied bootstrap admin where there is one, and
+                   the operator's generated Secret otherwise. The two
+                   have to agree: the operator's is reborn with the
+                   cluster while the database keeps what it was created
+                   with, so on a rebuild only the supplied one still
+                   opens the realm. */}}
+            {{- $adminSecret := .Values.keycloak.bootstrapAdmin.secretName | default (printf "%s-keycloak-initial-admin" .Release.Name) }}
             - name: ADMIN_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-keycloak-initial-admin
+                  name: {{ $adminSecret | quote }}
                   key: username
             - name: ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Release.Name }}-keycloak-initial-admin
+                  name: {{ $adminSecret | quote }}
                   key: password
           volumeMounts:
             - name: chart
