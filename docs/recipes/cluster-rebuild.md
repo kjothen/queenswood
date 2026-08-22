@@ -4,11 +4,26 @@
 
 ## Status
 
-Not yet run. Every step below is derived from the compositions, the
-chart and the provider's own behaviour rather than from having done it,
-and the first person to follow it should correct it as they go. The
-timings in particular are unknown: this is the procedure that produces
-this installation's first RTO measurement, and its first restore.
+Run once, on this installation's test instance: a planned rebuild onto
+Dataplane V2, and the first time anything here read a backup back.
+
+- **The backups are readable.** `fdbrestore` completed against a fresh
+  cluster — 142 files, five blocks, `ApplyVersionLag: 0`. Until a
+  restore completes, the encryption key is an assumption: a wrong key
+  lists in a bucket exactly like a right one.
+- **Data back in a little over half an hour.** The managed `Cluster`
+  was recomposed, and the restore Job completed thirty-two minutes
+  later, five of which were the restore itself. That is not an RTO. The
+  dataset was around 137KB across those 142 files, so the number says
+  the path works, not what it costs at size.
+- **Dataplane V2 came up as asked**, confirmed by `anetd` running in
+  `kube-system` rather than by the field reading back.
+
+Still unmeasured: anything at real data volume, and a clean
+delete-to-sign-in wall clock — the first run's was dominated by a
+credential problem that is now a precondition below rather than a step.
+The steps themselves have now been walked; the timings have not been
+earned twice.
 
 ## Problem
 
@@ -69,9 +84,11 @@ Not needed, and worth saying so:
 
 - **`grp-gcp-<code>-platform-admin@`** — impersonates the identity that
   builds a plane. Nothing here impersonates anything.
-- **`grp-gcp-<code>-secrets-admin@`** — nothing writes a secret
+- **`grp-gcp-<code>-secrets-admin@`** — nothing here writes a secret
   version. The backup key already exists, and writing a second one to
-  that entry would strand every backup taken under the first.
+  that entry would strand every backup taken under the first. The
+  bootstrap admin entry is the one thing that must already hold a
+  version, which is a check before starting rather than a step.
 
 One observed gap rather than a granted capability: the day-to-day
 capabilities list the backups bucket but cannot read an object out of
@@ -87,12 +104,26 @@ Confirm the three things the rest depends on:
 gcloud auth application-default login
 just sop-fdb-list-backups <env> <label>
 kubectl --context <code>-<env>-<label> -n queenswood get pods
+gcloud secrets versions list sec-<code>-<env>-<label>-keycloak-admin \
+  --project <instance-project>
 ```
 
 The listing gives the current generation and the restorable span.
 `gcloud auth login` on its own does not refresh application-default
 credentials, and a `kubectl` call that asks to reauthenticate mid-way
 through this is worth avoiding.
+
+The last one is the difference between a rebuild that comes back
+serving and one that comes back with a realm nothing can administer.
+Cloud SQL survives this procedure, so Keycloak's database keeps the
+admin account it was created with, and an operator-generated credential
+is reborn with the cluster as something that account has never heard
+of. An instance taking its bootstrap admin from Secret Manager is
+unaffected — the same value comes back. One that has not adopted it
+yet needs `secrets-admin` and `just gcp-keycloak-admin-secret <env>
+<label>` **before** starting, not after, since the account has to be
+reachable to be changed to match. See
+[external-secrets](external-secrets.md).
 
 ### 1. Stop writing to it
 
@@ -144,26 +175,50 @@ Let the mutation log catch up, then name the moment:
 just sop-fdb-version-at <env> <label> <YYYY-MM-DDTHH:MM:SSZ>
 ```
 
-Record the **version** and the **generation** it belongs to. A version
-without its generation cannot be used: version numbers restart near
-zero on a rebuild, so they only mean anything inside the container that
-wrote them.
+It answers with both halves, read off the mutation log rather than
+computed:
 
-### 3. Set the restore, and open a new generation
+```
+generation: fdb/continuous/2026-08-20
+version:    <version>
+written:    2026-08-20T16:49:31Z
+next log:   2026-08-20T16:50:04Z
+```
+
+Record the **version** and the **generation** it belongs to — they are
+what step 3 pastes. A version without its generation cannot be used:
+version numbers restart near zero on a rebuild, so they only mean
+anything inside the container that wrote them.
+
+### 3. Turn the restore on, and open a new generation
 
 *Write access to the installations repository — no cloud capability.*
 
-In the instance's values, in the same merge:
+Four fields in the instance's values, in the same merge, taking the two
+recorded above:
 
-- `fdb.restore.backupName` — the generation just recorded
-- `fdb.restore.version` — the version just recorded
-- `fdb.backup.backupName` — a **new** generation, not the one being
-  restored from
+```yaml
+fdb:
+  backup:
+    enabled: true
+    # A NEW generation. Not the one being restored from.
+    backupName: fdb/continuous/2026-08-21
+  restore:
+    # On for the rebuild, off again at step 9.
+    enabled: true
+    backupName: fdb/continuous/2026-08-20
+    version: "<version>"
+```
 
-The third is the one that is easy to miss and expensive to get wrong.
-A rebuilt cluster numbers its versions from near zero, so if it writes
-into the container it read from, `fdbbackup describe` starts answering
-with the dead cluster's higher numbers.
+`restore.enabled` is what renders the Job at all — the target on its own
+does nothing, which is what lets the target stay behind afterwards as a
+record. Quote the version: it is a string, and YAML reads a bare one as
+a number.
+
+`backup.backupName` is the field that is easy to miss and expensive to
+get wrong. A rebuilt cluster numbers its versions from near zero, so if
+it writes into the container it read from, `fdbbackup describe` starts
+answering with the dead cluster's higher numbers.
 
 ### 4. Merge the change that forces the rebuild
 
@@ -265,18 +320,49 @@ was there before, and finally sign in through the console and confirm a
 party resolves — Keycloak was never rebuilt, so a user whose party is
 missing means the restore, not the realm.
 
-### 9. Record what happened
+### 9. Turn the restore off again
 
-This procedure exists partly to produce numbers nothing else can:
+*Write access to the installations repository — no cloud capability.*
 
-- **RTO** — wall clock from the delete to a working sign-in, which
-  [fdb-recovery](fdb-recovery.md) currently admits has never been
-  measured.
-- **That the key works.** Until a restore completes, the FoundationDB
-  backup key is an assumption. A wrong key lists in a bucket exactly
-  like a right one.
-- **Anything here that was wrong**, which is likely, since nobody has
-  run it.
+One field, once the verification above passes:
+
+```yaml
+fdb:
+  restore:
+    enabled: false
+    # Left as the record of where this cluster's data came from.
+    backupName: fdb/continuous/2026-08-20
+    version: "<version>"
+```
+
+Nothing breaks today if this is forgotten: the Job reads the
+destination first and exits without restoring where it already holds
+data, so a re-run is a no-op and the migrator simply waits on a Job that
+does nothing.
+
+It breaks at the *next* rebuild, which starts against an empty
+destination — and an `enabled` restore then quietly restores **this**
+generation and **this** version, rather than whichever one that rebuild
+chose. The reason it survives review is that everything looks right:
+the Job runs, the Job succeeds, and the data that comes back is real
+data, just from the wrong moment.
+
+Leave the target beneath it. It costs nothing, it is not live, and it
+is the only place the cluster records where its data came from.
+
+### 10. Record what happened
+
+This procedure produces numbers nothing else can, and the first run
+produced only some of them:
+
+- **RTO** — wall clock from the delete to a working sign-in. The first
+  run's is not usable, and a clean one is most of what a second run is
+  worth.
+- **What it costs at size.** Half an hour against 137KB says the path
+  works and nothing about a bank with records in it, so record the
+  dataset beside the duration or the number means nothing later.
+- **Anything here that is still wrong.** One run corrects a procedure's
+  shape rather than its details.
 
 ## Rules
 
@@ -291,6 +377,10 @@ This procedure exists partly to produce numbers nothing else can:
   the point taken is still current when the volumes go.
 - Verify with `fdbrestore status` and a key count, never with the
   restore Job's exit status.
+- Set `fdb.restore.enabled: false` once the restore is verified, leaving
+  the target beneath it. A restore left enabled is inert against a
+  destination that holds data and silently authoritative against the
+  next empty one.
 
 **MUST NOT:**
 

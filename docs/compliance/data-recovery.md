@@ -128,19 +128,25 @@ what this provision is about.
 
 **Required by** DORA 12(1), CIS 11.5, NIS2 21(2)(c), ISO/IEC 27031.
 
-**Not met.**
+**Partially met.**
 
-- **FoundationDB** — no restore has been performed in this
-  installation. Verification reaches as far as objects existing and, if
-  anyone runs it, metadata decrypting under the key; neither proves the
-  data comes back.
-- **Keycloak** — likewise. The hourly export began before anything had
-  read one back.
+- **FoundationDB** — one restore has been performed, during a planned
+  cluster rebuild of the test instance, following
+  [cluster-rebuild](../recipes/cluster-rebuild.md). It completed
+  against a fresh cluster with `ApplyVersionLag: 0`, and the data was
+  reachable through the bank afterwards. That converts the backup key
+  and the whole write path from assumption into evidence, on a dataset
+  of around 137KB — the mechanism is proven, its cost at size is not.
+- **Keycloak** — untested. The hourly export has never been read back,
+  and the one rebuild that could have exercised it did not need to:
+  Cloud SQL outlives the cluster, so the realms were never gone.
+- **Cadence** — none. A single run is not periodic testing, and nothing
+  schedules the next one.
 
 CIS 11.5 puts the cadence at least quarterly; DORA requires it
-periodically without fixing a number. This is the load-bearing gap:
-every other line here describes machinery that has been built and
-observed, and this is the reason none of it is yet evidence.
+periodically without fixing a number. What is still missing is the
+schedule, a Keycloak restore that has actually been run, and a figure
+for a dataset that resembles a bank's.
 
 ### Declared recovery objectives
 
@@ -153,8 +159,11 @@ on important business services.
 - **RPO** — [fdb-recovery](../recipes/fdb-recovery.md) states one per
   recovery scenario, but those are measurements of what the running
   configuration achieves rather than targets it is held to.
-- **RTO** — neither measured nor declared. No recovery has been timed,
-  because none has been performed.
+- **RTO** — undeclared, and measured only once: half an hour from a
+  recomposed cluster to data back, on a test instance holding around
+  137KB. Nothing is held to it, no scenario other than a planned
+  rebuild has been timed, and the figure a bank would plan against is
+  not this one.
 
 A measurement without a tolerance cannot fail.
 

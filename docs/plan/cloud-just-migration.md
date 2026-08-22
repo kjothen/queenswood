@@ -89,49 +89,48 @@ store existed — needed one Keycloak restart after the secret was
 stored. A rebuilt instance does not: the operator and the config chart
 sit in sync waves ahead of the bank's own Application.
 
-**A cluster rebuild has been done, and the instance is part-way through
-it.** FoundationDB was restored from backup for the first time —
-`Restored to version <version>`, with `ApplyVersionLag: 0` —
-which makes the backups evidence rather than belief. The cluster came
-back on Dataplane V2, confirmed by `anetd` running in `kube-system`.
+**A cluster rebuild has been done, and the instance is serving again.**
+FoundationDB was restored from backup for the first time —
+`Restored to version <version>`, with `ApplyVersionLag: 0` — which makes
+the backups evidence rather than belief. The cluster came back on
+Dataplane V2, confirmed by `anetd` running in `kube-system`.
 
-It is not serving. Cloud SQL survived the rebuild, so Keycloak's
-database still holds the admin account the *previous* cluster's operator
-generated, and the operator has since generated a different password.
-Keycloak honours a bootstrap admin only while the master realm is
-absent, so nothing can administer a realm it is otherwise serving fine.
-The realm import cannot get a token, bootstrap waits on the import, and
-every service waits on bootstrap.
+What it cost in between is the part worth carrying forward. Cloud SQL
+outlives a cluster, so Keycloak's database kept the admin account the
+*previous* cluster's operator generated while the operator generated a
+different password — and Keycloak honours a bootstrap admin only while
+the master realm is absent, so nothing could administer a realm it was
+otherwise serving perfectly well. The realm import could not get a
+token, bootstrap waited on the import, and every service waited on
+bootstrap.
 
-The decided way out is not to repair the credential but to make it
-durable and start the realm again beside a fresh FoundationDB — which is
-the only condition under which resetting the realm is safe, since fresh
-user ids orphan records written against the old ones. In order:
+The way out was the one
+[deployment](../recipes/deployment.md) prescribes where FoundationDB
+survives: reset the credential rather than the realm. `kc.sh
+bootstrap-admin user`, run in the Keycloak pod against the same
+database, added an admin whose password is the one now held in
+`sec-<code>-<env>-<label>-keycloak-admin`. Both realms and every user id
+survived untouched, so the FDB records that reference them still
+resolve — a Google sign-in that predates the rebuild still lands on its
+own party.
 
-The chart side is merged: the bootstrap admin now comes from a Secret
-Manager entry the composite declares, so a rebuild stops causing this.
-What remains is applying it to this instance.
+The schema reset the earlier draft of this plan called for was not done
+and should not be: it rebuilds the realm from committed JSON with fresh
+user ids, orphaning every record written against the old ones. It is
+safe only where FoundationDB is being rebuilt in the same act, which is
+not what happened.
 
-1. Write a version into `sec-<code>-<env>-<label>-keycloak-admin` with
-   `just gcp-keycloak-admin-secret <env> <label>`, which generates the
-   value and refuses an entry that already holds one. Two properties,
-   `username` and `password` — the `ExternalSecret` reads both and
-   materialises a `kubernetes.io/basic-auth` Secret.
-2. Set `keycloak.bootstrapAdmin.secretName` in the instance values, to
-   the name `queenswood-config` gives it.
-3. Set `fdb.restore.enabled: false`. Leave the target beneath it as the
-   record of where this cluster's data came from.
-4. Reset the Keycloak schema through the proxy, per
-   [deployment](../recipes/deployment.md): `instances: 0` first, or the
-   schema is in use.
+Standing behind that, so the next rebuild does not repeat it: the
+bootstrap admin comes from a Secret Manager entry the composite
+declares and `queenswood-config` materialises, written with `just
+gcp-keycloak-admin-secret <env> <label>`; the instance names that Secret
+in `keycloak.bootstrapAdmin.secretName`; and `fdb.restore.enabled` is
+back to `false` with its target left as the record of where this
+cluster's data came from.
 
-Steps 1 and 2 are `secretsAdmin` and a merge in the manifests
-repository; step 4 is the only one that destroys anything, and it is
-safe only because step 3 leaves FoundationDB to come up empty
-alongside it.
-
-Both stores then come up clean and consistent, and the next rebuild is
-what tests whether the credential fix worked.
+[cluster-rebuild](../recipes/cluster-rebuild.md) now carries the
+procedure as run, including the check that belongs before starting
+rather than the recovery that belonged after.
 
 ### What to do first, on a fresh context
 
