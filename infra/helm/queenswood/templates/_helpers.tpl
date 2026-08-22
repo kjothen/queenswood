@@ -98,7 +98,14 @@ it a CA, so the files are encrypted instead. See fdb-backup.yaml.
 {{- end -}}
 {{- $container := $r.backupName | default $b.backupName -}}
 {{- $params := printf "bucket=%s&region=%s&secure_connection=0" $b.bucket $b.region -}}
-{{- printf "blobstore://%s@%s:%v/%s?%s" $b.accessKeyId $b.endpoint $b.port $container $params -}}
+{{- /* The endpoint through the same helper the backup uses. Read
+       straight off the value, it is empty unless somebody set it --
+       the fallback to <release>-s3proxy lives in the helper -- so the
+       restore built blobstore://key@:80/, with no host at all. Never
+       caught because no restore has run: the Job finds a non-empty
+       destination, exits 0, and the URL is never dialled. */}}
+{{- $endpoint := include "queenswood.fdbBackupEndpoint" . -}}
+{{- printf "blobstore://%s@%s:%v/%s?%s" $b.accessKeyId $endpoint $b.port $container $params -}}
 {{- end -}}
 
 {{/*
