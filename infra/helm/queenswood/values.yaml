@@ -120,6 +120,14 @@ keycloak:
   # The volume is optional, so enabling the vault before the Secret
   # exists leaves Keycloak running with the expression unresolved rather
   # than wedging the pod on a missing mount.
+  # Name of a Secret carrying `username` and `password` for Keycloak's
+  # bootstrap admin, supplied rather than generated. Empty falls back to
+  # the operator's `<release>-keycloak-initial-admin`, which is reborn
+  # with the cluster while the database keeps the credential it was
+  # created with -- so a rebuild leaves a realm nothing can administer.
+  # queenswood-config materialises this one from Secret Manager.
+  bootstrapAdmin:
+    secretName: ""
   vault:
     enabled: false
     secretName: queenswood-keycloak-vault

@@ -1,0 +1,48 @@
+{{- if .Values.keycloak.bootstrapAdmin.enabled }}
+{{- /*
+  Keycloak's bootstrap admin, from Secret Manager rather than from the
+  operator.
+
+  The operator generates this credential and ties its lifetime to the
+  Keycloak resource. The database outlives that resource, and Keycloak
+  honours a bootstrap admin only while the master realm does not exist
+  -- so once the realm is in the database, no regenerated password can
+  ever reach it. A rebuilt cluster comes back serving the realm with a
+  credential nothing accepts: the realm import cannot obtain a token,
+  the bootstrap Job waits on the import, and every service waits on
+  bootstrap. One stranded credential reads as an instance that will not
+  start.
+
+  Sourced from the durable tier, the value the database was created
+  with is the value that comes back, and a rebuild changes neither.
+
+  Both keys from one entry, as `sec-<code>-c-github-app` does: the CRD
+  wants a Secret carrying `username` and `password`, and two entries
+  would be two things to keep in step.
+*/}}
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: keycloak-admin
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: {{ include "queenswood-config.instance" . | quote }}
+  target:
+    name: {{ .Values.keycloak.bootstrapAdmin.secretName | quote }}
+    template:
+      type: kubernetes.io/basic-auth
+  data:
+    - secretKey: username
+      remoteRef:
+        key: {{ printf "sec-%s-keycloak-admin" (include "queenswood-config.instance" .) | quote }}
+        property: username
+    - secretKey: password
+      remoteRef:
+        key: {{ printf "sec-%s-keycloak-admin" (include "queenswood-config.instance" .) | quote }}
+        property: password
+{{- end }}

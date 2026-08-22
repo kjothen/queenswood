@@ -89,6 +89,40 @@ store existed — needed one Keycloak restart after the secret was
 stored. A rebuilt instance does not: the operator and the config chart
 sit in sync waves ahead of the bank's own Application.
 
+**A cluster rebuild has been done, and the instance is part-way through
+it.** FoundationDB was restored from backup for the first time —
+`Restored to version <version>`, with `ApplyVersionLag: 0` —
+which makes the backups evidence rather than belief. The cluster came
+back on Dataplane V2, confirmed by `anetd` running in `kube-system`.
+
+It is not serving. Cloud SQL survived the rebuild, so Keycloak's
+database still holds the admin account the *previous* cluster's operator
+generated, and the operator has since generated a different password.
+Keycloak honours a bootstrap admin only while the master realm is
+absent, so nothing can administer a realm it is otherwise serving fine.
+The realm import cannot get a token, bootstrap waits on the import, and
+every service waits on bootstrap.
+
+The decided way out is not to repair the credential but to make it
+durable and start the realm again beside a fresh FoundationDB — which is
+the only condition under which resetting the realm is safe, since fresh
+user ids orphan records written against the old ones. In order:
+
+1. Merge [#516](https://github.com/repldriven/queenswood/pull/516) —
+   the bootstrap admin moves to a Secret Manager entry the composite
+   declares, so a rebuild stops causing this at all.
+2. Write a version into `sec-<code>-<env>-<label>-keycloak-admin` with
+   `just gcp-secret-version`, and set
+   `keycloak.bootstrapAdmin.secretName` in the instance values.
+3. Set `fdb.restore.enabled: false` — the flag added today, doing what
+   it was added for. Leave the target beneath it as the record.
+4. Reset the Keycloak schema through the proxy, per
+   [deployment](../recipes/deployment.md): `instances: 0` first, or the
+   schema is in use.
+
+Both stores then come up clean and consistent, and the next rebuild is
+what tests whether the credential fix worked.
+
 ### What to do first, on a fresh context
 
 In this order, because each one tells you whether the next is worth

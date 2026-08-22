@@ -1148,6 +1148,63 @@ spec:
                 toFieldPath: metadata.annotations[crossplane.io/external-name]
               - fromFieldPath: spec.projectId
                 toFieldPath: spec.forProvider.project
+          # The container for Keycloak's bootstrap admin, and the same
+          # shape as the OAuth one above for the same reason: declared
+          # here, written by a person, never in git.
+          #
+          # It exists because the operator generating this credential
+          # ties its lifetime to the Keycloak resource, where the
+          # database outlives it. Keycloak honours a bootstrap admin
+          # only while the master realm does not exist, so a rebuilt
+          # cluster regenerates a password the database will never
+          # accept -- the realm import cannot obtain a token, bootstrap
+          # waits on the import, and every service waits on bootstrap.
+          # Sourcing it from here instead means the value the database
+          # was created with is the value that comes back.
+          #
+          # No Delete: losing it is losing the ability to administer a
+          # realm that is otherwise serving perfectly well.
+          - name: instance-keycloak-admin-secret
+            base:
+              apiVersion: secretmanager.gcp.m.upbound.io/v1beta1
+              kind: Secret
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  replication:
+                    auto: {}
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sec-%s-%s-%s-keycloak-admin"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sec-%s-%s-%s-keycloak-admin"
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
           # Certificate Manager, for the certificates the instance's
           # ingress terminates on. Enabled in this project rather than
           # only in the plane's: GCP checks the project the resource
