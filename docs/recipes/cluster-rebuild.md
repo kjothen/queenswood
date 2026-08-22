@@ -15,10 +15,9 @@ this installation's first RTO measurement, and its first restore.
 Some fields identify the composed `Cluster` rather than configure it —
 `zone`, `region`, `datapathProvider`, and anything else the provider
 treats as ForceNew. Changing one cannot be applied in place, and the
-provider refuses rather than performing it: the composite goes on
-reporting `Synced` and `Ready` while the cluster carries on unchanged,
-and the refusal appears only in `LastAsyncOperation` on the managed
-resource.
+provider refuses rather than performing it: the cluster carries on
+unchanged and the refusal lands in `LastAsyncOperation` on the managed
+resource, so `Synced` alone does not tell you it happened.
 
 So the change needs the cluster deleted and recomposed, which destroys
 the volumes under it and every record FoundationDB holds. Everything
