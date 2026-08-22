@@ -108,17 +108,26 @@ durable and start the realm again beside a fresh FoundationDB — which is
 the only condition under which resetting the realm is safe, since fresh
 user ids orphan records written against the old ones. In order:
 
-1. Merge [#516](https://github.com/repldriven/queenswood/pull/516) —
-   the bootstrap admin moves to a Secret Manager entry the composite
-   declares, so a rebuild stops causing this at all.
-2. Write a version into `sec-<code>-<env>-<label>-keycloak-admin` with
-   `just gcp-secret-version`, and set
-   `keycloak.bootstrapAdmin.secretName` in the instance values.
-3. Set `fdb.restore.enabled: false` — the flag added today, doing what
-   it was added for. Leave the target beneath it as the record.
+The chart side is merged: the bootstrap admin now comes from a Secret
+Manager entry the composite declares, so a rebuild stops causing this.
+What remains is applying it to this instance.
+
+1. Write a version into `sec-<code>-<env>-<label>-keycloak-admin` with
+   `just gcp-secret-version`. Two properties, `username` and
+   `password` — the `ExternalSecret` reads both and materialises a
+   `kubernetes.io/basic-auth` Secret.
+2. Set `keycloak.bootstrapAdmin.secretName` in the instance values, to
+   the name `queenswood-config` gives it.
+3. Set `fdb.restore.enabled: false`. Leave the target beneath it as the
+   record of where this cluster's data came from.
 4. Reset the Keycloak schema through the proxy, per
    [deployment](../recipes/deployment.md): `instances: 0` first, or the
    schema is in use.
+
+Steps 1 and 2 are `secretsAdmin` and a merge in the manifests
+repository; step 4 is the only one that destroys anything, and it is
+safe only because step 3 leaves FoundationDB to come up empty
+alongside it.
 
 Both stores then come up clean and consistent, and the next rebuild is
 what tests whether the credential fix worked.
