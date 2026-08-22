@@ -203,10 +203,20 @@ pool exists; when the pool has to be created again the CIDR is sent as
 a create parameter, and asking for a pod range without asking to create
 one is refused.
 
-Composing `networkConfig.podRange` fixes it for every rebuild after the
-one that discovers it, because a field the composition owns is a field
-late-initialisation cannot claim. On a cluster whose pool predates
-that, drop the field by hand:
+Composing `networkConfig.podRange` makes the range explicit and
+correct, and does **not** stop this happening again. Late-init fills
+any field that is unset, and the composition sets only `podRange` — so
+once the pool exists the provider writes `podIpv4CidrBlock` back beside
+it, and the next rebuild is refused the same way. Different fields,
+different managers; owning one does not deny the other.
+
+Stopping it for good means dropping `LateInitialize` from the pool's
+`managementPolicies`, so the provider never writes observed values into
+the spec. That is a wider change than it looks, since late-init also
+fills provider-assigned defaults, and it can only be tested by another
+rebuild.
+
+Until then this step is required every time. Drop the field by hand:
 
 ```bash
 kubectl --context <code>-mgmt -n crossplane-system \
