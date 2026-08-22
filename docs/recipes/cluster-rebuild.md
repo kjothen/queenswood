@@ -94,13 +94,30 @@ The listing gives the current generation and the restorable span.
 credentials, and a `kubectl` call that asks to reauthenticate mid-way
 through this is worth avoiding.
 
-### 1. Quiesce writes
+### 1. Stop writing to it
 
-*No cloud capability — this is the bank's own API.*
+*No cloud capability — this is the bank's own workloads.*
 
-Stop anything that writes to FoundationDB. The restore point is only
-as clean as the moment nothing is writing, and this is the one recovery
-scenario where that is available.
+Not for consistency. A continuous backup is transactionally consistent
+at any version, which is what the mutation log is for, so the restore
+point does not need a quiet cluster to be sound. Stopping writes is an
+RPO measure: it makes the version taken in the next step still current
+when the volumes go, instead of losing whatever arrived between the
+two.
+
+Three tiers, and the first is usually enough:
+
+- **Stop using it.** On an instance with one operator and no
+  traffic this is the whole of it.
+- **Scale `exclusive-dispatchers-service` to zero** if zero is wanted
+  literally. It is the one thing that writes without anybody asking:
+  it owns every changelog cursor and the Quartz scheduler, so anything
+  scheduled fires whether or not the console is open. Changelog relays
+  go quiet on their own, since they only checkpoint when they have
+  events to process.
+- **A real quiesce** — refusing writes at the API while staying up —
+  does not exist. An instance with users would need one, and that is
+  the gap this step papers over rather than fills.
 
 ### 2. Take the restore point
 
@@ -213,8 +230,9 @@ This procedure exists partly to produce numbers nothing else can:
   which container to read.
 - Point `fdb.backup.backupName` at a new generation before the rebuilt
   cluster starts writing.
-- Quiesce writes before taking the restore point, since this is the one
-  scenario where the point is chosen rather than inherited.
+- Stop writes before taking the restore point, and delete promptly
+  afterwards. Not for consistency — any version is consistent — but so
+  the point taken is still current when the volumes go.
 - Verify with `fdbrestore status` and a key count, never with the
   restore Job's exit status.
 
