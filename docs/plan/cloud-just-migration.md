@@ -173,10 +173,28 @@ Two habits this week paid for, both cheap:
   anything is a month away and the cadence can be chosen from what it
   costs.
 - **CMEK on the backups bucket.** The realm export carries user
-  credential records and client secrets as plain JSON, where the bank's
-  own data beside it is encrypted. One key covers both kinds of object,
-  makes rotation transparent, and answers "can we revoke access to
-  backups" — which nothing does today.
+  credential records as plain JSON, where the bank's own data beside it
+  is encrypted. Keycloak cannot close this itself: `kc.sh export` takes
+  a directory, a realm and a user strategy, and has no encryption
+  option at all, so the only places to add one are the bucket or the
+  upload step.
+
+  The bucket is the right one, and the reason is an asymmetry with FDB.
+  FoundationDB encrypts its backup files because its blobstore hop to
+  `s3proxy` is plain HTTP — the client has no usable trust store and the
+  operator cannot pass it a CA. The realm export has no such hop: the
+  upload container runs `gcloud storage cp` straight to GCS over TLS, so
+  at rest is its only exposure, which is what CMEK covers. The
+  alternatives — GCS CSEK, or encrypting in the container before upload
+  — both hand back an unrotatable key that strands what was written
+  under it, which is the problem the FDB key already has.
+
+  CMEK is rotatable and revocable where that key is neither, and it
+  answers "can we revoke access to backups", which nothing does today.
+  It does not make the FDB key rotatable: those files stay encrypted
+  twice, and bucket read access alone still yields nothing, which is
+  the property CMEK does not provide on its own — it is transparent to
+  any principal holding `storage.objects.get`.
 - **Argo holds `roles/container.admin` on every instance project**, in
   [what is left](#what-is-left) with the narrower shape and its
   trigger.
