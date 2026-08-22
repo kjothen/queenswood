@@ -42,6 +42,43 @@ so Cloud SQL goes, so Keycloak must be recovered alongside FoundationDB
 to points chosen together. Rebuilding the *installation* takes the
 recovery project and the backups with it. Neither is written down.
 
+### Who you need to be
+
+Assumed throughout, and the only two groups anybody stands in day to
+day:
+
+- **`grp-gcp-<code>-platform-viewer@`** — reads the installation.
+  `roles/browser`, `compute.viewer`, `container.viewer`,
+  `iam.serviceAccountViewer`, `logging.viewer` and `monitoring.viewer`
+  at the folder, plus a project custom role carrying
+  `container.pods.getLogs` — which `container.viewer` lacks and only
+  `container.developer` otherwise provides, along with exec and every
+  write.
+- **`grp-gcp-security-reviewer@`** — reads IAM policy across the
+  organisation and changes nothing. Organisation-scoped, so no
+  installation code in the name.
+
+Joined for one step and left:
+
+- **`grp-gcp-<code>-cluster-admin@`** — `roles/container.admin` at the
+  folder. Needed twice, and only twice: deleting the managed cluster,
+  and `kubectl exec` to verify the restore. `container.viewer` carries
+  neither delete nor exec, which is the point of it.
+
+Not needed, and worth saying so:
+
+- **`grp-gcp-<code>-platform-admin@`** — impersonates the identity that
+  builds a plane. Nothing here impersonates anything.
+- **`grp-gcp-<code>-secrets-admin@`** — nothing writes a secret
+  version. The backup key already exists, and writing a second one to
+  that entry would strand every backup taken under the first.
+
+One observed gap rather than a granted capability: the day-to-day
+capabilities list the backups bucket but cannot read an object out of
+it — `storage.objects.get` is denied. That is enough for every step
+here, since nothing needs an object's contents, but it is why
+`sop-fdb-describe` prints a command rather than running one.
+
 ### Before starting
 
 Confirm the three things the rest depends on:
@@ -59,11 +96,15 @@ through this is worth avoiding.
 
 ### 1. Quiesce writes
 
+*No cloud capability — this is the bank's own API.*
+
 Stop anything that writes to FoundationDB. The restore point is only
 as clean as the moment nothing is writing, and this is the one recovery
 scenario where that is available.
 
 ### 2. Take the restore point
+
+*`platform-viewer`.*
 
 Let the mutation log catch up, then name the moment:
 
@@ -77,6 +118,8 @@ zero on a rebuild, so they only mean anything inside the container that
 wrote them.
 
 ### 3. Set the restore, and open a new generation
+
+*Write access to the installations repository — no cloud capability.*
 
 In the instance's values, in the same merge:
 
@@ -92,11 +135,15 @@ with the dead cluster's higher numbers.
 
 ### 4. Merge the change that forces the rebuild
 
+*Write access to this repository — no cloud capability.*
+
 The manifest or values edit that started this — the new `zone`,
 `region` or `datapathProvider`. Merging it changes nothing yet, by
 design.
 
 ### 5. Delete the managed cluster
+
+*`cluster-admin`, joined for this step.*
 
 Break-glass, and the point of no return:
 
@@ -111,6 +158,8 @@ cluster.
 
 ### 6. Wait for Argo to find the new cluster
 
+*`platform-viewer`.*
+
 The composite writes Argo's cluster registration from the cluster's own
 reported endpoint and certificate authority, so there is a window where
 the registration names an endpoint that no longer answers. It corrects
@@ -120,6 +169,8 @@ rather than a fault.
 
 ### 7. Let the bring-up restore
 
+*Nothing. Argo and the chart do this unattended.*
+
 Nothing further is needed. The restore Job renders because
 `fdb.restore` is set, the migrator's `wait-for-restore` initContainer
 gates on it, bootstrap gates on the migrator, and every service gates
@@ -127,6 +178,8 @@ on bootstrap. The destination is empty, so the Job restores rather than
 taking its do-nothing branch.
 
 ### 8. Verify the restore, not the Job
+
+*`cluster-admin` again — `exec` is not a viewer capability.*
 
 ```bash
 kubectl --context <code>-<env>-<label> -n queenswood exec -it \
