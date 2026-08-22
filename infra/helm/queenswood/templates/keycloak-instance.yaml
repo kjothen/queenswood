@@ -21,7 +21,7 @@ spec:
   {{- with .Values.keycloak.bootstrapAdmin.secretName }}
   bootstrapAdmin:
     user:
-      secret: {{ . | quote }}
+      secret: {{ include "queenswood.keycloakBootstrapAdminSecret" $ | quote }}
   {{- end }}
   instances: {{ .Values.keycloak.instances }}
   image: {{ .Values.keycloak.image | quote }}

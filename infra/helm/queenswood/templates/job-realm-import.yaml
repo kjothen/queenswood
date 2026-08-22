@@ -466,7 +466,7 @@ spec:
                    cluster while the database keeps what it was created
                    with, so on a rebuild only the supplied one still
                    opens the realm. */}}
-            {{- $adminSecret := .Values.keycloak.bootstrapAdmin.secretName | default (printf "%s-keycloak-initial-admin" .Release.Name) }}
+            {{- $adminSecret := include "queenswood.keycloakBootstrapAdminSecret" . }}
             - name: ADMIN_USER
               valueFrom:
                 secretKeyRef:

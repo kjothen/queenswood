@@ -293,14 +293,18 @@ http://localhost:8081/keycloak
 
 {{- /*
 The Secret holding admin REST credentials for the bootstrap Job's
-signing-key push. The operator mints one for its own instance; the dev
-instance has none and the dev credentials are used instead.
+signing-key push. In operator mode that is the bootstrap admin, which
+is the supplied one where there is one: the operator mints a Secret of
+its own only while nothing supplies `spec.bootstrapAdmin`, so naming
+its generated one unconditionally leaves this Job with a secretKeyRef
+to an object that does not exist. The dev instance has neither, and the
+dev credentials are used instead.
 */ -}}
 {{- define "queenswood.keycloakAdminSecret" -}}
 {{- if .Values.keycloak.adminSecret.name -}}
 {{ .Values.keycloak.adminSecret.name }}
 {{- else if eq (include "queenswood.keycloakMode" .) "operator" -}}
-{{ .Release.Name }}-keycloak-initial-admin
+{{ include "queenswood.keycloakBootstrapAdminSecret" . }}
 {{- end -}}
 {{- end -}}
 
@@ -391,6 +395,28 @@ service Deployments that mount it.
 */ -}}
 {{- define "queenswood.keycloakAdminKeySecret" -}}
 {{ .Release.Name }}-keycloak-admin
+{{- end -}}
+
+{{- /*
+The Secret carrying Keycloak's bootstrap admin: the one supplied where
+`keycloak.bootstrapAdmin.secretName` names it, and the operator's
+generated one otherwise. Two templates reach it -- the `Keycloak`
+resource that names it and the realm-import Job that reads it.
+
+It refuses the Secret above, whose name a bootstrap admin's is one
+character from. That one holds the `queenswood-admin` client's signing
+pair, declared without `data` and left to the bootstrap Job under
+server-side apply, so an ExternalSecret pointed at the same name either
+fails on the immutable type or takes the object over and replaces what
+bootstrap wrote -- a realm that starts and a bank that cannot sign a
+client assertion.
+*/ -}}
+{{- define "queenswood.keycloakBootstrapAdminSecret" -}}
+{{- $supplied := .Values.keycloak.bootstrapAdmin.secretName -}}
+{{- if eq $supplied (include "queenswood.keycloakAdminKeySecret" .) -}}
+{{- fail (printf "keycloak.bootstrapAdmin.secretName is %s, which is where the queenswood-admin client's signing pair lives. Name the bootstrap admin's Secret something else." $supplied) -}}
+{{- end -}}
+{{- $supplied | default (printf "%s-keycloak-initial-admin" .Release.Name) -}}
 {{- end -}}
 
 {{- /*

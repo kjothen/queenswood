@@ -113,9 +113,10 @@ Manager entry the composite declares, so a rebuild stops causing this.
 What remains is applying it to this instance.
 
 1. Write a version into `sec-<code>-<env>-<label>-keycloak-admin` with
-   `just gcp-secret-version`. Two properties, `username` and
-   `password` — the `ExternalSecret` reads both and materialises a
-   `kubernetes.io/basic-auth` Secret.
+   `just gcp-keycloak-admin-secret <env> <label>`, which generates the
+   value and refuses an entry that already holds one. Two properties,
+   `username` and `password` — the `ExternalSecret` reads both and
+   materialises a `kubernetes.io/basic-auth` Secret.
 2. Set `keycloak.bootstrapAdmin.secretName` in the instance values, to
    the name `queenswood-config` gives it.
 3. Set `fdb.restore.enabled: false`. Leave the target beneath it as the
