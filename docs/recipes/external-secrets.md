@@ -122,6 +122,31 @@ expects — `<realm>_<key>` — so the realm's committed
 `${vault.google-client-secret}` resolves. Rotatable. See
 [google-sign-in](google-sign-in.md).
 
+**`sec-<code>-<env>-<label>-keycloak-admin`**, on an instance. Two
+properties in one entry — `username` and `password` — materialised as
+the `kubernetes.io/basic-auth` Secret the `Keycloak` resource names in
+`spec.bootstrapAdmin.user.secret` and the realm-import Job reads. The
+operator generates this credential where nothing supplies one, and ties
+its lifetime to the `Keycloak` resource; the database outlives that, and
+Keycloak honours a bootstrap admin only while the master realm is
+absent. So a rebuilt cluster comes back serving the realm under a
+password nothing accepts, and one stranded credential reads as an
+instance that will not start — the import cannot obtain a token,
+bootstrap waits on the import, and every service waits on bootstrap.
+Sourcing it here is what makes the value the database was created with
+the value that comes back.
+
+Changing it is not a matter of adding a version, for that same reason:
+a later one reaches the running realm not at all. It goes in through
+`just gcp-keycloak-admin-secret <env> <label>`, which generates the
+value — nothing reads a version back out of Secret Manager, so whoever
+needs the admin console reads the Secret on the cluster — and refuses an
+entry that already holds one, naming the two ways out: reset the account
+in Keycloak to match, or reset the realm beside a fresh FoundationDB.
+Nothing reads the entry at all until
+`keycloak.bootstrapAdmin.secretName` names its Secret in the instance's
+values; empty leaves the chart on the operator's generated one.
+
 **`sec-<code>-<env>-<label>-fdb-backup-key`**, one per instance, and
 the not-rotatable case: an existing backup is readable only under the
 key it was written with, so losing the entry loses every backup taken

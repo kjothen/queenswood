@@ -1340,6 +1340,68 @@ gcp-fdb-backup-key env label supersede="":
         >/dev/null
     echo ">>> $SECRET now holds a key. It is the only copy, deliberately."
 
+# Generate the bootstrap admin an instance's Keycloak database is created
+# with, and put it in that instance's entry. Once, per database.
+gcp-keycloak-admin-secret env label username="admin" supersede="":
+    #!/usr/bin/env zsh
+    set -e
+    # Its own recipe rather than a value typed into gcp-secret-version,
+    # because the payload is two properties in one entry -- `username`
+    # and `password`, read by name, as sec-<code>-c-github-app is. The
+    # Keycloak CRD wants a kubernetes.io/basic-auth Secret carrying
+    # both, and two entries would be two things to keep in step.
+    #
+    # Generated rather than typed: nothing reads a version back out of
+    # Secret Manager -- secretsAdmin carries no versions.access,
+    # deliberately -- so a value somebody chose is a value they keep
+    # somewhere else. Whoever needs to sign in to the admin console
+    # reads it from the Secret external-secrets writes on the cluster.
+    #
+    # Alphanumeric, which costs nothing at this length and spares every
+    # consumer a quoting question: the realm-import Job urlencodes it,
+    # and the next thing to read it might not.
+    SECRET="sec-{{ CODE }}-{{ env }}-{{ label }}-keycloak-admin"
+    PROJECT=$(just _gcp-instance-project {{ env }} {{ label }} || true)
+
+    # Refused rather than versioned. Keycloak honours a bootstrap admin
+    # only while the master realm is absent, so the database keeps the
+    # account it was created with, and a later version reaches the
+    # running realm not at all -- it materialises a credential nothing
+    # accepts, which is the failure this entry exists to prevent: a
+    # realm serving perfectly well that nothing can administer.
+    #
+    # supersede=yes is for the two cases that are not that -- an entry
+    # written before any database existed, and an account you are about
+    # to change to match. For the second the order is: write, let
+    # external-secrets sync, read the Secret, then set that password on
+    # the account. There is nothing to type, because the value is
+    # generated here.
+    if [[ -n "$PROJECT" ]] \
+       && VERSIONS=$(gcloud secrets versions list "$SECRET" --project="$PROJECT" \
+                       --filter="state=ENABLED" --format='value(name)' 2>/dev/null) \
+       && [[ -n "$VERSIONS" ]]; then
+      if [[ "{{ supersede }}" != "yes" ]]; then
+        echo "$SECRET already holds a credential, and a later version does" >&2
+        echo "not change the account the database was created with. Reset" >&2
+        echo "that account in Keycloak to match, or reset the realm beside" >&2
+        echo "a fresh FoundationDB -- then say so:" >&2
+        echo "  just gcp-keycloak-admin-secret {{ env }} {{ label }} {{ username }} yes" >&2
+        exit 1
+      fi
+      echo ">>> superseding the credential in $SECRET, on your word that the" >&2
+      echo ">>> account in the database is being changed to match" >&2
+    fi
+
+    # Thirty-two alphanumerics out of forty-eight random bytes, so the
+    # strip cannot run its source dry.
+    PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)
+    jq -n --arg u "{{ username }}" --arg p "$PASSWORD" \
+      '{username: $u, password: $p}' \
+      | just gcp-secret-version "$SECRET" "$PROJECT"
+    echo ">>> $SECRET now holds a bootstrap admin. Nothing reads it until"
+    echo ">>> keycloak.bootstrapAdmin.secretName in the instance's values"
+    echo ">>> names the Secret the ExternalSecret writes."
+
 # Add a version to a Secret Manager entry, reading the value off stdin.
 gcp-secret-version secret project="" file="":
     #!/usr/bin/env zsh

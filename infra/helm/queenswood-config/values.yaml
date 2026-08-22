@@ -36,9 +36,17 @@ keycloak:
   # credential outlives the cluster. The name has to match what the
   # queenswood chart puts in `spec.bootstrapAdmin.user.secret` and what
   # the realm-import Job reads.
+  #
+  # Not `queenswood-keycloak-admin`, which is a different credential
+  # entirely: the signing pair for the `queenswood-admin` client, an
+  # Opaque Secret the queenswood chart declares and its bootstrap Job
+  # fills. Pointed at that one, this materialises nothing -- a Secret's
+  # type is immutable, so it fails as `could not update secret` -- and
+  # would replace the pair rather than fail if the types ever agreed.
+  # The queenswood chart refuses the collision outright.
   bootstrapAdmin:
     enabled: true
-    secretName: queenswood-keycloak-admin
+    secretName: queenswood-keycloak-bootstrap-admin
 
 fdb:
   backup:

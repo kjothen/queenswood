@@ -125,7 +125,10 @@ keycloak:
   # the operator's `<release>-keycloak-initial-admin`, which is reborn
   # with the cluster while the database keeps the credential it was
   # created with -- so a rebuild leaves a realm nothing can administer.
-  # queenswood-config materialises this one from Secret Manager.
+  # queenswood-config materialises this one from Secret Manager, as
+  # `<release>-keycloak-bootstrap-admin`. Not `<release>-keycloak-admin`,
+  # which holds the queenswood-admin client's signing pair -- the chart
+  # refuses that name rather than let one Secret carry two credentials.
   bootstrapAdmin:
     secretName: ""
   vault:
