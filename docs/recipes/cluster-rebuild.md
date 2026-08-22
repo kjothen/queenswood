@@ -188,6 +188,47 @@ Crossplane recomposes it from the composite. Expect the node pool to go
 with it and be recomposed too, since a node pool cannot outlive its
 cluster.
 
+### 5b. Expect the node pool's first create to fail
+
+*`cluster-admin`.*
+
+`Can only set pod_ipv4_cidr_block if create_pod_range is true`, on the
+`NodePool`, repeating every reconcile while the cluster sits there with
+no nodes.
+
+Late-initialisation is the cause. Where the composition does not own
+`networkConfig`, upjet observes the live pool and writes `podRange` and
+`podIpv4CidrBlock` into the spec. That is only a description while the
+pool exists; when the pool has to be created again the CIDR is sent as
+a create parameter, and asking for a pod range without asking to create
+one is refused.
+
+Composing `networkConfig.podRange` makes the range explicit and
+correct, and does **not** stop this happening again. Late-init fills
+any field that is unset, and the composition sets only `podRange` — so
+once the pool exists the provider writes `podIpv4CidrBlock` back beside
+it, and the next rebuild is refused the same way. Different fields,
+different managers; owning one does not deny the other.
+
+Stopping it for good means dropping `LateInitialize` from the pool's
+`managementPolicies`, so the provider never writes observed values into
+the spec. That is a wider change than it looks, since late-init also
+fills provider-assigned defaults, and it can only be tested by another
+rebuild.
+
+Until then this step is required every time. Drop the field by hand:
+
+```bash
+kubectl --context <code>-mgmt -n crossplane-system \
+  patch nodepool.container.gcp.m.upbound.io <pool> \
+  --type=json -p='[{"op":"remove",
+       "path":"/spec/forProvider/networkConfig/podIpv4CidrBlock"}]'
+```
+
+The same shape is worth suspecting for anything else late-init owns: a
+value that reads correctly against a resource that exists can still be
+one nothing may ask for at create.
+
 ### 6. Wait for Argo to find the new cluster
 
 *`platform-viewer`.*
