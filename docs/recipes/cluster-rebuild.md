@@ -105,19 +105,34 @@ RPO measure: it makes the version taken in the next step still current
 when the volumes go, instead of losing whatever arrived between the
 two.
 
-Three tiers, and the first is usually enough:
+Five deployments write, and all five have to stop:
 
-- **Stop using it.** On an instance with one operator and no
-  traffic this is the whole of it.
-- **Scale `exclusive-dispatchers-service` to zero** if zero is wanted
-  literally. It is the one thing that writes without anybody asking:
-  it owns every changelog cursor and the Quartz scheduler, so anything
-  scheduled fires whether or not the console is open. Changelog relays
-  go quiet on their own, since they only checkpoint when they have
-  events to process.
-- **A real quiesce** — refusing writes at the API while staying up —
-  does not exist. An instance with users would need one, and that is
-  the gap this step papers over rather than fills.
+- `api-service` — synchronously, for every write that has not earned
+  command status
+- `financial-processors-service` and `operational-processors-service` —
+  consuming commands off the bus
+- `external-adapters-service` — a provider's webhook arrives whether or
+  not anybody is using the bank
+- `exclusive-dispatchers-service` — the one that writes with nobody
+  asking, owning every changelog cursor and the Quartz scheduler, so
+  anything scheduled fires regardless
+
+The console is not among them; it proxies to the API and writes
+nothing itself. Changelog relays go quiet on their own, having no
+events to checkpoint.
+
+Scale those five to zero and leave FoundationDB, the backup agents and
+s3proxy running, so the log can ship what was last written. There is no
+command for this. `state: down` is **not** it: node pool to zero takes
+FoundationDB and the backup agents down with the writers, so whatever
+was in flight never ships and the restorable span ends earlier than it
+needed to.
+
+On an instance with one operator and no traffic, not using it is the
+whole of it, and none of the above is necessary. What is missing for an
+instance with users is a way to refuse writes at the edge while the
+data tier stays up long enough to flush — the deployments are the
+mechanism, and nothing wraps them.
 
 ### 2. Take the restore point
 
