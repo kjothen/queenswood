@@ -8,7 +8,8 @@ The instance backs itself up continuously and nothing has ever been
 restored from it.
 
 The scenarios are the ordinary ones — initial provisioning, stop and
-start, planned migration, unplanned failover, logical corruption — and
+start, planned cluster rebuild, unplanned failover, logical
+corruption — and
 they behave the way they do on any cloud database. What is particular
 here is which of them this installation can actually serve today, and
 that `fdb.restore` records where a cluster's data should come from
@@ -94,7 +95,7 @@ not a restore scenario.
 | ------------- | -------------- | ------------ | ------------ |
 | none          | provisioning   | normal ops   | the incident |
 | latest        | DR failover    | no effect    | no effect    |
-| specific      | PITR migration | no effect    | no effect    |
+| specific      | PITR rebuild   | no effect    | no effect    |
 
 Only the empty column acts. Everything in the other two completes
 successfully and changes nothing.
@@ -117,23 +118,51 @@ re-applying the same values resolves to a Job that already completed.
 
 **RPO:** zero, no data is lost. **RTO:** the time to schedule pods.
 
-### Planned migration to another zone or region — specific × new
+### Planned cluster rebuild — specific × new
 
-Moving `zone` or `region` in the instance manifest **rebuilds the
-cluster**, and for a region the subnet with it. The cluster is
-deliberately zonal — a regional one replicates the node count into
-every zone it spans, which an environment of this tier does not buy —
-so there is no live migration to arrange. The move destroys the data
-tier, and a restore is how data arrives at the far end.
+Any change to a field that identifies the composed `Cluster` rebuilds
+it: `zone`, `region` — the subnet with it — `datapathProvider`, and
+anything else the provider treats as ForceNew. The trigger varies and
+the event does not, so read this section by what is being rebuilt
+rather than by what prompted it.
+
+It is a rebuild in place rather than a migration, and it rebuilds the
+cluster rather than the instance. The instance is not replaced: same
+project, same name, same address, same DNS records, same database. Only
+the cluster and the volumes under it go. There is no second instance at
+any point, so there is nothing to cut over to and no second name to
+invent.
+
+Two larger rebuilds exist and are not this. Rebuilding the *instance*
+destroys its project, so the database goes with the cluster and
+Keycloak has to be recovered alongside FoundationDB, to points chosen
+together. Rebuilding the *installation* takes the recovery project too,
+and with it the backups being restored from. Neither is written down.
+
+That is also why there is no way back. This is the in-place shape, and
+it commits at the moment the volumes go.
 
 Because it is planned, the restore point is chosen rather than
 inherited. Quiesce writes, let the mutation log catch up, take the
-version with `just sop-fdb-version-at <env> <label> <time>`, then move
-and restore to it.
+version with `just sop-fdb-version-at <env> <label> <time>`, then
+rebuild and restore to it.
+
+One trap belongs to the trigger rather than the recovery: a ForceNew
+change is refused rather than performed, so editing the field alone
+leaves the composite reporting `Synced` while the cluster carries on
+unchanged, and the refusal appears only in `LastAsyncOperation`. The
+managed resource has to be deleted for the rebuild to happen at all.
 
 **RPO:** zero if writes stop before the version is taken; otherwise
 everything after it. **RTO:** a full rebuild plus the restore, which is
 hours rather than minutes and has never been measured here.
+
+Restoring *beside* the instance instead would need a second label, and
+every per-instance name follows it — including the backups bucket and
+the backup key, which is one per instance and granted on that entry
+alone. A twin would hold a key that cannot read the original's backups,
+and nothing composes the grant that would fix it. That is a larger part
+of why the side-by-side shape is unbuilt than the cutover is.
 
 ### Unplanned failover — latest × new
 
@@ -312,7 +341,8 @@ waits on.
   recovering. `fdb.restore.backupName` is the source,
   `fdb.backup.backupName` is the destination, and after a recovery they
   differ.
-- Quiesce writes before taking a restore point for a planned migration,
+- Quiesce writes before taking a restore point for a planned cluster
+  rebuild,
   and take it with `sop-fdb-version-at` rather than modelling one.
 - Read RPO off the restorable window rather than off
   `snapshotPeriodSeconds`. The mutation log fills between full copies,
