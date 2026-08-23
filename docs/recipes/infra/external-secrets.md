@@ -81,7 +81,7 @@ file you cannot prove is gone is worse than one you know is there.
 **Not `pass`, or any other local store.** That is a second durable copy
 of the credential, on one machine, under one key, with no audit trail —
 which is what
-[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+[ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
 named as the previous generation's failure. Two authorities also means
 two places to rotate, and one of them will be forgotten.
 
@@ -281,6 +281,6 @@ does, needs a restart after that.
   and why one half alone reports nothing.
 - [cloud-naming](cloud-naming.md) — what an entry is called, and what
   the code, environment and label in its name are.
-- [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+- [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — Secret Manager in the management project, and the one-machine store
   it replaces.

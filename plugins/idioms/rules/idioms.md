@@ -17,7 +17,7 @@ rejection (`:bank/invalid-status`), plus the storage failures that mean
 retry (`:fdb/contention`, `:fdb/timeout`), with the call site moving to
 the payload as `:operation`. A genuinely unrecoverable `throw` is rare
 and carries `;; nosemgrep: no-raw-throw` on the line above.
-See [error-handling](../../../docs/recipes/error-handling.md),
+See [error-handling](../../../docs/recipes/code/error-handling.md),
 [ADR-0005](../../../docs/adr/0005-error-handling-with-anomalies.md).
 
 ## IDs and timestamps come from `utility`
@@ -26,14 +26,14 @@ See [error-handling](../../../docs/recipes/error-handling.md),
 `UUID/randomUUID`, `Instant/now`, or `System/currentTimeMillis` outside
 `components/utility/` — that brick is the only place those primitives are
 called. For any non-`clojure.core` helper, check `utility` first.
-See [common-helpers](../../../docs/recipes/common-helpers.md),
-[code-style](../../../docs/recipes/code-style.md).
+See [common-helpers](../../../docs/recipes/code/common-helpers.md),
+[code-style](../../../docs/recipes/code/code-style.md).
 
 ## Tests drive the system with `with-test-system`
 
 Manage system lifecycle with `with-test-system`; assert
 anomaly-freeness with `nom-test>`. Never `use-fixtures`.
-See [testing](../../../docs/recipes/testing.md).
+See [testing](../../../docs/recipes/test/testing.md).
 
 ## Comment the why, not the what
 
@@ -65,7 +65,7 @@ package, so the two internal groups collapse into one. A bare require
 `[com.example.ns]`, never unbracketed. In a component interface test
 the SUT takes the own-package slot, aliased `SUT`, and nothing else
 from that component is required.
-See [code-style](../../../docs/recipes/code-style.md).
+See [code-style](../../../docs/recipes/code/code-style.md).
 
 ## Everyday shape
 
@@ -73,5 +73,5 @@ kebab-case keyword keys throughout (string ISO-4217 currency the one
 deliberate exception); `cond->` with `utility/assoc-some` /
 `assoc-seq` over chains of optional `assoc`; destructure one map level
 per `let` binding.
-See [code-style](../../../docs/recipes/code-style.md),
+See [code-style](../../../docs/recipes/code/code-style.md),
 [ADR-0006](../../../docs/adr/0006-kebab-case-keyword-keys.md).

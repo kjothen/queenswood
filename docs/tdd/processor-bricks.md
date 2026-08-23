@@ -25,7 +25,7 @@ message bus — see
 changelog and relay mechanics themselves — see
 [ADR-0021](../adr/0021-changelog-relay.md). The
 component-interface conventions in general — see
-[recipes/components.md](../recipes/components.md).
+[recipes/code/components.md](../recipes/code/components.md).
 
 ## Background
 
@@ -78,7 +78,7 @@ bases/<group>-processors/    # one per processor group
 The base contains no business logic — its `system.clj` is a
 bundle of `require` forms so the group's component-kinds are
 registered, and `main.clj` starts the system per
-[recipes/bases.md](../recipes/bases.md). Which processors a
+[recipes/code/bases.md](../recipes/code/bases.md). Which processors a
 given service actually runs is decided by its project's
 `application.yml`: a new processor adds its brick to the group
 its boundary dictates — financial or operational, per
@@ -417,7 +417,7 @@ follows.
 The processor base's own `system.clj` is a bare-require bundle
 of the bricks whose component-kinds need to be registered before
 `system/start` runs. See
-[recipes/system-components.md](../recipes/system-components.md)
+[recipes/code/system-components.md](../recipes/code/system-components.md)
 for the `defcomponents` mechanics.
 
 ## Invariants
@@ -454,7 +454,7 @@ The three rules that make the architecture hang together:
   rejection vs error vs failure anomaly categories.
 - [ADR-0021](../adr/0021-changelog-relay.md) — the relay
   mechanics that `events.clj` consumes from.
-- [recipes/components.md](../recipes/components.md) — general
+- [recipes/code/components.md](../recipes/code/components.md) — general
   brick conventions (interface as the doc surface, etc.).
-- [recipes/error-handling.md](../recipes/error-handling.md) —
+- [recipes/code/error-handling.md](../recipes/code/error-handling.md) —
   `let-nom>`, `error/reject`, `error/try-nom`.

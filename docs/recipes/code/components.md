@@ -105,7 +105,7 @@ function-call graph. We accept that cost.
 
 ## References
 
-- [ADR-0001](../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
-- [ADR-0011](../adr/0011-one-component-per-third-party-library.md) —
+- [ADR-0001](../../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
+- [ADR-0011](../../adr/0011-one-component-per-third-party-library.md) —
   One component per third-party library
 - [Polylith documentation](https://polylith.gitbook.io/polylith)

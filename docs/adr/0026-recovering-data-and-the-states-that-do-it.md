@@ -222,7 +222,7 @@ at all.
   as a declared state, and why an instance's project is durable
 - [ADR-0024](0024-instances-are-their-own-composites.md) — the instance
   as its own composite, and what `down` leaves standing
-- [recovery-procedures](../recipes/recovery-procedures.md) — the
+- [recovery-procedures](../recipes/infra/recovery-procedures.md) — the
   previous generation's mechanics, accurate where they do not assume
   `QUEENSWOOD_ENV`
 - [the plan](../plan/cloud-just-migration.md) — where the backup path

@@ -18,8 +18,8 @@ own local namespaces (plus `clojure.core`) and nothing from any other
 brick, not even the `error`/`utility` wrapper bricks. Wrap every
 third-party library in exactly one brick and consume the wrapper,
 never the library — and never list a component in `deps.edn`.
-See [components](../../../docs/recipes/components.md),
-[bases](../../../docs/recipes/bases.md),
+See [components](../../../docs/recipes/code/components.md),
+[bases](../../../docs/recipes/code/bases.md),
 [ADR-0011](../../../docs/adr/0011-one-component-per-third-party-library.md).
 
 ## Bases are application entry points
@@ -44,7 +44,7 @@ a component, and a base may bare-require `fdb.interface` from its
 `system.clj` to register FDB component-kinds and nothing more —
 `component → base` is disallowed, so state behind an entry point
 would be unreachable by every component.
-See [bases](../../../docs/recipes/bases.md).
+See [bases](../../../docs/recipes/code/bases.md).
 
 ## Projects are pure config
 
@@ -56,4 +56,4 @@ project MAY carry a `resources/` folder for deployment-scoped files
 (`application.yml`, `logback.xml` / `logback-test.xml`, an optional
 `bank/` subfolder of domain-scoped includes). Projects never depend
 on other projects.
-See [projects](../../../docs/recipes/projects.md).
+See [projects](../../../docs/recipes/code/projects.md).

@@ -193,15 +193,15 @@ The single shared Dockerfile parameterised by
 `PROJECT_NAME` makes the per-service split tractable —
 adding a service is a project, a base, and a chart entry,
 not a fresh image-build pipeline. See
-[deployment.md](deployment.md) for the full story.
+[deployment.md](../infra/deployment.md) for the full story.
 
 ## References
 
-- [ADR-0001](../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
-- [ADR-0007 — System-as-data](../adr/0007-system-as-data.md)
+- [ADR-0001](../../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
+- [ADR-0007 — System-as-data](../../adr/0007-system-as-data.md)
 - [bases.md](bases.md)
 - [components.md](components.md)
-- [deployment.md](deployment.md)
+- [deployment.md](../infra/deployment.md)
 - [system-components.md](system-components.md)
 - [system-configurations.md](system-configurations.md)
 - [Polylith documentation](https://polylith.gitbook.io/polylith)

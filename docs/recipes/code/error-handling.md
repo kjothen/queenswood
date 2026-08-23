@@ -171,7 +171,7 @@ structured.
 
 ## References
 
-- [ADR-0005](../adr/0005-error-handling-with-anomalies.md) —
+- [ADR-0005](../../adr/0005-error-handling-with-anomalies.md) —
   Error handling with anomalies
 - [`de.otto/nom`](https://github.com/otto-de/nom)
 - `error` brick interface

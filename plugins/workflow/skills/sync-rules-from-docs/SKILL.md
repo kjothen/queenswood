@@ -25,7 +25,7 @@ metadata:
 # sync-rules-from-docs
 
 A Tessl rule (always-loaded agent context) and its source docs
-(`docs/recipes/*.md`, `docs/adr/*.md`) are two independent prose
+(`docs/recipes/*/*.md`, `docs/adr/*.md`) are two independent prose
 statements of the same guidance. Left to drift, the rule can quietly
 stop matching its source with no signal. This skill closes that gap:
 it extracts the normative content straight from each section's linked
@@ -56,7 +56,7 @@ shapes below are specific to those two).
    (plugin name derived from the rule file's own plugin, e.g. `idioms`
    for `plugins/idioms/rules/idioms.md` — the default rule-file path is
    `plugins/<plugin-name>/rules/<plugin-name>.md`). Also
-   deterministic and judgment-free: it scans every `docs/recipes/*.md`
+   deterministic and judgment-free: it scans every `docs/recipes/*/*.md`
    and `docs/adr/*.md` for a `<!-- tessl-plugin: <name> -->` label on
    the front matter, between the title and the first section, and
    cross-references against the rule
@@ -168,11 +168,11 @@ Example:
 
 ```
 Discovery
-  unlinked: docs/recipes/system-configurations.md (labeled 'idioms', no rule section links it) -> authored new section below
+  unlinked: docs/recipes/code/system-configurations.md (labeled 'idioms', no rule section links it) -> authored new section below
   mismatched: none
 
 Return anomalies, don't throw across a boundary
-  Sources: docs/recipes/error-handling.md, ADR-0005
+  Sources: docs/recipes/code/error-handling.md, ADR-0005
   Changed: added "anomaly category names the call site" (was missing)
   Untraceable: none
 
@@ -182,7 +182,7 @@ Comment the why, not the what
   Untraceable: none
 
 YAML system configs stay declarative
-  Sources: docs/recipes/system-configurations.md
+  Sources: docs/recipes/code/system-configurations.md
   Changed: new section
   Untraceable: none
 ```

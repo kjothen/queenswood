@@ -525,8 +525,8 @@ throw-safe (a handler exception is logged, not fatal).
   the changelog relay for reactive state transitions
 - [ADR-0009](../adr/0009-model-equality-property-testing.md) —
   Model-equality property testing
-- [error-handling.md](../recipes/error-handling.md)
-- [system-components.md](../recipes/system-components.md)
+- [error-handling.md](../recipes/code/error-handling.md)
+- [system-components.md](../recipes/code/system-components.md)
 - `command` brick interface
 - `command-processor` brick interface
 - `event` brick interface

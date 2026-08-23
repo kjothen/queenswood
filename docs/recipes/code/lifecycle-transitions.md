@@ -167,11 +167,11 @@ That guard is also what hides reordering, which is worth knowing
 when it stops being harmless. Every topic is single-partition today
 and `message-bus/send` passes no partition key, so a `closing`
 event overtaking its `opening` would land on the guard and skip
-silently. See [ADR-0021](../adr/0021-changelog-relay.md).
+silently. See [ADR-0021](../../adr/0021-changelog-relay.md).
 
 ## References
 
-- [ADR-0021](../adr/0021-changelog-relay.md) — the changelog
+- [ADR-0021](../../adr/0021-changelog-relay.md) — the changelog
   relay for reactive state transitions
 - [error-handling](error-handling.md) — anomaly kinds and
   `let-nom>`

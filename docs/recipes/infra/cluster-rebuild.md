@@ -304,9 +304,9 @@ This procedure exists partly to produce numbers nothing else can:
 ## References
 
 - [fdb-recovery](fdb-recovery.md) — the scenarios, and what each costs
-- [ADR-0026](../adr/0026-recovering-data-and-the-states-that-do-it.md)
+- [ADR-0026](../../adr/0026-recovering-data-and-the-states-that-do-it.md)
   — why in place commits at the moment the volumes go
 - [crossplane-providers](crossplane-providers.md) — why a ForceNew
   change is refused rather than performed
-- [data-recovery](../compliance/data-recovery.md) — the obligations a
+- [data-recovery](../../compliance/data-recovery.md) — the obligations a
   completed run of this would satisfy

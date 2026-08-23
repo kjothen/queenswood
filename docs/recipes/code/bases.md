@@ -158,7 +158,7 @@ components" lets the same code run in different deployments
 HTTP service, and two aggregators composing other bases into one
 in-process system: `monolith` (the whole bank, for local dev and
 Testcontainers-backed end-to-end tests) and `external-adapters` (every
-vendor adapter and its simulator). See [deployment.md](deployment.md)
+vendor adapter and its simulator). See [deployment.md](../infra/deployment.md)
 for the per-service split that the production deployables
 follow.
 
@@ -204,10 +204,10 @@ contrast, can consolidate these into a single
 
 ## References
 
-- [ADR-0001](../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
-- [ADR-0007 — System-as-data](../adr/0007-system-as-data.md)
+- [ADR-0001](../../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
+- [ADR-0007 — System-as-data](../../adr/0007-system-as-data.md)
 - [components.md](components.md)
-- [deployment.md](deployment.md)
+- [deployment.md](../infra/deployment.md)
 - [projects.md](projects.md)
 - [system-components.md](system-components.md)
 - [Polylith documentation](https://polylith.gitbook.io/polylith)

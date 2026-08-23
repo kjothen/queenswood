@@ -192,7 +192,7 @@ completed Job, and the deployment reports success over an unchanged
 bank.
 
 Two shapes exist in principle, and
-[ADR-0026](../adr/0026-recovering-data-and-the-states-that-do-it.md)
+[ADR-0026](../../adr/0026-recovering-data-and-the-states-that-do-it.md)
 prefers the second here specifically:
 
 - *Restore in place* — empty the destination and let the restore fill
@@ -385,15 +385,15 @@ waits on.
 
 ## References
 
-- [ADR-0026](../adr/0026-recovering-data-and-the-states-that-do-it.md)
+- [ADR-0026](../../adr/0026-recovering-data-and-the-states-that-do-it.md)
   — why `down` no longer empties anything, the two shapes of recovery,
   and retention as one number in days
-- [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+- [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — off as a declared state, and why an instance's project is durable
 - [recovery-procedures](recovery-procedures.md) — the previous
   generation's mechanics, and the Keycloak half this does not replace
 - [external-secrets](external-secrets.md) — where the backup
   encryption key lives, and why it is never rotated
-- [data-recovery](../compliance/data-recovery.md) — the obligations
+- [data-recovery](../../compliance/data-recovery.md) — the obligations
   this procedure exists to satisfy, and the ones it does not yet meet
 - `justfiles/sop.just` — the read-side recipes, and what each proves

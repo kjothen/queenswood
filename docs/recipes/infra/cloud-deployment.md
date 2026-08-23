@@ -11,7 +11,7 @@ way and nothing has replaced that yet.
 The current model is an installation reconciled by its own management
 plane — see [crossplane-app-deployment](crossplane-app-deployment.md),
 [cloud-naming](cloud-naming.md) and [the
-plan](../plan/cloud-just-migration.md). This document carries no plugin
+plan](../../plan/cloud-just-migration.md). This document carries no plugin
 label, so nothing here becomes a rule; read it for what the old path
 does, never for what to do now.
 
@@ -450,7 +450,7 @@ just kind-xp-install-gcp-secret
 - Put a `RecordSet` on a workload chart. Crossplane MR CRDs exist
   only on the management plane, not on the GKE target — DNS
   belongs in the apex composite. See
-  [infrastructure.md](../tdd/infrastructure.md).
+  [infrastructure.md](../../tdd/infrastructure.md).
 
 **MAY:**
 
@@ -501,13 +501,13 @@ cold start days later, with quota as the only symptom.
 
 - [deployment.md](deployment.md) — the local build and kind dev
   loop, the shared service Dockerfile, the chart's shape.
-- [infrastructure.md](../tdd/infrastructure.md) — the two-cluster
+- [infrastructure.md](../../tdd/infrastructure.md) — the two-cluster
   split, the bootstrap chain and sync waves, the `XPlatform`
   composition, Keycloak topology, and the operational notes
   behind several rules here.
-- [ADR-0016](../adr/0016-crossplane-over-terraform.md) —
+- [ADR-0016](../../adr/0016-crossplane-over-terraform.md) —
   Crossplane over Terraform.
-- [ADR-0019](../adr/0019-processor-packaging.md) — why the
+- [ADR-0019](../../adr/0019-processor-packaging.md) — why the
   services group the way they do.
 - `justfiles/cloud.just` — every `gcp-*` and `kind-xp-*` recipe
   referenced above.

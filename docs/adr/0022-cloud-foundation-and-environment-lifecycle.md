@@ -90,7 +90,7 @@ what forces the management plane to hold its own service account rather
 than borrowing this one.
 
 The runbook for both paths is
-[crossplane-app-deployment](../recipes/crossplane-app-deployment.md).
+[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md).
 
 Its rights are folder-scoped once the folder exists, but creating the
 folder is not: `resourcemanager.folders.create` is checked on the
@@ -123,7 +123,7 @@ Organization Administrator at all — break-glass is a super admin adding
 a member, and an empty group is never a lockout.
 
 What the groups are and how they come to exist is
-[cloud-account](../recipes/cloud-account.md).
+[cloud-account](../recipes/infra/cloud-account.md).
 
 The groups are not one per tier of seniority but one per capability that
 must be separable. Organization Administrator and Folder Administrator
@@ -148,7 +148,7 @@ a compliance argument later demands one, not a re-architecture.
 ### Foundations are observed and liened; only what rebuilds is deleted
 
 The tier model in
-[cloud-deployment](../recipes/cloud-deployment.md) extends up to the
+[cloud-deployment](../recipes/infra/cloud-deployment.md) extends up to the
 projects themselves:
 
 - Bootstrap project, management project, instance projects, DNS zones and

@@ -133,7 +133,7 @@ it makes the exception visible and attributable rather than silent.
 
 - [cloud-naming](cloud-naming.md) — what things are called, and why a
   suffix exists at all
-- [ADR-0023](../adr/0023-installation-naming-and-access.md) — the
+- [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the
   naming and access decision underneath both
 - `scripts/hooks/check-cloud-ids.sh` — the detection half, and the one
   definition of what an identifier is

@@ -753,7 +753,7 @@ spec:
                   # refuses the diff rather than performing it and the
                   # refusal lands in LastAsyncOperation -- Synced alone
                   # does not say. The cluster takes this when it is next
-                  # rebuilt; see docs/recipes/cluster-rebuild.md.
+                  # rebuilt; see docs/recipes/infra/cluster-rebuild.md.
                   #
                   # It forecloses enableFqdnNetworkPolicy, which cannot
                   # coexist with inter-node encryption, so egress
@@ -2391,7 +2391,7 @@ spec:
             {{- /* Two certificates rather than one with two names:
                    managed.domains is ForceNew, so a name added to a
                    live certificate replaces it. See
-                   docs/recipes/crossplane-providers.md. */}}
+                   docs/recipes/infra/crossplane-providers.md. */}}
             {{- range $c := list (dict "slug" "" "domain" $domain) (dict "slug" "-wildcard" "domain" (printf "*.%s" $domain)) }}
             ---
             apiVersion: certificatemanager.gcp.m.upbound.io/v1beta1

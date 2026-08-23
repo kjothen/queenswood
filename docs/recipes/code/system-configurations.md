@@ -247,7 +247,7 @@ walk through the assembly mechanics in detail.
 
 ## References
 
-- [ADR-0007 — System-as-data](../adr/0007-system-as-data.md)
+- [ADR-0007 — System-as-data](../../adr/0007-system-as-data.md)
 - [system-components.md](system-components.md)
 - [bases.md](bases.md)
 - [`donut.system`](https://github.com/donut-party/system)

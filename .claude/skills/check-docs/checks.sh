@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Doc-quality checks for Queenswood.
 # Sources every verification command in
-#   docs/recipes/writing-docs.md
+#   docs/recipes/practices/writing-docs.md
 # Prints PASS/FAIL per check; FAIL includes file:line refs.
 #
 # Run from the repository root.
@@ -31,7 +31,7 @@ ALL_MD=( "${DOCS_MD[@]}" "${TOP_MD[@]}" )
 # it from content-pattern checks (still subject to wrap and
 # mermaid checks).
 PATTERN_MD=( $(printf '%s\n' "${ALL_MD[@]}" \
-                 | grep -v '^docs/recipes/writing-docs\.md$') )
+                 | grep -v '^docs/recipes/practices/writing-docs\.md$') )
 
 section() {
   printf '\n### %s\n\n' "$1"
@@ -73,9 +73,11 @@ section 'Paren-adjacent links — `]([url]))`'
 out=$(grep -nE '\]\([^)]+\)\)' "${PATTERN_MD[@]}" 2>/dev/null)
 report 'paren-adjacent-link' "$out"
 
-# 4. Cross-level relative links — `../../`.
-section 'Cross-level relative links — `../../`'
-out=$(grep -nE '\]\(\.\./\.\./' "${DOCS_MD[@]}" 2>/dev/null)
+# 4. Cross-level relative links — `../../../`. Two levels is what a
+# recipe in docs/recipes/<chapter>/ costs to reach an ADR; three means
+# the link is leaving docs/.
+section 'Cross-level relative links — `../../../`'
+out=$(grep -nE '\]\(\.\./\.\./\.\./' "${DOCS_MD[@]}" 2>/dev/null)
 report 'cross-level-link' "$out"
 
 # 5. Inline-code as the entire link text — [`...`](...).

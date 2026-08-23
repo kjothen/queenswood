@@ -79,9 +79,9 @@ That boundary matters more than the catalogue does, because "the only
 way to build cloud infrastructure" is true of one half and false of the
 other, and somebody will eventually go looking for the abstraction that
 cannot exist. The manual half lives in recipes —
-[cloud-account](../recipes/cloud-account.md),
-[cloud-dns](../recipes/cloud-dns.md),
-[google-sign-in](../recipes/google-sign-in.md) — and is as much a part
+[cloud-account](../recipes/infra/cloud-account.md),
+[cloud-dns](../recipes/infra/cloud-dns.md),
+[google-sign-in](../recipes/infra/google-sign-in.md) — and is as much a part
 of building an installation as anything composed.
 
 Note what this does _not_ exclude. The OAuth client cannot be composed;
@@ -132,6 +132,6 @@ identity that reads it — the three that are already written twice.
   Terraform.
 - [ADR-0024](0024-instances-are-their-own-composites.md) — an instance
   is its own composite.
-- [crossplane](../recipes/crossplane.md) — what a composite costs, and
+- [crossplane](../recipes/infra/crossplane.md) — what a composite costs, and
   where failures report.
-- [gcp-iam](../recipes/gcp-iam.md) — both halves of Workload Identity.
+- [gcp-iam](../recipes/infra/gcp-iam.md) — both halves of Workload Identity.

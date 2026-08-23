@@ -49,8 +49,8 @@ and still pass every check. Tests consolidate system-component bare
 requires for a base or project into one `test/.../system.clj` namespace
 rather than repeating them per file.
 See [ADR-0007](../../../docs/adr/0007-system-as-data.md),
-[system-components](../../../docs/recipes/system-components.md),
-[system-configurations](../../../docs/recipes/system-configurations.md).
+[system-components](../../../docs/recipes/code/system-components.md),
+[system-configurations](../../../docs/recipes/code/system-configurations.md).
 
 ## React to a changelog, don't orchestrate across bricks
 
@@ -175,7 +175,7 @@ schema registered in both YAMLs, the `domain.clj` guard, `core.clj`
 orchestration, `commands.clj` dispatch, `interface.clj` fn, the
 `events.clj` leg if two-phase, the `api` route/OpenAPI/rejection
 mapping, the event channel and consumer wiring, and tests.
-See [lifecycle-transitions](../../../docs/recipes/lifecycle-transitions.md),
+See [lifecycle-transitions](../../../docs/recipes/code/lifecycle-transitions.md),
 [ADR-0021](../../../docs/adr/0021-changelog-relay.md).
 
 ## System-level tests prove model equality
@@ -203,7 +203,7 @@ exactly as it would a production literal and never branches on
 whether it's running against a container. The `testcontainers` brick
 may call builder-pattern setup methods during construction, never
 library methods against a started container.
-See [testcontainers](../../../docs/recipes/testcontainers.md).
+See [testcontainers](../../../docs/recipes/test/testcontainers.md).
 
 ## Bank-specific code generation follows the shared prep-lib pattern
 
@@ -220,4 +220,4 @@ never committed. Regeneration is deliberate:
 `:force true` is required — the `:ensure` marker doesn't detect
 staleness on its own.
 See [ADR-0010](../../../docs/adr/0010-code-generation-via-prep-lib.md),
-[code-generation](../../../docs/recipes/code-generation.md).
+[code-generation](../../../docs/recipes/code/code-generation.md).

@@ -4,7 +4,7 @@
 
 ## Problem
 
-[ADR-0023](../adr/0023-installation-naming-and-access.md) decided that
+[ADR-0023](../../adr/0023-installation-naming-and-access.md) decided that
 names follow the Google Cloud security foundations guide, and listed
 enough kinds to build the first installation. It is not a complete
 inventory, and it never can be: a kind arrives before the list does.
@@ -363,9 +363,9 @@ installation is that field and nothing else.
 
 ## References
 
-- [ADR-0023](../adr/0023-installation-naming-and-access.md) — the
+- [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the
   decision this recipe carries out, and the reasoning behind the code.
-- [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+- [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as an installation, and its lifecycle.
 - [crossplane-app-deployment](crossplane-app-deployment.md) — what a
   deployment builds, and the two identities that build it.

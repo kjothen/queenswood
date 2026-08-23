@@ -1,5 +1,5 @@
 # Findings accepted deliberately, with the reasoning in
-# docs/recipes/security-scanning.md. A muted finding is a decision
+# docs/recipes/infra/security-scanning.md. A muted finding is a decision
 # somebody made, not a check somebody switched off: each entry names the
 # resources it covers rather than the check, so the same check still
 # fails for anything else.
@@ -29,7 +29,7 @@ Mutelist:
             - "^sa-[a-z0-9]{4}-boot@"
           Description: >-
             The platform and bootstrap identities hold admin by design.
-            See docs/recipes/security-scanning.md.
+            See docs/recipes/infra/security-scanning.md.
 
         # CIS 2.14 — Cloud Asset Inventory enabled.
         #
@@ -50,4 +50,4 @@ Mutelist:
           Description: >-
             Asset inventory is enabled org-wide from the seed project.
             Per-project enablement is a no-op for the capability.
-            See docs/recipes/security-scanning.md.
+            See docs/recipes/infra/security-scanning.md.

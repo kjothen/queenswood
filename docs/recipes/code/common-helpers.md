@@ -37,7 +37,7 @@ something from a blog post, work through this sequence:
    `components/utility/deps.edn` and re-export through
    `utility.interface`. Don't pull the library directly into
    another brick — see
-   [ADR-0011](../adr/0011-one-component-per-third-party-library.md).
+   [ADR-0011](../../adr/0011-one-component-per-third-party-library.md).
 4. **Is it nowhere?** Implement inside the `utility` brick in
    the appropriate sub-namespace and re-export.
 
@@ -117,7 +117,7 @@ care whether the implementation is local or wrapping a library.
   helper is general (not domain-specific).
 - Pull a third-party helper library directly into another
   brick. Wrap it through `utility` per
-  [ADR-0011](../adr/0011-one-component-per-third-party-library.md).
+  [ADR-0011](../../adr/0011-one-component-per-third-party-library.md).
 
 **SHOULD:**
 
@@ -149,7 +149,7 @@ yes, hoist it.
 
 ## References
 
-- [ADR-0011](../adr/0011-one-component-per-third-party-library.md) —
+- [ADR-0011](../../adr/0011-one-component-per-third-party-library.md) —
   One component per third-party library
 - [code-style.md](code-style.md)
 - [`weavejester/medley`](https://github.com/weavejester/medley)

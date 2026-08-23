@@ -490,8 +490,8 @@ auth boundaries — go here, not into a brick's `interface_test.clj`.
   Kebab-case keyword keys
 - [transaction-processing.md](transaction-processing.md) —
   Transaction processing
-- [error-handling.md](../recipes/error-handling.md)
-- [code-style.md](../recipes/code-style.md) — sieppari
+- [error-handling.md](../recipes/code/error-handling.md)
+- [code-style.md](../recipes/code/code-style.md) — sieppari
   `terminate` rule
 - `api` base
 - `server` brick interface

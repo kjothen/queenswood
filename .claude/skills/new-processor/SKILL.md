@@ -118,7 +118,7 @@ processors base:
 
 5. **Add Avro schemas** for the new commands and events under
    the schema brick, per
-   [recipes/code-generation.md](../../../docs/recipes/code-generation.md).
+   [recipes/code/code-generation.md](../../../docs/recipes/code/code-generation.md).
    Run `clj -X:deps prep :aliases '[:dev]' :force true`
    to regenerate.
 
@@ -129,7 +129,7 @@ processors base:
    group services' Helm/Tilt/CI entries already exist. Only a
    processor needing its own dedicated deployment (a boundary
    or scaling case per ADR-0019) adds chart entries, per
-   [recipes/deployment.md](../../../docs/recipes/deployment.md).
+   [recipes/infra/deployment.md](../../../docs/recipes/infra/deployment.md).
 
 ## Invariants (verify on every change)
 

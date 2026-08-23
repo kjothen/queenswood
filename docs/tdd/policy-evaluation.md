@@ -376,5 +376,5 @@ turns `:unauthorized/policy-*` into 403.
   Transaction processing (envelope, command flow)
 - [service-apis.md](service-apis.md) — Service APIs (anomaly
   → HTTP status)
-- [error-handling.md](../recipes/error-handling.md)
+- [error-handling.md](../recipes/code/error-handling.md)
 - `policy` brick interface
