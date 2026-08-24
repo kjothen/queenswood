@@ -321,6 +321,38 @@ spec:
                       description: |
                         Which GKE release channel upgrades this cluster.
                         RAPID, REGULAR or STABLE.
+                    upgradeSettings:
+                      type: object
+                      default: {}
+                      description: |
+                        How the node pool is upgraded. Stated rather
+                        than left to GKE: unset, the provider observes
+                        whatever defaults applied when the pool was made
+                        and late-initialises them into the spec, so the
+                        behaviour reads as declared while nobody chose
+                        it and a later rebuild starts from whatever the
+                        defaults are then.
+                      properties:
+                        strategy:
+                          type: string
+                          default: SURGE
+                          description: |
+                            SURGE adds nodes and drains the old ones.
+                            BLUE_GREEN builds the replacement pool
+                            whole, which costs a second pool's capacity
+                            for the length of the upgrade.
+                        maxSurge:
+                          type: integer
+                          default: 1
+                          description: |
+                            How many nodes may be added beyond
+                            nodeCount while upgrading.
+                        maxUnavailable:
+                          type: integer
+                          default: 0
+                          description: |
+                            How many nodes may be taken down before
+                            their replacements are ready.
                 keycloak:
                   type: object
                   default: {}

@@ -154,6 +154,121 @@ spec:
                     Immutable, so a value that merely differs replaces
                     the pool, and on this plane that is the pool running
                     the Crossplane doing the replacing.
+
+                    Superseded by cluster.machineType where a manifest
+                    states one. Kept because manifests state this, and a
+                    field is added rather than repurposed.
+                network:
+                  type: object
+                  default: {}
+                  description: |
+                    The ranges this plane occupies. Disjoint from an
+                    instance's defaults by construction, which is what
+                    makes the two safe to leave alone -- and stating
+                    them belongs before anything is peered rather than
+                    after. A range is immutable, so moving one rebuilds
+                    the subnet and the cluster standing on it, which
+                    here is the cluster doing the rebuilding.
+                  properties:
+                    subnetCidr:
+                      type: string
+                      default: 10.60.0.0/16
+                      description: |
+                        Where the nodes sit.
+                    podsCidr:
+                      type: string
+                      default: 10.61.0.0/16
+                      description: |
+                        The secondary range GKE allocates pod addresses
+                        from. Sized for pods rather than nodes: every
+                        pod takes one.
+                    servicesCidr:
+                      type: string
+                      default: 10.62.0.0/20
+                      description: |
+                        The secondary range for ClusterIP services.
+                cluster:
+                  type: object
+                  default: {}
+                  description: |
+                    The shape of the plane's cluster, stated the way an
+                    instance states its own rather than left where only
+                    the composition can see it. What runs here is
+                    Crossplane, its providers and Argo, so this is a
+                    floor for a control plane rather than for a bank.
+                  properties:
+                    machineType:
+                      type: string
+                      description: |
+                        What the nodes are. Deliberately undefaulted:
+                        absent means the top-level machineType, which is
+                        where every manifest states this today, and a
+                        default here would quietly override each one.
+                    nodeCount:
+                      type: integer
+                      default: 1
+                      description: |
+                        How many nodes. One is enough for what runs
+                        here, and survives an upgrade rather than
+                        blocking it: a surge upgrade adds a node, drains
+                        the old one and removes it, so the pool is
+                        briefly two and every pod on it restarts once.
+
+                        Nothing here holds a PersistentVolume or a
+                        PodDisruptionBudget, which are the two things
+                        that stall a single node's drain.
+                    diskSize:
+                      type: integer
+                      default: 50
+                      description: |
+                        Each node's boot disk, in GB. Nothing durable
+                        belongs on it: a node is replaced rather than
+                        resumed.
+                    diskType:
+                      type: string
+                      default: pd-standard
+                      description: |
+                        Boot disks only, so the cheapest class is
+                        usually right.
+                    releaseChannel:
+                      type: string
+                      default: REGULAR
+                      description: |
+                        Which GKE release channel upgrades this cluster.
+                        RAPID, REGULAR or STABLE.
+                    upgradeSettings:
+                      type: object
+                      default: {}
+                      description: |
+                        How the node pool is upgraded. Stated rather
+                        than left to GKE: unset, the provider observes
+                        whatever defaults applied when the pool was made
+                        and late-initialises them into the spec, so the
+                        behaviour reads as declared while nobody chose
+                        it and a later rebuild starts from whatever the
+                        defaults are then.
+                      properties:
+                        strategy:
+                          type: string
+                          default: SURGE
+                          description: |
+                            SURGE adds nodes and drains the old ones.
+                            BLUE_GREEN builds the replacement pool
+                            whole, which costs a second pool's capacity.
+                        maxSurge:
+                          type: integer
+                          default: 1
+                          description: |
+                            How many nodes may be added beyond
+                            nodeCount during an upgrade. One is what
+                            lets a single-node pool upgrade at all.
+                        maxUnavailable:
+                          type: integer
+                          default: 0
+                          description: |
+                            How many nodes may be taken down before
+                            their replacements are ready. Zero, so a
+                            pool of one is never a pool of none.
                 management:
                   type: object
                   properties:

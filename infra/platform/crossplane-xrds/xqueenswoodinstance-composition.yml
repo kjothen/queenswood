@@ -2239,7 +2239,8 @@ spec:
           template: |
             {{- $xr := .observed.composite.resource }}
             {{- $cluster := $xr.spec.cluster | default dict }}
-            {{- range $f := list "machineType" "nodeCount" "diskSize" "diskType" }}
+            {{- $upgrade := $cluster.upgradeSettings | default dict }}
+            {{- range $f := list "machineType" "nodeCount" "diskSize" "diskType" "upgradeSettings" }}
             {{- if not (hasKey $cluster $f) }}
             {{- fail (printf "spec.cluster.%s is absent" $f) }}
             {{- end }}
@@ -2291,6 +2292,15 @@ spec:
                   podRange: pods
                 project: {{ $xr.spec.projectId }}
                 nodeCount: {{ $count | int }}
+                # Composed rather than observed, for the same reason as
+                # networkConfig above: left unset, upjet writes back
+                # whatever GKE defaulted to, so the spec reads as
+                # declared while nobody chose it. maxUnavailable 0 keeps
+                # a replacement node up before the old one goes.
+                upgradeSettings:
+                  strategy: {{ $upgrade.strategy }}
+                  maxSurge: {{ $upgrade.maxSurge | int }}
+                  maxUnavailable: {{ $upgrade.maxUnavailable | int }}
                 nodeConfig:
                   machineType: {{ $cluster.machineType }}
                   diskSizeGb: {{ $cluster.diskSize | int }}
