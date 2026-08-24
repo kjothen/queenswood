@@ -176,6 +176,10 @@ topic.
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See
   [crossplane-app-deployment](docs/recipes/infra/crossplane-app-deployment.md).
+- **Upgrading the plane's own Crossplane and Argo** — why a merged
+  change reaches the next plane and not this one, the `extraObjects`
+  a values file must carry, and when to rebuild instead. See
+  [plane-upgrades.md](docs/recipes/infra/plane-upgrades.md).
 - **Installing Queenswood** — the two repositories a plane reads, the
   GitHub App that reaches the private one, the manifest's fields, and
   who holds which access capability. See
