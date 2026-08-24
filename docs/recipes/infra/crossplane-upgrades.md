@@ -95,15 +95,6 @@ A version change shows in the first, anything else in the second. Until
 your change is there the composite has not reconciled it, and there is
 nothing yet to upgrade to.
 
-Expect a few minutes: Argo polls the repository, then the composite
-reconciles. Longer than that, and it is worth forcing rather than
-waiting:
-
-```bash
-kubectl --context "$CODE-mgmt" -n argocd annotate app crossplane-xrds \
-  argocd.argoproj.io/refresh=hard --overwrite
-```
-
 ### 3. Take the values and the version from that object
 
 ```bash
