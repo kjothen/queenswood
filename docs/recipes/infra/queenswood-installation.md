@@ -173,6 +173,21 @@ fields, a release channel and an upgrade strategy cannot.
   provider late-initialises whatever GKE defaulted to when the pool was
   made, so the spec reads as declared while nobody chose it, and the
   next pool starts from whatever the defaults are then.
+
+  **Size the plane once, because it cannot resize itself.** `nodeCount`
+  is mutable and `machineType` is not, so a plane that turns out too
+  small can gain nodes and cannot gain a bigger one — changing the
+  machine type replaces the pool that the plane's own Crossplane is
+  running on, and nothing is left to create the replacement. The
+  default is one node large enough for what a plane holds: an
+  `e2-standard-2` leaves about 6GB allocatable, and crossplane-system
+  alone takes around 4.1GB of it, because each upjet provider is a
+  Terraform runtime. What that shortfall looks like is worth knowing,
+  because it does not look like memory: every pod in `argocd` and
+  `crossplane-system` is BestEffort, so the scheduler reads the node as
+  a third committed while it is full, and the largest pods die of
+  liveness-probe timeouts while the small ones with limits are the only
+  things the kernel kills outright.
 - **`network.*`** — `subnetCidr`, `podsCidr` and `servicesCidr`. The
   plane's default ranges are disjoint from an instance's by
   construction, which is what makes the two safe to leave alone. A
