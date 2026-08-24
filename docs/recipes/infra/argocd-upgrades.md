@@ -20,7 +20,8 @@ resource request, or any other chart value.
 Every command below reads these:
 
 ```bash
-export CODE=qw01   ## example, qw01
+# the installation code, e.g. qw01
+export CODE=qw01
 export WORK=$(mktemp -d)
 export REL="release.helm.m.crossplane.io/argocd-$CODE-c-mgmt"
 export VALUES="$WORK/argocd-values.json"
@@ -36,7 +37,9 @@ See what the new chart would render, against the values this plane
 actually runs:
 
 ```bash
-export FROM=10.2.1 TO=10.4.0   ## example
+# the version now, and the one being moved to
+export FROM=10.2.1
+export TO=10.4.0
 
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo

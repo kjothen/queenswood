@@ -46,6 +46,9 @@ partway through something and not reading around it. So:
 - Set the variables the steps share once, at the top of the Solution,
   with an example value. A command carrying `<code>` has to be edited
   before it runs, which is how one gets run against the wrong thing.
+- Put a comment on its own line, never after the command it explains.
+  A trailing comment has to be deleted before the line can be pasted,
+  and interactive zsh does not treat `#` as a comment by default.
 - Name a file in full in every step that touches it. "The same file as
   above" assumes a reader who arrived from above.
 - Let each step stand alone. A step that calls a helper defined in
