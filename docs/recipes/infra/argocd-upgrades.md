@@ -190,6 +190,12 @@ happened. The revision below it is where a rollback goes.
 
 ```bash
 helm --kube-context "$CODE-mgmt" history argocd -n argocd
+```
+
+Then roll back to a release revision — the `REVISION` column above, a
+small integer. Not a chart version:
+
+```bash
 helm --kube-context "$CODE-mgmt" rollback argocd <revision> -n argocd
 ```
 
