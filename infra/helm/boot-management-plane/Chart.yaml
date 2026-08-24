@@ -13,8 +13,10 @@ icon: https://avatars.githubusercontent.com/kjothen
 kubeVersion: ">=1.27.0-0"
 
 dependencies:
+  # Held at 2.3.4: 2.4.0 breaks a shared provider service account.
+  # See the composition, and docs/recipes/infra/crossplane-upgrades.md.
   - name: crossplane
-    version: "2.4.0"
+    version: "2.3.4"
     repository: "https://charts.crossplane.io/stable"
     condition: crossplane.enabled
   - name: argo-cd
