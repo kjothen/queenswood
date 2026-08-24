@@ -954,6 +954,29 @@ spec:
                     repository: https://charts.crossplane.io/stable
                     name: crossplane
                     version: "2.3.4"
+                  # The chart's defaults are both binding on a plane of
+                  # this size. Measured over seven days: the core holds
+                  # 472m sustained against a 500m limit -- throttled
+                  # continuously -- and peaked at 977Mi against 1024Mi.
+                  # Requests are the steady state, limits leave room.
+                  #
+                  # The RBAC manager reserves 256Mi and 100m by default
+                  # and uses 24Mi and 2m.
+                  values:
+                    resourcesCrossplane:
+                      requests:
+                        cpu: 500m
+                        memory: 512Mi
+                      limits:
+                        cpu: 1000m
+                        memory: 2Gi
+                    resourcesRBACManager:
+                      requests:
+                        cpu: 10m
+                        memory: 32Mi
+                      limits:
+                        cpu: 100m
+                        memory: 256Mi
             patches:
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
