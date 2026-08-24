@@ -55,6 +55,14 @@ spec:
   Wave 0: a provider Deployment takes whatever service account exists
   when it starts.
 */}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crossplane-provider-kubernetes
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+---
 apiVersion: pkg.crossplane.io/v1beta1
 kind: DeploymentRuntimeConfig
 metadata:
@@ -67,13 +75,16 @@ spec:
       selector: {}
       template:
         spec:
+          # Unowned, as the GCP one is. A provider has more than one
+          # revision over its life and the old one keeps its controller
+          # ownerReference, so from Crossplane 2.4 a new revision cannot
+          # claim an account the package manager owns -- with one
+          # provider as surely as with ten.
+          serviceAccountName: crossplane-provider-kubernetes
           containers:
             - name: package-runtime
               resources:
                 {{- toYaml .Values.resources.providers | nindent 16 }}
-  serviceAccountTemplate:
-    metadata:
-      name: crossplane-provider-kubernetes
 ---
 {{- /*
   provider-helm, which pins nothing: its service account is the
