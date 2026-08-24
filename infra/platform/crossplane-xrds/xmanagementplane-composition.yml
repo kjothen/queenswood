@@ -1018,7 +1018,7 @@ spec:
                   chart:
                     repository: https://argoproj.github.io/argo-helm
                     name: argo-cd
-                    version: "10.2.1"
+                    version: "10.4.0"
                   # What tells Argo where git is, carried by the
                   # release that installs Argo so that bringing up a
                   # management plane stays one act. The public
