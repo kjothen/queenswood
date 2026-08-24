@@ -167,6 +167,9 @@ helm --kube-context "$CODE-mgmt" upgrade argocd argo/argo-cd \
 # the bootstrap Application still exists
 kubectl --context "$CODE-mgmt" -n argocd get application management-plane
 
+# what landed, and what a rollback would return to
+helm --kube-context "$CODE-mgmt" history argocd -n argocd
+
 # every component came back
 kubectl --context "$CODE-mgmt" -n argocd get pods
 
@@ -175,6 +178,10 @@ kubectl --context "$CODE-mgmt" -n argocd get applications
 ```
 
 The first is the one that matters. Everything else is recoverable.
+
+The newest revision reads `deployed`, against the chart version you
+pinned — which is the only place a version change shows up as having
+happened. The revision below it is where a rollback goes.
 
 ### If it goes wrong
 
