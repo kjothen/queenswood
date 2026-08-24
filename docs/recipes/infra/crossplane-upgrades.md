@@ -4,8 +4,9 @@
 
 ## Status
 
-**Untested.** Derived from the composition, the live release and the
-chart. Nobody has followed it.
+**Verified**, 2026-08-24, on the configuration path (introducing a
+values block, for the core's own resources). The version path is
+untested.
 
 ## Problem
 
