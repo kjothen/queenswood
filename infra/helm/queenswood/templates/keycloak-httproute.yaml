@@ -16,7 +16,13 @@ spec:
   # the API server rejects, and one invalid object holds up the sync of
   # every other one beside it.
   parentRefs:
-    - name: {{ .Release.Name }}-gateway
+    # group and kind are what the API server defaults a parentRef to.
+    # Stated rather than left out so the rendered manifest matches the
+    # live object -- unstated, every comparison reports the route
+    # OutOfSync and a sync that succeeds changes nothing.
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Release.Name }}-gateway
       sectionName: https
   hostnames:
     - {{ include "queenswood.keycloakHost" . | quote }}
@@ -28,7 +34,12 @@ spec:
       backendRefs:
         # The Keycloak Operator creates `<keycloak-cr-name>-service`
         # on port 8080 (plain HTTP — TLS terminates at the queenswood
-        # gateway and the Keycloak pod trusts `X-Forwarded-*`).
-        - name: {{ .Release.Name }}-keycloak-service
+        # gateway and the Keycloak pod trusts `X-Forwarded-*`). group,
+        # kind and weight are the API server's defaults, stated so the
+        # manifest matches the live object.
+        - group: ""
+          kind: Service
+          name: {{ .Release.Name }}-keycloak-service
           port: 8080
+          weight: 1
 {{- end }}

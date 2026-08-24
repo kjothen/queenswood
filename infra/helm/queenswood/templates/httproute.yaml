@@ -13,7 +13,13 @@ metadata:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
   parentRefs:
-    - name: {{ .Release.Name }}-gateway
+    # group and kind are what the API server defaults a parentRef to.
+    # Stated rather than left out so the rendered manifest matches the
+    # live object -- unstated, every comparison reports the route
+    # OutOfSync and a sync that succeeds changes nothing.
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Release.Name }}-gateway
       sectionName: https
   hostnames:
     - {{ .Values.gateway.consoleHost | quote }}
@@ -23,8 +29,13 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ .Release.Name }}-console
+        # Defaulted by the API server, and stated for the same reason
+        # as the parentRef above.
+        - group: ""
+          kind: Service
+          name: {{ .Release.Name }}-console
           port: {{ .Values.console.port }}
+          weight: 1
 {{- end }}
 ---
 {{- if (index .Values.services "api-service").enabled }}
@@ -40,7 +51,9 @@ metadata:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
   parentRefs:
-    - name: {{ .Release.Name }}-gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Release.Name }}-gateway
       sectionName: https
   hostnames:
     - {{ .Values.gateway.apiHost | quote }}
@@ -50,8 +63,11 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: {{ .Release.Name }}-api-service
+        - group: ""
+          kind: Service
+          name: {{ .Release.Name }}-api-service
           port: {{ (index .Values.services "api-service").port }}
+          weight: 1
 {{- end }}
 ---
 # HTTP→HTTPS redirect on :80. Replaces the legacy FrontendConfig's
@@ -65,7 +81,9 @@ metadata:
     {{- include "queenswood.labels" . | nindent 4 }}
 spec:
   parentRefs:
-    - name: {{ .Release.Name }}-gateway
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: {{ .Release.Name }}-gateway
       sectionName: http
   hostnames:
     - {{ .Values.gateway.host | quote }}
@@ -76,7 +94,13 @@ spec:
     - {{ .Values.gateway.apiHost | quote }}
 {{- end }}
   rules:
-    - filters:
+    # A rule with no matches matches everything, which the API server
+    # writes out as this. Stated so the two agree.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
         - type: RequestRedirect
           requestRedirect:
             scheme: https
