@@ -180,6 +180,10 @@ topic.
   own Argo is `Observe`, the `extraObjects` a values file must carry,
   and why a merged change does not reach it. See
   [argocd-upgrades.md](docs/recipes/infra/argocd-upgrades.md).
+- **Upgrading or reconfiguring Crossplane** — the same `Observe` tier as
+  Argo's with the opposite hazards: no values block to lose, and a
+  restart that stops every managed resource being reconciled. See
+  [crossplane-upgrades.md](docs/recipes/infra/crossplane-upgrades.md).
 - **Installing Queenswood** — the two repositories a plane reads, the
   GitHub App that reaches the private one, the manifest's fields, and
   who holds which access capability. See
