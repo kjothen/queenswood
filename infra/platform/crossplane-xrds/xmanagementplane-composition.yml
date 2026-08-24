@@ -633,13 +633,13 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  ipCidrRange: 10.60.0.0/16
                   privateIpGoogleAccess: true
+                  # Range names only. The ranges themselves are patched
+                  # from spec.network, which defaults to what this block
+                  # used to hold.
                   secondaryIpRange:
                     - rangeName: pods
-                      ipCidrRange: 10.61.0.0/16
                     - rangeName: services
-                      ipCidrRange: 10.62.0.0/20
             patches:
               # Required, here and on every patch below whose source
               # the XRD defaults rather than the manifest states. A
@@ -675,6 +675,22 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.region
                 toFieldPath: spec.forProvider.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.subnetCidr
+                toFieldPath: spec.forProvider.ipCidrRange
+              # By index, which is what makes the rangeName entries in
+              # base load-bearing: the patch fills the range beside a
+              # name it does not set, and the two only line up because
+              # the order is fixed there.
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.podsCidr
+                toFieldPath: spec.forProvider.secondaryIpRange[0].ipCidrRange
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.servicesCidr
+                toFieldPath: spec.forProvider.secondaryIpRange[1].ipCidrRange
 
           # ===================================================================
           # The cluster that will run Crossplane and Argo, and nothing
@@ -710,8 +726,6 @@ spec:
                   initialNodeCount: 1
                   removeDefaultNodePool: true
                   deletionProtection: false
-                  releaseChannel:
-                    channel: REGULAR
                   ipAllocationPolicy:
                     clusterSecondaryRangeName: pods
                     servicesSecondaryRangeName: services
@@ -724,6 +738,10 @@ spec:
                 writeConnectionSecretToRef:
                   name: gke-kubeconfig
             patches:
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.releaseChannel
+                toFieldPath: spec.forProvider.releaseChannel.channel
               - fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
@@ -793,10 +811,16 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  nodeCount: 1
+                  # Named rather than left to late-initialisation. Where
+                  # the composition does not own networkConfig, upjet
+                  # observes the live pool and writes podRange and
+                  # podIpv4CidrBlock into the spec -- a description
+                  # while the pool exists, and a create parameter the
+                  # next time it has to be made, where asking for a pod
+                  # range without asking to create one is refused.
+                  networkConfig:
+                    podRange: pods
                   nodeConfig:
-                    diskSizeGb: 50
-                    diskType: pd-standard
                     oauthScopes:
                       - https://www.googleapis.com/auth/cloud-platform
                     workloadMetadataConfig:
@@ -836,6 +860,43 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.machineType
                 toFieldPath: spec.forProvider.nodeConfig.machineType
+              # After the one above, and deliberately not Required.
+              # Absent is meaningful here: a skipped patch leaves the
+              # top-level value standing, which is what makes this an
+              # addition rather than a move. A manifest stating neither
+              # still composes, and one stating both takes the more
+              # specific.
+              - fromFieldPath: spec.cluster.machineType
+                toFieldPath: spec.forProvider.nodeConfig.machineType
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.nodeCount
+                toFieldPath: spec.forProvider.nodeCount
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.diskSize
+                toFieldPath: spec.forProvider.nodeConfig.diskSizeGb
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.diskType
+                toFieldPath: spec.forProvider.nodeConfig.diskType
+              # Composed rather than observed. Unset, the provider
+              # late-initialises whatever GKE defaulted to when the pool
+              # was made, so the spec reads as declared while nobody
+              # chose it -- and the next pool starts from whatever the
+              # defaults are then.
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.upgradeSettings.strategy
+                toFieldPath: spec.forProvider.upgradeSettings.strategy
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.upgradeSettings.maxSurge
+                toFieldPath: spec.forProvider.upgradeSettings.maxSurge
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster.upgradeSettings.maxUnavailable
+                toFieldPath: spec.forProvider.upgradeSettings.maxUnavailable
               # Immutable, so changing it replaces the pool and restarts
               # everything on the cluster. Worth pairing with any other
               # change that also replaces it -- machineType is the other

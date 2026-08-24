@@ -71,6 +71,18 @@ relinquishes it — the provider then writes it back under its own field
 manager. Three managers are normal: the composition, the reference
 resolver, the provider.
 
+Which is why the time to own a field is before the provider does, not
+after. Two kinds are worth taking: a value that is a choice, and a
+value that is only a description now and a create parameter later. A
+node pool's `upgradeSettings` is the first — unset, the provider writes
+back whatever GKE defaulted to, so the spec reads as declared while
+nobody chose it, and the next pool starts from whatever the defaults
+are then. Its `networkConfig.podIpv4CidrBlock` is the second: harmless
+while the pool exists, and refused the next time one has to be made.
+Neither is visible as a problem, because a late-initialised field looks
+exactly like a composed one in the spec — `metadata.managedFields` is
+the only place the difference shows.
+
 ### Groups
 
 Prefer the namespaced `.m.` group — `cloudplatform.gcp.m.upbound.io`,
@@ -101,6 +113,10 @@ turns out not to exist.
   Kubernetes name, or where something else spells it.
 - Feed a generated id back as an adopt value where the external name is
   empty after create, or the resource never completes.
+- Compose a field before the provider late-initialises it, where the
+  value is a choice somebody should make or a parameter a later create
+  will need. Read `metadata.managedFields` to tell which fields are
+  the composition's and which the provider filled in.
 
 **MUST NOT:**
 

@@ -33,6 +33,20 @@ spec:
   region: "<region>" # e.g. europe-west2
   regionCode: "<region-code>" # e.g. euw2
   zone: "<zone>" # e.g. europe-west2-a
+  network:
+    subnetCidr: "10.60.0.0/16"
+    podsCidr: "10.61.0.0/16"
+    servicesCidr: "10.62.0.0/20"
+  cluster:
+    machineType: "e2-standard-2"
+    nodeCount: 1
+    diskSize: 50
+    diskType: "pd-standard"
+    releaseChannel: "REGULAR"
+    upgradeSettings:
+      strategy: "SURGE"
+      maxSurge: 1
+      maxUnavailable: 0
   access:
     platformViewer: ["group:grp-gcp-<code>-platform-viewer@<your-domain>"]
     platformAdmin: ["group:grp-gcp-<code>-platform-admin@<your-domain>"]
@@ -131,21 +145,43 @@ cluster holds a credential at all.
 One file, and the fields it carries. `management.*` says which project
 and where its configuration comes from, which a plane needs because it
 composes a folder and a project and `createFolder.*` is the other half
-of that pair. Everything describing the cluster it builds is flat,
-because a plane has one cluster and nothing else with a size — where an
-instance groups, since `diskSize` there could be a node's or a
-database's.
+of that pair. What describes the cluster it builds groups under
+`cluster` and `network`, the same two sections an instance carries and
+for the same reason: a plane whose only sized thing was a machine type
+could state it flat, and one that also states a node count, two disk
+fields, a release channel and an upgrade strategy cannot.
 
 - **`code`** — the installation's short name, which every resource name
   derives from. See [cloud-naming](cloud-naming.md).
-- **`region`, `regionCode`, `zone`, `machineType`** — stated
-  rather than left to the XRD's defaults. A name carries the region
-  abbreviation, and moving the region, the zone or the machine type
-  rebuilds a subnet, a cluster or a node pool, so a default that
-  changed underneath a live installation would move it silently. State
-  the machine type the pool is already running: it is immutable, so a
-  value that merely differs replaces the pool, and the pool being
-  replaced is the one running the Crossplane doing the replacing.
+- **`region`, `regionCode`, `zone`** — stated rather than left to the
+  XRD's defaults. A name carries the region abbreviation, and moving
+  the region or the zone rebuilds a subnet or a cluster, so a default
+  that changed underneath a live installation would move it silently.
+- **`cluster.*`** — `machineType`, `nodeCount`, `diskSize`, `diskType`,
+  `releaseChannel` and `upgradeSettings`. State the machine type the
+  pool is already running: it is immutable, so a value that merely
+  differs replaces the pool, and the pool being replaced is the one
+  running the Crossplane doing the replacing.
+
+  `machineType` is also read from the top level, where it was stated
+  before this section existed, and `cluster.machineType` supersedes it
+  where a manifest carries both. That one field is deliberately
+  undefaulted, since a default would override every manifest still
+  spelling it flat.
+
+  `upgradeSettings` is stated because unset it is not unset: the
+  provider late-initialises whatever GKE defaulted to when the pool was
+  made, so the spec reads as declared while nobody chose it, and the
+  next pool starts from whatever the defaults are then.
+- **`network.*`** — `subnetCidr`, `podsCidr` and `servicesCidr`. The
+  plane's default ranges are disjoint from an instance's by
+  construction, which is what makes the two safe to leave alone. A
+  range is immutable, so state them before anything is peered rather
+  than after — moving one rebuilds the subnet and the cluster standing
+  on it, which here is the cluster doing the rebuilding. No `proxyCidr`
+  or `psaPrefixLength`: the plane composes neither a proxy-only subnet
+  nor a private services range, and a field the composition ignores is
+  worse than an absent one.
 
   The general rule is stronger than the silent-move argument, and
   applies to any field an XRD defaults and a composition patches from.
@@ -230,11 +266,11 @@ it for humans, and the third overrides the installation's billing
 account for this instance alone.
 
 **Grouped where a name would otherwise be ambiguous.** `diskSize` on an
-instance could mean a node's or the database's, so both group; the
-plane has one cluster and nothing else with a size, so its
-`machineType` stays flat. `keycloak.database` rather than `database`
-because FoundationDB is the bank's own store and will want a section of
-its own — neither should get to be "the database".
+instance could mean a node's or the database's, so both group, and the
+plane groups the same way now that its cluster is described by more
+than a machine type. `keycloak.database` rather than `database` because
+FoundationDB is the bank's own store and will want a section of its own
+— neither should get to be "the database".
 
 **What is not here is deliberate.** The composition keeps
 `ipv4Enabled: false`, `sslMode: ENCRYPTED_ONLY`,
