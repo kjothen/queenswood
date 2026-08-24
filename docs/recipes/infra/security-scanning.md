@@ -76,7 +76,7 @@ decides otherwise. They are not defects to be surprised by:
   the two on a busy cluster. Sampling is the middle option.
 - **CIS 4.9, the management node's public IP** — the cluster is publicly
   reachable, which
-  [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+  [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   leaves deliberately open.
 - **CIS 4.7 and 4.11, CSEK disks and Confidential Computing** — both
   Level 2, both a real cost, for a cluster running Crossplane and Argo
@@ -122,5 +122,5 @@ report, which is what the next reader will assume.
   which of them are populated rather than break-glass.
 - [gcp-iam](gcp-iam.md) — why reading organisation policy needs a role
   nobody holds by default, and the two generations of constraint id.
-- [ADR-0023](../adr/0023-installation-naming-and-access.md) — the access
+- [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the access
   capabilities and who holds which.

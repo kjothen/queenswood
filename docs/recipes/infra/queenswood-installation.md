@@ -386,9 +386,9 @@ one piece the composite deliberately cannot fill.
   billing account, none of which has an API.
 - [cloud-naming](cloud-naming.md) — the installation code, and what every
   name derives from it.
-- [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+- [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as an installation, and why foundations are not deleted.
-- [ADR-0023](../adr/0023-installation-naming-and-access.md) — the access
+- [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the access
   capabilities and who holds them.
 - `infra/platform/crossplane-xrds/xmanagementplane-xrd.yml` — the
   fields above, as a schema.

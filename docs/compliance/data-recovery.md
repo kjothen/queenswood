@@ -53,11 +53,11 @@ every regime that states it.
 
 **Met.**
 
-- **FoundationDB** — [fdb-recovery](../recipes/fdb-recovery.md): the
+- **FoundationDB** — [fdb-recovery](../recipes/infra/fdb-recovery.md): the
   recovery scenarios, which restore mode each takes, and the measured
   RPO of each.
 - **Keycloak** —
-  [recovery-procedures](../recipes/recovery-procedures.md), whose
+  [recovery-procedures](../recipes/infra/recovery-procedures.md), whose
   FoundationDB half is superseded and whose Keycloak half is not.
 
 ### Automated backups, at a frequency set by criticality
@@ -84,7 +84,7 @@ down.
 
 - **FoundationDB** — met. The backups are encrypted under a key held in
   Secret Manager that has never been in git; see
-  [external-secrets](../recipes/external-secrets.md).
+  [external-secrets](../recipes/infra/external-secrets.md).
 - **Keycloak** — not met. The realm exports sit in the same bucket as
   plain JSON carrying user credential records and client secrets, which
   is a weaker control than the source Keycloak applies. Closing it means
@@ -150,7 +150,7 @@ on important business services.
 
 **Not met.**
 
-- **RPO** — [fdb-recovery](../recipes/fdb-recovery.md) states one per
+- **RPO** — [fdb-recovery](../recipes/infra/fdb-recovery.md) states one per
   recovery scenario, but those are measurements of what the running
   configuration achieves rather than targets it is held to.
 - **RTO** — neither measured nor declared. No recovery has been timed,
@@ -174,7 +174,7 @@ These are policy statements rather than procedures, which is why they
 belong here and not in a recipe. Each is currently absent:
 
 - **RPO and RTO**, per recovery scenario. The measured figures are in
-  [fdb-recovery](../recipes/fdb-recovery.md) and are the natural
+  [fdb-recovery](../recipes/infra/fdb-recovery.md) and are the natural
   starting point for the targets.
 - **The retention period**, in days.
   [ADR-0026](../adr/0026-recovering-data-and-the-states-that-do-it.md)
@@ -186,11 +186,11 @@ belong here and not in a recipe. Each is currently absent:
 
 ## References
 
-- [fdb-recovery](../recipes/fdb-recovery.md) — the FoundationDB
+- [fdb-recovery](../recipes/infra/fdb-recovery.md) — the FoundationDB
   recovery scenarios and procedures
-- [recovery-procedures](../recipes/recovery-procedures.md) — Keycloak
+- [recovery-procedures](../recipes/infra/recovery-procedures.md) — Keycloak
   recovery
-- [external-secrets](../recipes/external-secrets.md) — where the backup
+- [external-secrets](../recipes/infra/external-secrets.md) — where the backup
   encryption key lives, and why it is never rotated
 - [ADR-0026](../adr/0026-recovering-data-and-the-states-that-do-it.md)
   — the recovery position, the two shapes, and retention as one number

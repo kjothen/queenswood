@@ -121,7 +121,7 @@ idv}-processor` bases and their `-service` projects.
   project instead of scaffolding a base.
 - `.claude/skills/new-processor/SKILL.md` — same amendment to the
   scaffold workflow (steps 3–5 become "wire into the group project").
-- `docs/recipes/projects.md` / `deployment.md` — update the service
+- `docs/recipes/code/projects.md` / `deployment.md` — update the service
   inventory if they enumerate it.
 
 ### Test systems

@@ -405,8 +405,9 @@ wrapper, one place to swap.
 
 ## References
 
-- [ADR-0006](../adr/0006-kebab-case-keyword-keys.md) — Kebab-case keyword keys
-- [ADR-0012](../adr/0012-pre-commit-hooks.md) — Pre-commit hooks
+- [ADR-0006](../../adr/0006-kebab-case-keyword-keys.md) — Kebab-case
+  keyword keys
+- [ADR-0012](../../adr/0012-pre-commit-hooks.md) — Pre-commit hooks
 - [error-handling.md](error-handling.md)
 - [system-components.md](system-components.md)
 - _Elements of Clojure_ by Zachary Tellman

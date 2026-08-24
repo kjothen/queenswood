@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.party.domain-test
   "Pure-function tests for merge-party's source-state guards. No FDB,
   no processor — this pins the lifecycle-transition convention
-  (docs/recipes/lifecycle-transitions.md): reject before any
+  (docs/recipes/code/lifecycle-transitions.md): reject before any
   capability check when either party isn't in a valid source state."
   (:require
     [com.repldriven.queenswood.party.domain :as SUT]

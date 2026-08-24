@@ -24,10 +24,10 @@ A deployable service is a triple:
   `deps.edn` listing components and bases as `:local/root`,
   plus `resources/` for `application.yml` and logback
   config. No Clojure source, no `-main`. See
-  [projects.md](projects.md).
+  [projects.md](../code/projects.md).
 - **Base** at `bases/<name>/` — owns `main.clj` and
   `(:gen-class)`. The project's `:build` alias points at
-  the base's `-main` entry. See [bases.md](bases.md).
+  the base's `-main` entry. See [bases.md](../code/bases.md).
 - **Image** built from the shared Dockerfile at
   `infra/docker/service/Dockerfile` with a `PROJECT_NAME`
   build-arg; the build stage runs `clojure -X:build uber`
@@ -43,7 +43,7 @@ one dispatcher — the changelog relay runners and the Quartz
 scheduler — is `exclusive-dispatchers-service`. Every
 vendor adapter and its simulator share
 `external-adapters-service` — see
-[ADR-0019](../adr/0019-processor-packaging.md). The two
+[ADR-0019](../../adr/0019-processor-packaging.md). The two
 one-shots are `migrator-service` and
 `bootstrap-service`.
 
@@ -211,7 +211,7 @@ kind node's containerd, then `helm-install`s the chart.
 - Every deployable project under `projects/*-service/` is
   pure config (`deps.edn` + `resources/`); the
   corresponding base owns `main.clj`. See
-  [projects.md](projects.md) and [bases.md](bases.md).
+  [projects.md](../code/projects.md) and [bases.md](../code/bases.md).
 - Service images are built from
   `infra/docker/service/Dockerfile` with a `PROJECT_NAME`
   build-arg.
@@ -279,7 +279,7 @@ kind node's containerd, then `helm-install`s the chart.
 Processors were originally one project each; at current
 volume that meant a JVM per domain, each under-utilised, so
 they are packaged into boundary groups instead, per
-[ADR-0019](../adr/0019-processor-packaging.md). Each
+[ADR-0019](../../adr/0019-processor-packaging.md). Each
 processor still owns its Kafka consumer group and changelog
 cursors — the group a processor runs in is deployment-time
 YAML composition, so a domain that develops its own scaling
@@ -347,19 +347,19 @@ the bootstrap because we want the
 in-place updates on edit-the-code aren't possible. 
 ## References
 
-- [bases.md](bases.md) — base owns `main.clj`; the
+- [bases.md](../code/bases.md) — base owns `main.clj`; the
   project depends on the base.
-- [projects.md](projects.md) — projects are pure config;
+- [projects.md](../code/projects.md) — projects are pure config;
   the per-service split.
-- [system-configurations.md](system-configurations.md) —
+- [system-configurations.md](../code/system-configurations.md) —
   `application.yml` shape, profiles, env-var
   interpolation.
-- [system-components.md](system-components.md) —
+- [system-components.md](../code/system-components.md) —
   bare-require pattern in `main.clj`.
-- [ADR-0007](../adr/0007-system-as-data.md) — system-as-data
+- [ADR-0007](../../adr/0007-system-as-data.md) — system-as-data
   via donut.system + YAML; the same bootstrap path runs
   under Testcontainers, kind, and production.
-- [ADR-0021](../adr/0021-changelog-relay.md) — the
+- [ADR-0021](../../adr/0021-changelog-relay.md) — the
   scaling caveat on changelog cursors.
 - `infra/helm/queenswood/README.md` — chart user guide:
   `helm install`, `kind create`, port-forward, verifying.

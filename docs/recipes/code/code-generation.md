@@ -179,6 +179,6 @@ source-schema change, force.
 
 ## References
 
-- [ADR-0010](../adr/0010-code-generation-via-prep-lib.md) —
+- [ADR-0010](../../adr/0010-code-generation-via-prep-lib.md) —
   Code generation via :deps/prep-lib
 - `bases/build` (shared generation logic)

@@ -57,8 +57,8 @@ clojure -M:poly test brick:balance:cash-account project:dev
 Don't write `deftest`-style integration tests against the
 command pipeline. The scenario runner is the only sanctioned
 path for system-level tests. See
-[ADR-0009](../adr/0009-model-equality-property-testing.md) and
-[docs/tdd/scenario-testing.md](../tdd/scenario-testing.md)
+[ADR-0009](../../adr/0009-model-equality-property-testing.md) and
+[docs/tdd/scenario-testing.md](../../tdd/scenario-testing.md)
 for the architecture.
 
 ### with-test-system
@@ -87,7 +87,7 @@ asserts it started cleanly, and stops it after the body — no
 The optional second element of the binding vector is a patch-fn
 applied to the system defs before start. Use it to inject HTTP
 handlers — analogous to base-level required-component injection;
-see [system-configurations.md](system-configurations.md) — or to
+see [system-configurations.md](../code/system-configurations.md) — or to
 swap a component for a test double.
 
 ### nom-test>
@@ -109,7 +109,7 @@ For a single anomaly check with no further bindings:
 (nom-test> [_ (operation-that-must-not-fail)])
 ```
 
-See [error-handling.md](error-handling.md) for the broader
+See [error-handling.md](../code/error-handling.md) for the broader
 anomaly story.
 
 ### Test resources
@@ -122,7 +122,7 @@ configuration (common fixtures, common schemas) lives in the
 The classpath URL pattern
 `classpath:<brick>/application-test.yml` is what
 `with-test-system` expects; load mechanics are covered by
-[system-configurations.md](system-configurations.md).
+[system-configurations.md](../code/system-configurations.md).
 
 ### eftest synchronization
 
@@ -205,10 +205,10 @@ parallelism on cheap tests where it actually helps.
 
 ## References
 
-- [ADR-0009](../adr/0009-model-equality-property-testing.md) —
+- [ADR-0009](../../adr/0009-model-equality-property-testing.md) —
   Model-equality property testing
-- [docs/tdd/scenario-testing.md](../tdd/scenario-testing.md)
-- [error-handling.md](error-handling.md)
-- [system-configurations.md](system-configurations.md)
+- [docs/tdd/scenario-testing.md](../../tdd/scenario-testing.md)
+- [error-handling.md](../code/error-handling.md)
+- [system-configurations.md](../code/system-configurations.md)
 - `test-system` brick (provides `with-test-system`, `nom-test>`)
 - `test-resources` brick (shared fixtures and schemas)

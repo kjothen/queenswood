@@ -26,19 +26,19 @@ topic.
   fns, `cond->`, `let`-binding format, ID generation (`util/uuidv7`),
   timestamps (`util/now`), interceptor short-circuit
   (`sieppari.context/terminate`).
-  See [recipes/code-style.md](docs/recipes/code-style.md).
+  See [code-style.md](docs/recipes/code/code-style.md).
 - **Common helpers** — when to add a helper to `utility`, when to
   re-export from a library (medley etc.), the convergence rule.
-  See [recipes/common-helpers.md](docs/recipes/common-helpers.md).
+  See [common-helpers.md](docs/recipes/code/common-helpers.md).
 - **Component interfaces and docstrings** — `interface.clj` is the
   documentation surface; impl files stay bare.
   See [ADR-0015](docs/adr/0015-comments-and-docstrings.md) and
-  [recipes/components.md](docs/recipes/components.md).
+  [components.md](docs/recipes/code/components.md).
 - **Error handling** — anomalies at component boundaries; never
   throw from `interface.clj`; `error/try-nom` and `error/nom->` at
   library edges. See
   [ADR-0005](docs/adr/0005-error-handling-with-anomalies.md) and
-  [recipes/error-handling.md](docs/recipes/error-handling.md).
+  [error-handling.md](docs/recipes/code/error-handling.md).
 - **Data shapes** — kebab-case keyword keys throughout, with
   string-typed currency (ISO 4217) as a deliberate exception.
   See [ADR-0006](docs/adr/0006-kebab-case-keyword-keys.md).
@@ -48,13 +48,13 @@ topic.
 - **System wiring** — `system/defcomponents`, `system.clj` vs
   `system/` folder, the test-bundle pattern, naming shared
   resource components without baking environment names in.
-  See [recipes/system-components.md](docs/recipes/system-components.md)
+  See [system-components.md](docs/recipes/code/system-components.md)
   and [ADR-0007](docs/adr/0007-system-as-data.md).
 - **Brick boundaries** — bricks react to events relayed off
   each other's changelogs rather than orchestrating across each
   other; `bank-api` stays ignorant of cross-brick effects.
   See [ADR-0021](docs/adr/0021-changelog-relay.md) and
-  [recipes/components.md](docs/recipes/components.md).
+  [components.md](docs/recipes/code/components.md).
 - **Transactional guarantees** — the line between work inside FDB
   (one transaction, commit-then-ack) and work that crosses a
   boundary (ingress idempotent consume-then-ack; egress via an
@@ -72,11 +72,11 @@ topic.
   See [tdd/processor-bricks.md](docs/tdd/processor-bricks.md).
 - **Bases and projects** — entry points, per-service projects,
   the development project that includes everything.
-  See [recipes/bases.md](docs/recipes/bases.md) and
-  [recipes/projects.md](docs/recipes/projects.md).
+  See [bases.md](docs/recipes/code/bases.md) and
+  [projects.md](docs/recipes/code/projects.md).
 - **System configurations** — YAML system definitions, profiles,
   `!system/component` / `!system/ref` / `!env`.
-  See [recipes/system-configurations.md](docs/recipes/system-configurations.md).
+  See [system-configurations.md](docs/recipes/code/system-configurations.md).
 - **Service APIs** — Reitit + Sieppari + Muuntaja, RFC 9457
   problem details, two-tier auth, OpenAPI assembly. The API style
   is resource-based, not CRUD-shaped.
@@ -87,17 +87,17 @@ topic.
   a new entity state or transition, source-state guards in
   `domain.clj` (`:<entity>/invalid-status`, HTTP 409), and event-
   handler guards as an idempotency gate rather than a rejection.
-  See [recipes/lifecycle-transitions.md](docs/recipes/lifecycle-transitions.md)
+  See [lifecycle-transitions.md](docs/recipes/code/lifecycle-transitions.md)
   and [ADR-0021](docs/adr/0021-changelog-relay.md).
 
 ### Tests
 
 - **General testing** — `with-test-system`, `nom-test>`, no
   `use-fixtures`, brick-level vs project-level test runs.
-  See [recipes/testing.md](docs/recipes/testing.md).
+  See [testing.md](docs/recipes/test/testing.md).
 - **Testcontainers** — FDB and Pulsar containers, reuse, image
   selection. See
-  [recipes/testcontainers.md](docs/recipes/testcontainers.md).
+  [testcontainers.md](docs/recipes/test/testcontainers.md).
 - **Scenario testing** — two sibling scenario bricks, both
   data-driven EDN + fugato-style runner. `bank-test-scenarios`
   drives the domain layer for model-equality property tests;
@@ -113,7 +113,7 @@ topic.
   overclaim, no competitor names, PRDs use product language and
   describe what users do via "the banking API" rather than
   naming operations. See
-  [recipes/writing-docs.md](docs/recipes/writing-docs.md).
+  [writing-docs.md](docs/recipes/practices/writing-docs.md).
 
 ### Operations
 
@@ -121,27 +121,27 @@ topic.
   auto-merges deps weekly), stage user-initiated deletions and
   moves with `git add` not `git rm`, include the user's
   untracked drafts in workspace-wide ops.
-  See [recipes/git-workflow.md](docs/recipes/git-workflow.md).
+  See [git-workflow.md](docs/recipes/practices/git-workflow.md).
 - **Code generation** — protoc + protojure for protobuf, Lancaster
   for Avro, prep alias for the bank profile.
-  See [recipes/code-generation.md](docs/recipes/code-generation.md)
+  See [code-generation.md](docs/recipes/code/code-generation.md)
   and [ADR-0010](docs/adr/0010-code-generation-via-prep-lib.md).
 - **Deployment** — Helm chart, kind dev loop, per-service
   Docker images. See
-  [recipes/deployment.md](docs/recipes/deployment.md).
+  [deployment.md](docs/recipes/infra/deployment.md).
 - **Cloud deployment (previous generation)** — the GHCR-published
   charts, the `QUEENSWOOD_ENV` model and the up/down runbook that
   `cloud.just` still runs. Superseded by the installation model; read
   it for what the old path does, never for what to do now. See
-  [recipes/cloud-deployment.md](docs/recipes/cloud-deployment.md).
+  [cloud-deployment.md](docs/recipes/infra/cloud-deployment.md).
 - **Rebuilding an instance's cluster** — the runbook for a planned
   cluster rebuild: why a ForceNew field reports `Synced` and does
   nothing, the order, and what it leaves standing. See
-  [recipes/cluster-rebuild.md](docs/recipes/cluster-rebuild.md).
+  [cluster-rebuild.md](docs/recipes/infra/cluster-rebuild.md).
 - **Recovering FoundationDB** — the scenario matrix, restore mode
   against destination state, RPO per scenario, why scale-to-zero is not
   a recovery scenario, and the CIS and DORA controls each open item
-  lands on. See [recipes/fdb-recovery.md](docs/recipes/fdb-recovery.md).
+  lands on. See [fdb-recovery.md](docs/recipes/infra/fdb-recovery.md).
 - **Obligations, and how they are met** — a register of what an outside
   body requires and which recipe addresses it, gaps included. Recipes
   themselves carry no regulation; the citation lives here. See
@@ -149,7 +149,7 @@ topic.
 - **Recovery (previous generation's environment model)** — how
   FoundationDB and Keycloak restore, which has not changed, wrapped in
   a `QUEENSWOOD_ENV` and `pass` model that has. See
-  [recipes/recovery-procedures.md](docs/recipes/recovery-procedures.md).
+  [recovery-procedures.md](docs/recipes/infra/recovery-procedures.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
   plane; Argo CD wires the bootstrap chain; the installation's
   composites drive everything else. See
@@ -175,55 +175,55 @@ topic.
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See
-  [crossplane-app-deployment.md](docs/recipes/crossplane-app-deployment.md).
+  [crossplane-app-deployment](docs/recipes/infra/crossplane-app-deployment.md).
 - **Installing Queenswood** — the two repositories a plane reads, the
   GitHub App that reaches the private one, the manifest's fields, and
   who holds which access capability. See
-  [recipes/queenswood-installation.md](docs/recipes/queenswood-installation.md).
+  [queenswood-installation.md](docs/recipes/infra/queenswood-installation.md).
 - **Crossplane** — what identifies a composed resource, what a patch
   does when its source is absent, which condition carries which error.
-  See [recipes/crossplane.md](docs/recipes/crossplane.md).
+  See [crossplane.md](docs/recipes/infra/crossplane.md).
 - **Crossplane providers** — upjet's refusal to replace, external names
   as cloud identifiers, late-initialisation, reading the CRD rather
   than the Terraform docs. See
-  [recipes/crossplane-providers.md](docs/recipes/crossplane-providers.md).
+  [crossplane-providers.md](docs/recipes/infra/crossplane-providers.md).
 - **Argo CD** — app-of-apps, waves against missing kinds, server-side
   apply for large CRDs, retry budgets; and the GitHub App that reaches a
   private repository. See
-  [recipes/argocd.md](docs/recipes/argocd.md) and
-  [recipes/argocd-github.md](docs/recipes/argocd-github.md).
+  [argocd.md](docs/recipes/infra/argocd.md) and
+  [argocd-github.md](docs/recipes/infra/argocd-github.md).
 - **GCP IAM for automation** — Workload Identity's two halves, node
   identities, rights held by accident, role scopes. See
-  [recipes/gcp-iam.md](docs/recipes/gcp-iam.md).
+  [gcp-iam.md](docs/recipes/infra/gcp-iam.md).
 - **Security scanning** — how the organisation is scanned, which
   findings are accepted and why, and the difference between a muted
   finding and a deferred one. See
-  [recipes/security-scanning.md](docs/recipes/security-scanning.md).
+  [security-scanning.md](docs/recipes/infra/security-scanning.md).
 - **External secrets** — the declared container and the written
   version, why the read happens on the destination cluster, and why a
   credential you can regenerate gets no second copy anywhere. See
-  [recipes/external-secrets.md](docs/recipes/external-secrets.md).
+  [external-secrets.md](docs/recipes/infra/external-secrets.md).
 - **Google sign-in** — the OAuth client no API creates, the redirect
   URI Google refuses only after the user has left, and why the realm's
   placeholder pair reaches it by two different routes. See
-  [recipes/google-sign-in.md](docs/recipes/google-sign-in.md).
+  [google-sign-in.md](docs/recipes/infra/google-sign-in.md).
 - **Cloud DNS** — the manual half: proving domain ownership before a
   public zone may be created, what has to survive a registrar move,
   and checking the new zone before the delegation follows. See
-  [recipes/cloud-dns.md](docs/recipes/cloud-dns.md).
+  [cloud-dns.md](docs/recipes/infra/cloud-dns.md).
 - **Writing about an installation** — what counts as an identifier,
   what to write instead, and why masking happens while you write rather
   than when a check fails. See
-  [recipes/cloud-identifiers.md](docs/recipes/cloud-identifiers.md).
+  [cloud-identifiers.md](docs/recipes/infra/cloud-identifiers.md).
 - **Cloud naming** — the installation code, the prefix/code/env/label
   rule and its exceptions, the inventory of every kind and a worked
   example of one installation. See
-  [recipes/cloud-naming.md](docs/recipes/cloud-naming.md) and
+  [cloud-naming.md](docs/recipes/infra/cloud-naming.md) and
   [ADR-0023](docs/adr/0023-installation-naming-and-access.md).
 - **Justfile recipes** — the `set -e` shapes that abort silently,
   capturing before piping, and not rediscovering what the caller
   supplied. See
-  [recipes/justfile-recipes.md](docs/recipes/justfile-recipes.md).
+  [justfile-recipes.md](docs/recipes/practices/justfile-recipes.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See
   [ADR-0012](docs/adr/0012-pre-commit-hooks.md).

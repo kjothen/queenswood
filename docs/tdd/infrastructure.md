@@ -16,7 +16,7 @@ order), the Composites we own, the patterns we keep
 re-applying.
 
 Out of scope: building service images and iterating on a local
-kind cluster — see [recipes/deployment.md](../recipes/deployment.md).
+kind cluster — see [recipes/infra/deployment.md](../recipes/infra/deployment.md).
 The Polylith brick layout for the application itself — see the
 per-capability TDDs.
 
@@ -435,7 +435,7 @@ commit messages.
 ## Out of scope
 
 - The local-kind dev loop —
-  [recipes/deployment.md](../recipes/deployment.md).
+  [recipes/infra/deployment.md](../recipes/infra/deployment.md).
 - Per-service image build pipeline — `infra/docker/service/`
   shared Dockerfile, `release-images.yml` workflow.
 - Realm content (clients, scopes, audience mappers) —

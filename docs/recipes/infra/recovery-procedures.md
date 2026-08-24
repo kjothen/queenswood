@@ -11,7 +11,7 @@ credentials and restore points live has.
 The backup path is also being redesigned: an S3-to-GCS proxy replaces
 the HMAC key this describes, because the org-policy exemption it needs
 is not available in an organisation we do not own. See
-[the plan](../plan/cloud-just-migration.md).
+[the plan](../../plan/cloud-just-migration.md).
 
 The FoundationDB half is superseded by
 [fdb-recovery](fdb-recovery.md), which covers the same ground for the
@@ -255,5 +255,5 @@ backup and tears down its agents.
 
 - [cloud-deployment](cloud-deployment.md) — the tiers, the teardown
   order, and the credential taxonomy the backup keys live in
-- [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why the
+- [ADR-0016](../../adr/0016-crossplane-over-terraform.md) — why the
   management plane applies any of this at all

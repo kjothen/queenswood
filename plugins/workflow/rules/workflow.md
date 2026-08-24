@@ -17,7 +17,7 @@ initiating. Never develop new features inside the user's untracked
 drafts; do include them in workspace-wide operations (rename,
 dead-code cleanup, regeneration) so the tree stays consistent, and
 report what was touched.
-See [git-workflow](../../../docs/recipes/git-workflow.md).
+See [git-workflow](../../../docs/recipes/practices/git-workflow.md).
 
 ## The pre-commit hook formats and lints before CI sees it
 

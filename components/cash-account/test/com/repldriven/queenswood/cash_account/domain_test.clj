@@ -1,7 +1,7 @@
 (ns com.repldriven.queenswood.cash-account.domain-test
   "Pure-function tests for the close/suspend/resume/rotate-address
   source-state guards. No FDB, no processor — this pins the
-  lifecycle-transition convention (docs/recipes/lifecycle-transitions.md):
+  lifecycle-transition convention (docs/recipes/code/lifecycle-transitions.md):
   reject before any capability/limit check when the account isn't in
   a valid source state."
   (:require

@@ -53,7 +53,7 @@ spec:
 
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
-                # are built; see docs/recipes/crossplane-app-deployment.md.
+                # are built; see docs/recipes/infra/crossplane-app-deployment.md.
                 billingAccountId:
                   type: string
                   description: |
@@ -355,14 +355,14 @@ spec:
                     rather than holding a zone of its own -- the zone
                     outlives every instance, and a rebuilt one draws a
                     new nameserver set the registrar does not follow.
-                    See docs/recipes/cloud-dns.md.
+                    See docs/recipes/infra/cloud-dns.md.
                   properties:
                     domain:
                       type: string
                       description: |
                         The apex, without a trailing dot. Names the
                         zone as dz-<code>-c-<domain>, dots becoming
-                        hyphens; see docs/recipes/cloud-naming.md.
+                        hyphens; see docs/recipes/infra/cloud-naming.md.
                     records:
                       type: array
                       description: |

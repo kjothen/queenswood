@@ -4,7 +4,7 @@
 # All new GCP work lands here, and anything still needed from
 # cloud.just moves here rather than being called across -- cloud.just is
 # the previous generation and shrinks as its recipes are replaced by
-# managed resources. See docs/recipes/crossplane-app-deployment.md.
+# managed resources. See docs/recipes/infra/crossplane-app-deployment.md.
 # =========================================================================
 
 # Throwaway control plane used to create the folder and the management
@@ -175,7 +175,7 @@ _gcp-org-id org="":
     if [[ "$COUNT" -eq 0 ]]; then
       echo "no organization visible to $(gcloud config get-value account 2>/dev/null)" >&2
       echo "an organization comes from Cloud Identity, not from gcloud --" >&2
-      echo "see docs/recipes/cloud-account.md" >&2
+      echo "see docs/recipes/infra/cloud-account.md" >&2
       exit 1
     fi
     if [[ "$COUNT" -ne 1 ]]; then
@@ -1497,7 +1497,7 @@ gcp-github-app-secret pem app_id installation_id:
     set -e
     # A person's act, once per App, from the secretsAdmin capability --
     # GitHub has no API that creates an App, so nothing here can be
-    # declared. See docs/recipes/crossplane-app-deployment.md for the console
+    # declared. See docs/recipes/infra/crossplane-app-deployment.md for the console
     # steps that produce these three values.
     #
     # The container is composed by the installation; this adds a

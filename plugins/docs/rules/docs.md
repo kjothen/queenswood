@@ -17,7 +17,7 @@ mermaid labels, notes, and arrow text, replace `;` with `,`, `—`,
 `.`, or `<br/>` — mermaid treats `;` as a statement separator and
 GitHub fails to render the block. A mermaid line MAY exceed 80
 characters when the diagram reads more clearly as one line.
-See [writing-docs](../../../docs/recipes/writing-docs.md).
+See [writing-docs](../../../docs/recipes/practices/writing-docs.md).
 
 ## A doc may be formatted, so the tooling tolerates formatting
 
@@ -29,7 +29,7 @@ the file is saved, and a parser reading a fixed line reports the doc as
 unlabelled — indistinguishable from one nobody labelled, and silent.
 Never move a label to satisfy a script: if discovery cannot find a
 labelled doc, the script is what is wrong.
-See [writing-docs](../../../docs/recipes/writing-docs.md).
+See [writing-docs](../../../docs/recipes/practices/writing-docs.md).
 
 ## Tone, maturity claims, and the PRD register
 
@@ -49,4 +49,4 @@ principle and discipline rather than a mechanical CI gate, and
 acknowledge drift in a recipe's Harder consequences; reserve the
 project's own vocabulary (`changelog relay`, `brick`,
 `interceptor`) for TDDs and recipes.
-See [writing-docs](../../../docs/recipes/writing-docs.md).
+See [writing-docs](../../../docs/recipes/practices/writing-docs.md).

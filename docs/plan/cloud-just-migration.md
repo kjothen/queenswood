@@ -73,14 +73,14 @@ What a second instance repeats, in this order:
   web client with a chosen redirect URI, so no automation holds the
   right — it is `roles/oauthconfig.editor`, granted through
   `platformAdmin`. See
-  [google-sign-in](../recipes/google-sign-in.md).
+  [google-sign-in](../recipes/infra/google-sign-in.md).
 - **The secret**, written once into `sec-qw01-n-test-google-oauth` with
   `just gcp-secret-version`. Crossplane composes containers, never
   values, and the GitHub App key went in by hand the same way. What
   external-secrets buys is that it survives a cluster rebuild and
   lives somewhere auditable rather than only in etcd. The general
   shape, and where a value must not go on the way in, is
-  [external-secrets](../recipes/external-secrets.md).
+  [external-secrets](../recipes/infra/external-secrets.md).
 - **The id**, set on `keycloak.googleClientId` in
   `qw01/test-values.yml`.
 
@@ -122,7 +122,7 @@ What remains is applying it to this instance.
 3. Set `fdb.restore.enabled: false`. Leave the target beneath it as the
    record of where this cluster's data came from.
 4. Reset the Keycloak schema through the proxy, per
-   [deployment](../recipes/deployment.md): `instances: 0` first, or the
+   [deployment](../recipes/infra/deployment.md): `instances: 0` first, or the
    schema is in use.
 
 Steps 1 and 2 are `secretsAdmin` and a merge in the manifests
@@ -172,7 +172,7 @@ Two habits this week paid for, both cheap:
   email` unless the realm sets `defaultScope`, and verification binds
   only sensitive and restricted scopes. Do it when the test-user list
   stops being the point. See
-  [google-sign-in](../recipes/google-sign-in.md).
+  [google-sign-in](../recipes/infra/google-sign-in.md).
 - **A doc sweep.** The same architecture is described in about five
   places and the retired generation is still present in most of them.
   `docs/tdd/infrastructure.md` is the worst: 444 lines, 26 references
@@ -180,7 +180,7 @@ Two habits this week paid for, both cheap:
   `XPlatform`, `XQueenswoodApex` and workload delivery through
   `provider-helm`. Fixing it piecemeal leaves it half-true; it wants
   one deliberate pass, at the end, together with
-  [cloud-deployment](../recipes/cloud-deployment.md) and this plan.
+  [cloud-deployment](../recipes/infra/cloud-deployment.md) and this plan.
 - **Statements in this plan that nothing durable records.** "Workloads
   arrive through Argo, not Crossplane" was one and now lives in
   ADR-0024. Two more are still plan-only: what the Keycloak fold buys
@@ -363,7 +363,7 @@ reported drift: from Argo's side the Secret was exactly what git said.
 The fix was to generate in the cluster, from the Job that registers it,
 and let the chart declare the Secret with no `data` so server-side
 apply leaves the contents alone. Now in
-[argocd](../recipes/argocd.md).
+[argocd](../recipes/infra/argocd.md).
 
 **Two credentials in a row failed only at the moment of use.** A
 redirect URI missing its last character is accepted by Google at setup
@@ -517,7 +517,7 @@ what says who satisfies it.
   container, and what goes inside may never be in git.
 
 They divide by how often each is paid, which is what the two paths in
-[crossplane-app-deployment](../recipes/crossplane-app-deployment.md) are
+[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md) are
 really distinguishing:
 
 - **Once per organisation** — the organisation, the billing account, the
@@ -574,7 +574,7 @@ Each leaves the composite Ready and every managed resource green.
   `_gcp-allow-sa-keys` reads the effective policy and does nothing where
   it is already off, so the ban holds wherever a folder is handed over
   and
-  [crossplane-app-deployment](../recipes/crossplane-app-deployment.md)
+  [crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md)
   is imprecise about where it comes from rather than wrong about it
   holding. The default network has no such default: `cloud.just` set it
   at the organisation, and a folder elsewhere gets a default VPC in
@@ -653,7 +653,7 @@ Small, and none of it blocking:
   recorded until now in a comment in the composition.
 - **`sa-qw01-nodes` renamed but the cluster not.** `gke-qw01-c-mgmt` and
   `np-qw01-c-mgmt` keep names that predate the rule in
-  [cloud-naming](../recipes/cloud-naming.md), because renaming either
+  [cloud-naming](../recipes/infra/cloud-naming.md), because renaming either
   destroys the cluster. New installations get the shorter forms.
 
 Then the durable tier and the first instance, both described under
@@ -673,7 +673,7 @@ For most resources this is harmless, because the external name defaults
 to `metadata.name`, and the composition pins those deterministically:
 `vpc-qw01-c-mgmt`, `gke-qw01-c-mgmt`, `np-qw01-c-mgmt`. The provider
 observes, finds the object, and adopts it. This is the second reason for
-[cloud-naming](../recipes/cloud-naming.md)'s rule that Kubernetes names
+[cloud-naming](../recipes/infra/cloud-naming.md)'s rule that Kubernetes names
 are the same names — the recipe gives the cross-reference reason, and
 re-adoption is the one that bites at a pivot.
 
@@ -1024,7 +1024,7 @@ GCP provider configuration has, reached the same way.
 **The credential itself is two human acts**, and they are the last two
 in the chain. The GitHub App is created by a person in a UI, because
 GitHub has no API that creates one — see
-[crossplane-app-deployment](../recipes/crossplane-app-deployment.md) —
+[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md) —
 and `gcp-github-app-secret` writes its three values into Secret Manager
 as one JSON entry, run by a person holding `secretsAdmin`. The
 identifiers travel with the key rather than through a second channel, so
@@ -1241,7 +1241,7 @@ the cluster, and points outward. The only thing able to act on GCP is
 the management cluster.
 
 That is stronger than the rule
-[crossplane-app-deployment](../recipes/crossplane-app-deployment.md)
+[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md)
 states today. "A merge is the privileged action, so merged state applies
 and a `pull_request` trigger gets no cloud identity" exists because the
 alternative was push-based CI holding one. Pull-based and data-only
@@ -1258,7 +1258,7 @@ requiring review is the control that belongs there, a merge being what
 reaches production.
 
 This is a seam the design already has rather than a new one.
-[crossplane-app-deployment](../recipes/crossplane-app-deployment.md)
+[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md)
 says the manifest lives "in whichever repository the applier reconciles
 from", allowing that it is not this one, and
 [ADR-0023](../adr/0023-installation-naming-and-access.md) assumes
@@ -1300,13 +1300,13 @@ that rare, and is good discipline regardless.
 The test that decided this still governs what goes in *this* repository:
 **does exposure cost anything?** The code, the region, the folder
 display name and the access group addresses all fail it — the ADRs and
-[cloud-account](../recipes/cloud-account.md) publish the naming
+[cloud-account](../recipes/infra/cloud-account.md) publish the naming
 convention in full, so a redacted worked example may stay here and be
 useful. The billing account id and the project-hierarchy identifiers
 pass it.
 
 On what has already leaked: management and seed project ids are printed
-in [cloud-naming](../recipes/cloud-naming.md)'s worked example. A
+in [cloud-naming](../recipes/infra/cloud-naming.md)'s worked example. A
 rebuilt installation takes new random suffixes, at the cost of consuming
 the old project ids permanently — which
 [ADR-0023](../adr/0023-installation-naming-and-access.md) already
@@ -1803,7 +1803,7 @@ Continuity is what makes this better than moving the data. The backup
 stays continuous and lands natively in GCS, so the object layout,
 `fdbbackup expire`, the bucket's lifecycle rules and the restore path
 are all exactly what
-[recovery-procedures](../recipes/recovery-procedures.md) already
+[recovery-procedures](../recipes/infra/recovery-procedures.md) already
 describes. The recovery point objective does not move, and restore
 gains no step.
 
@@ -1833,7 +1833,7 @@ if MinIO is wanted for something else.
 
 **`fdbdr` to a second cluster.** Continuous replication is disaster
 recovery, not point-in-time restore, and
-[recovery-procedures](../recipes/recovery-procedures.md) is built on
+[recovery-procedures](../recipes/infra/recovery-procedures.md) is built on
 restoring to a recorded version. A second cluster running continuously
 also contradicts the disposable tier's whole reason for existing. It
 answers a different question, and could sit alongside a backup rather
@@ -2107,7 +2107,7 @@ Four things wait rather than block:
   `ProjectIAMAuditConfig` for data-access logs. Both are composed
   resources rather than scripts, both close a real CIS finding, and the
   second carries a standing log bill worth sizing first. See
-  [security-scanning](../recipes/security-scanning.md).
+  [security-scanning](../recipes/infra/security-scanning.md).
 - **Flow logs on both subnets**, which is `logConfig` on `Subnetwork`
   and the same cost question one level up.
 
@@ -2172,7 +2172,7 @@ the secret out of Secret Manager, so what is left of either is
 named for what it acts on rather than for Keycloak.
 
 **Never migrates.** The directory work in
-[cloud-account](../recipes/cloud-account.md) — the organisation, the
+[cloud-account](../recipes/infra/cloud-account.md) — the organisation, the
 billing account, domain verification, the access groups — because Cloud
 Identity has no API reachable before a project exists. `gcp-oauth-client`
 stays a console step for the same reason, and only its capture changes.
@@ -2183,7 +2183,7 @@ stays a console step for the same reason, and only its capture changes.
   together across two repositories. Keeping new XRD fields optional
   with defaults makes it rare rather than solved.
 - Whether a redacted worked example stays in
-  [cloud-naming](../recipes/cloud-naming.md), or the whole example
+  [cloud-naming](../recipes/infra/cloud-naming.md), or the whole example
   follows the manifests into `installations`. It is the one piece of
   this documentation that reads better with real values in it.
 - Whether `pass` is retired at the pivot or kept for the boot path.
@@ -2209,13 +2209,13 @@ stays a console step for the same reason, and only its capture changes.
   installation code, the naming scheme and the four capabilities.
 - [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
-- [crossplane-app-deployment](../recipes/crossplane-app-deployment.md) —
+- [crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md) —
   what a deployment builds, and the two identities that build it.
-- [cloud-naming](../recipes/cloud-naming.md) — the inventory every new
+- [cloud-naming](../recipes/infra/cloud-naming.md) — the inventory every new
   resource takes its name from.
-- [cloud-deployment](../recipes/cloud-deployment.md) — the tier model
+- [cloud-deployment](../recipes/infra/cloud-deployment.md) — the tier model
   and the up/down runbook this replaces.
-- [recovery-procedures](../recipes/recovery-procedures.md) — what a
+- [recovery-procedures](../recipes/infra/recovery-procedures.md) — what a
   restore actually does, which is what the durable tier exists for.
 - [GitOps Principles v1.0.0](https://opengitops.dev/) — the four
   principles, published by the GitOps Working Group.

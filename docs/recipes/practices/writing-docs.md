@@ -78,7 +78,7 @@ adjacent `)` is the problem.
 ```
 ;; Bad — link text spans two lines
 - [ADR-0001 — Reuse mono as
-  upstream](../adr/0001-reuse-mono-as-upstream.md)
+  upstream](../../adr/0001-reuse-mono-as-upstream.md)
 ```
 
 Use the canonical reference-list pattern: link first, em-dash,
@@ -87,10 +87,10 @@ prose can wrap.
 
 ```
 ;; OK — link intact, title fits inline
-- [ADR-0001](../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
+- [ADR-0001](../../adr/0001-reuse-mono-as-upstream.md) — Reuse mono as upstream
 
 ;; OK — link intact, title wraps because the path is long
-- [ADR-0011](../adr/0011-one-component-per-third-party-library.md) —
+- [ADR-0011](../../adr/0011-one-component-per-third-party-library.md) —
   One component per third-party library
 ```
 
@@ -104,11 +104,14 @@ prose can wrap.
 [slides/foo/bar.md](../slides/foo/bar.md)
 ```
 
-**4. Avoid relative links that climb more than one level
-(`../../`).** Single-level relatives (`../adr/...`,
-`../recipes/...`) work; two-level paths can fail the viewer's
-resolver. If you need to reference a sibling tree, keep that
-tree under `docs/` so a single-level relative suffices.
+**4. Climb at most two levels (`../../`), and never three.**
+Recipes sit one level deeper than everything else under `docs/`
+— `docs/recipes/<chapter>/` — so a recipe reaching an ADR is
+`../../adr/...` and there is no shallower spelling of it. A
+recipe reaching another chapter is `../<chapter>/...`, and
+anything outside `docs/` reaching in is `../recipes/<chapter>/...`.
+Three or more means the link is leaving `docs/` for a tree that
+should have been under it.
 
 ### Mermaid diagrams
 
@@ -296,7 +299,8 @@ without naming the operation.
 - Hard-wrap markdown at 80 columns under `docs/`.
 - Use the canonical reference-list pattern for ADR / recipe /
   TDD links: `[ID](path) — Title`.
-- Use single-level relative links inside `docs/`.
+- Keep relative links inside `docs/` to two levels at most,
+  which is what a recipe reaching an ADR costs.
 - Replace `;` inside mermaid labels, notes, and arrow text
   with `,`, `—`, `.`, or `<br/>`.
 
@@ -305,7 +309,8 @@ without naming the operation.
 - Put `)` immediately after a link's closing paren.
 - Wrap link text across lines.
 - Use inline code as an entire link text.
-- Use relative links that climb more than one level (`../../`).
+- Use relative links that climb three levels or more
+  (`../../../`).
 - Describe `mono`, Queenswood, or their components as
   "battle-tested", "production-proven", or similar maturity
   claims.
@@ -370,7 +375,8 @@ codebase doesn't perfectly comply.
 
 ## References
 
-- [ADR-0015](../adr/0015-comments-and-docstrings.md) — Comments and docstrings
-- [code-style.md](code-style.md)
+- [ADR-0015](../../adr/0015-comments-and-docstrings.md) — Comments and
+  docstrings
+- [code-style.md](../code/code-style.md)
 - [GitHub flavoured markdown](https://github.github.com/gfm/)
 - [Mermaid documentation](https://mermaid.js.org/)

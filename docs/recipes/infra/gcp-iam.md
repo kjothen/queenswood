@@ -65,7 +65,7 @@ The refusal is a 400 declining the scope, not a permission the caller
 lacks, so no upstream grant fixes it.
 
 Reading them is scoped the same way, and nothing else holds it: no
-capability in [ADR-0023](../adr/0023-installation-naming-and-access.md)
+capability in [ADR-0023](../../adr/0023-installation-naming-and-access.md)
 carries `orgpolicy.policyViewer`, not even the viewer that reads
 everything else, so a person cannot list the constraints binding their
 own installation. `just gcp-policy-status` asks the bootstrap identity

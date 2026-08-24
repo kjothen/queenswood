@@ -38,7 +38,7 @@ dispatcher; scale the relay tier by sharding stores across
 deployments. Raising replicas elsewhere buys standbys
 rather than throughput until `message-bus/send` carries a partition
 key and topics have more than one partition.
-See [deployment](../../../docs/recipes/deployment.md).
+See [deployment](../../../docs/recipes/infra/deployment.md).
 
 ## A folder is an installation, and its foundations are not deleted
 
@@ -83,7 +83,7 @@ never delete a project as a side effect of an edit. Deploying with
 `instances: []` is valid, asking a platform team for the folder and the
 identity shortens this path without changing it, and another XRD and
 composition loaded onto the plane deploys something else the same way.
-See [crossplane-app-deployment](../../../docs/recipes/crossplane-app-deployment.md).
+See [crossplane-app-deployment](../../../docs/recipes/infra/crossplane-app-deployment.md).
 
 ## An installation is one file, and changing it is a merge
 
@@ -102,7 +102,7 @@ that sets it lives in another repository. `management.source` may name
 upstream, a fork, or a mirror that vendors the layout, pinned to a tag;
 an empty `access` mapping installs and capabilities may be added later;
 and one manifest per folder allows more than one installation.
-See [queenswood-installation](../../../docs/recipes/queenswood-installation.md).
+See [queenswood-installation](../../../docs/recipes/infra/queenswood-installation.md).
 
 ## A composite builds what an instance is, Argo installs what runs there
 
@@ -188,7 +188,7 @@ belongs to the resource it names: one pipeline step failing — an
 unparseable template, a kind with no CRD — stops every composed
 resource and reports on the composite. Read `Synced`, `Ready` and
 `LastAsyncOperation` before concluding anything.
-See [crossplane](../../../docs/recipes/crossplane.md).
+See [crossplane](../../../docs/recipes/infra/crossplane.md).
 
 ## Provider resources are Terraform underneath
 
@@ -210,7 +210,7 @@ Kubernetes name or where something else spells the same string, and
 feed a generated id back as an adopt value where the external name is
 empty after create, or the resource never completes. Do not re-add a
 patch for a field late-initialisation now owns.
-See [crossplane-providers](../../../docs/recipes/crossplane-providers.md).
+See [crossplane-providers](../../../docs/recipes/infra/crossplane-providers.md).
 
 ## An automation identity is granted, never inherited
 
@@ -233,7 +233,7 @@ predefined role granting writes you do not want, naming it with
 underscores because a custom role id takes no hyphens, and do not
 assume a role can be granted at the scope its feature acts on.
 `gcloud auth login` does not refresh ADC.
-See [gcp-iam](../../../docs/recipes/gcp-iam.md).
+See [gcp-iam](../../../docs/recipes/infra/gcp-iam.md).
 
 ## A credential is a declared container and a written version
 
@@ -282,7 +282,7 @@ the value was used rather than as a credential nobody wrote, and a
 version added after the `ExternalSecret` synced waits out the refresh
 interval, so delete the controller's pod and restart whatever reads the
 value at startup. See
-[external-secrets](../../../docs/recipes/external-secrets.md).
+[external-secrets](../../../docs/recipes/infra/external-secrets.md).
 
 ## Google sign-in is two console acts and an Admin API call
 
@@ -327,7 +327,7 @@ sync waves than the bank, and restart Keycloak where a secret is stored
 after the pod. Never read `401 invalid_client` on a rebuilt environment
 as evidence the rebuild failed — it is the likelier cause and the wrong
 conclusion.
-See [google-sign-in](../../../docs/recipes/google-sign-in.md).
+See [google-sign-in](../../../docs/recipes/infra/google-sign-in.md).
 
 ## A public zone needs proven ownership, and the registrar is touched once
 
@@ -377,7 +377,7 @@ nameservers change with it, the registrar does not follow, and each
 fresh zone draws from a finite per-domain pool. Move the apex once
 rather than delegating a subdomain per environment, and set a CAA record
 naming the issuing CA.
-See [cloud-dns](../../../docs/recipes/cloud-dns.md).
+See [cloud-dns](../../../docs/recipes/infra/cloud-dns.md).
 
 ## A parent Application holds only kinds that already exist
 
@@ -408,7 +408,7 @@ over whatever the last one left. Generate such a value in the cluster
 instead, from the same Job that registers it wherever its counterpart
 lives, and let the chart declare the Secret without `data` so
 server-side apply leaves the contents to whoever wrote them.
-See [argocd](../../../docs/recipes/argocd.md).
+See [argocd](../../../docs/recipes/infra/argocd.md).
 
 ## Argo reads a private repository as a GitHub App
 
@@ -422,7 +422,7 @@ once. Never commit the `.pem` or pass it on a command line, and never
 give the App webhook access or any write permission. One App may serve
 several repositories in the same organisation where the same reader
 should reach all of them.
-See [argocd-github](../../../docs/recipes/argocd-github.md).
+See [argocd-github](../../../docs/recipes/infra/argocd-github.md).
 
 ## Name the shape, never the instance
 
@@ -460,7 +460,7 @@ identifier is, it reports afterwards, and it points forward, since what
 reached merged history stays there. Where a real value genuinely
 belongs, `cloud-id-ok` on the line makes it deliberate rather than
 missed.
-See [cloud-identifiers](../../../docs/recipes/cloud-identifiers.md).
+See [cloud-identifiers](../../../docs/recipes/infra/cloud-identifiers.md).
 
 ## A recipe fails loudly or not at all
 
@@ -475,4 +475,4 @@ empty result. Use whatever the caller supplied and discover only what
 they did not, because discovery fails where an argument would have
 worked. Declare an overridable variable with `env_var_or_default`, and
 name a recipe for what it acts on.
-See [justfile-recipes](../../../docs/recipes/justfile-recipes.md).
+See [justfile-recipes](../../../docs/recipes/practices/justfile-recipes.md).

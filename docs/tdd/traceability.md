@@ -295,7 +295,7 @@ property under test.
   Transaction processing (defines envelope ID set)
 - [service-apis.md](service-apis.md) — Service APIs (HTTP
   edge interceptors)
-- [error-handling.md](../recipes/error-handling.md)
+- [error-handling.md](../recipes/code/error-handling.md)
 - `telemetry` brick interface
 - `log` brick interface
 - [W3C Trace Context](https://www.w3.org/TR/trace-context/)

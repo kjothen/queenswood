@@ -97,7 +97,7 @@ installation set is folder and project scoped, so it belongs in the
 installation manifest beside the resources it applies to. The manifest
 names each capability and maps it to a principal, so which group answers
 is configuration; see
-[ADR-0023](../adr/0023-installation-naming-and-access.md).
+[ADR-0023](../../adr/0023-installation-naming-and-access.md).
 
 For each, in this order: **Access type: Restricted**, *then* **Who can
 join: Only invited users**. Reversing it discards the join rule, and the

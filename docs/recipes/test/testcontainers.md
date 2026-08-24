@@ -102,7 +102,7 @@ If `testcontainers` reached into a started container to pull a
 URL, it would acquire a hidden dependency on the container
 library's API — coupling `testcontainers` to libraries it
 shouldn't know about and breaking
-[ADR-0011](../adr/0011-one-component-per-third-party-library.md).
+[ADR-0011](../../adr/0011-one-component-per-third-party-library.md).
 
 Extraction goes in the relevant brick's `system/` folder
 because that brick already legitimately depends on the library.
@@ -155,8 +155,8 @@ that library knowledge. The high-level component is library-
 naïve and works the same in either world.
 
 The `system/` folder pattern — described in
-[components.md](components.md) and
-[system-components.md](system-components.md) — exists
+[components.md](../code/components.md) and
+[system-components.md](../code/system-components.md) — exists
 specifically for this kind of cross-cutting registration:
 multiple component kinds related to the same library, one of
 which interrogates running infrastructure.
@@ -167,10 +167,10 @@ walk through the testcontainer construction in more detail.
 
 ## References
 
-- [ADR-0007 — System-as-data](../adr/0007-system-as-data.md)
-- [ADR-0011](../adr/0011-one-component-per-third-party-library.md) —
+- [ADR-0007 — System-as-data](../../adr/0007-system-as-data.md)
+- [ADR-0011](../../adr/0011-one-component-per-third-party-library.md) —
   One component per third-party library
-- [components.md](components.md)
-- [system-components.md](system-components.md)
-- [system-configurations.md](system-configurations.md)
+- [components.md](../code/components.md)
+- [system-components.md](../code/system-components.md)
+- [system-configurations.md](../code/system-configurations.md)
 - [Systems-as-data slides](../slides/systems-as-data/slides.md)

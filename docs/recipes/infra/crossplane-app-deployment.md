@@ -175,7 +175,7 @@ made for a workload that needs one.
 Projects, DNS zones and backup buckets carry `managementPolicies`
 without `Delete`, so the composite cannot destroy what cannot be
 rebuilt. A project lien is what
-[ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+[ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
 puts above that, on the grounds that a policy is a convention a later
 edit undoes; a folder cannot carry a lien at all, and what protects it
 is that nobody holds `resourcemanager.folders.delete`.
@@ -253,10 +253,10 @@ generations.
 
 ## References
 
-- [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+- [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as an installation, declared `state`, ordered draining,
   and why foundations are not deleted.
-- [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
+- [ADR-0016](../../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
 - [queenswood-installation](queenswood-installation.md) — the manifest
   this plane reads, field by field.
@@ -266,7 +266,7 @@ generations.
   what a composition owns.
 - [gcp-iam](gcp-iam.md) — Workload Identity's two halves, and rights held
   by accident.
-- [infrastructure](../tdd/infrastructure.md) — the bootstrap chain, sync
+- [infrastructure](../../tdd/infrastructure.md) — the bootstrap chain, sync
   waves and existing compositions.
 - `justfiles/gcp.just` — `gcp-preflight`, `gcp-groups-bind`,
   `gcp-boot-*`, `gcp-platform-*`, `gcp-adc-*`, `gcp-plane-up` /

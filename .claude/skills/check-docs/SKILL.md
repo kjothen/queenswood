@@ -7,7 +7,7 @@ allowed-tools: Bash
 # check-docs
 
 Runs every verification command from
-[docs/recipes/writing-docs.md](../../../docs/recipes/writing-docs.md)
+[docs/recipes/practices/writing-docs.md](../../../docs/recipes/practices/writing-docs.md)
 across the project's markdown corpus and reports findings.
 
 The recipe is the source of truth for *what's wrong* and
@@ -19,7 +19,7 @@ The recipe is the source of truth for *what's wrong* and
   (slidev presentations) and `docs/plan/` (in-flight
   plans, often containing quoted REPL output).
 - `readme.md` and `CLAUDE.md` at the repo root.
-- `docs/recipes/writing-docs.md` itself is excluded from
+- `docs/recipes/practices/writing-docs.md` itself is excluded from
   *content-pattern* checks (paren-adjacent links, code-as-
   link-text, maturity overclaim, competitor names,
   brittle-temporal) because it documents those patterns
@@ -37,7 +37,7 @@ Treat every section that says `PASS` as a clean check.
 For each `FAIL` section:
 
 1. Map the file:line reference to the relevant rule in
-   [docs/recipes/writing-docs.md](../../../docs/recipes/writing-docs.md).
+   [docs/recipes/practices/writing-docs.md](../../../docs/recipes/practices/writing-docs.md).
    The rules and their rationales live there; don't
    restate them, just follow them.
 2. Suggest a fix that follows the recipe's "OK" pattern,

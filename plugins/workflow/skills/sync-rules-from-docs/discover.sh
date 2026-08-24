@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cross-references docs/recipes/*.md + docs/adr/*.md labels
+# Cross-references docs/recipes/*/*.md + docs/adr/*.md labels
 # (`<!-- tessl-plugin: <name> -->` in the front matter, between the
 # title and the first section) against a rule file's existing `See
 # [...]` links, for one named
@@ -19,7 +19,7 @@
 #        (default rule-file: plugins/<plugin-name>/rules/<plugin-name>.md)
 #
 # A third mode, independent of any one plugin: `discover.sh --unlabeled`
-# lists every docs/recipes/*.md + docs/adr/*.md with no tessl-plugin
+# lists every docs/recipes/*/*.md + docs/adr/*.md with no tessl-plugin
 # label at all. This is what backs CLAUDE.md's claim that every recipe
 # and ADR is already distilled into some plugin's rule — run it after
 # adding a new recipe/ADR to catch one that slipped through unlabeled.
@@ -57,7 +57,9 @@ doc_label() {
 
 if [ "${1:-}" = "--unlabeled" ]; then
   unlabeled_count=0
-  for f in docs/recipes/*.md docs/adr/*.md; do
+  for f in docs/recipes/*/*.md docs/recipes/*.md docs/adr/*.md; do
+  # A chapter index is navigation, not a labelled doc.
+  [ "$(basename "$f")" = "readme.md" ] && continue
     [ -f "$f" ] || continue
     if [ -z "$(doc_label "$f")" ]; then
       echo "unlabeled: $f"
@@ -82,7 +84,9 @@ RULE_DIR="$(dirname "$RULE_FILE")"
 # --- Every recipe/ADR labeled for this plugin ------------------------------
 
 LABELED=()
-for f in docs/recipes/*.md docs/adr/*.md; do
+for f in docs/recipes/*/*.md docs/recipes/*.md docs/adr/*.md; do
+  # A chapter index is navigation, not a labelled doc.
+  [ "$(basename "$f")" = "readme.md" ] && continue
   [ -f "$f" ] || continue
   [ "$(doc_label "$f")" = "$PLUGIN" ] && LABELED+=("$f")
 done

@@ -86,7 +86,7 @@
       body: "Infrastructure bricks live in the workspace, not as a library. Pulled upstream via <code>git merge upstream/main</code>; bank-specific code stays close." },
     { key: "recipe-tc", kicker: "Recipe · testcontainers",
       title: "REPL on the inside.",
-      href: "https://github.com/repldriven/queenswood/blob/main/docs/recipes/testcontainers.md",
+      href: "https://github.com/repldriven/queenswood/blob/main/docs/recipes/test/testcontainers.md",
       body: "Start a REPL, evaluate a comment block, and the whole system — FDB, Pulsar, HTTP, Keycloak — boots inside Testcontainers. The dev loop is the system.",
       variant: "feature" },
   ];
@@ -104,7 +104,7 @@
   import adr0007 from "../../../../docs/adr/0007-system-as-data.md?raw";
   import adr0002 from "../../../../docs/adr/0002-foundationdb-record-layer.md?raw";
   import adr0001 from "../../../../docs/adr/0001-reuse-mono-as-upstream.md?raw";
-  import recipeTC from "../../../../docs/recipes/testcontainers.md?raw";
+  import recipeTC from "../../../../docs/recipes/test/testcontainers.md?raw";
 
   const docs = {
     "adr-0013": {
@@ -149,7 +149,7 @@
     },
     "recipe-tc": {
       raw: recipeTC,
-      path: "docs/recipes/testcontainers.md",
+      path: "docs/recipes/test/testcontainers.md",
       label: "Recipe · testcontainers",
     },
   };
