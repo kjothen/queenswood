@@ -17,7 +17,19 @@ resource request, or any other chart value.
 
 ## Solution
 
-Every command below reads these:
+### Who you need to be
+
+- **`grp-gcp-<code>-platform-viewer@`** — reads the plane. Enough for
+  everything except the upgrade itself, and for verifying it
+  afterwards.
+- **`grp-gcp-<code>-cluster-admin@`** — `roles/container.admin` on the
+  folder. Step 5 only: `container.viewer` reads Kubernetes objects and
+  writes none, and an upgrade replaces Deployments, a StatefulSet, the
+  CRDs and Helm's own release Secrets. Join for that step and leave.
+
+Plus write access to this repository, for step 1.
+
+### What every command reads
 
 ```bash
 # the installation code, e.g. qw01
@@ -210,6 +222,8 @@ no git at all.
   merging a version change, and read the Argo CD release notes for
   the app versions it crosses.
 - Confirm `management-plane` still exists before anything else.
+- Join `cluster-admin` for the upgrade itself and leave again.
+  Everything else here is a viewer's.
 
 **MUST NOT:**
 
