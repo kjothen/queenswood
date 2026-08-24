@@ -68,8 +68,7 @@ support for the core version being moved to.
 One file:
 
 - `infra/platform/crossplane-xrds/xmanagementplane-composition.yml` —
-  `management-crossplane`'s `values:` block, which does not exist yet:
-  add it under `forProvider`, beside `chart`.
+  `management-crossplane`'s `values:` block.
 
 The chart's own keys are flat — `resourcesCrossplane` and
 `resourcesRBACManager`, each with `limits` and `requests`.
@@ -105,9 +104,6 @@ kubectl --context "$CODE-mgmt" -n argocd annotate app crossplane-xrds \
   argocd.argoproj.io/refresh=hard --overwrite
 ```
 
-The second prints nothing where the composition declares no values,
-which is this release's state until somebody adds some.
-
 ### 3. Take the values and the version from that object
 
 ```bash
@@ -116,9 +112,6 @@ kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
 VERSION=$(kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.chart.version}')
 ```
-
-Where the object declares no values, `$VALUES` is empty. Do not pass an
-empty file to `helm upgrade`: step 5 drops its `-f` instead.
 
 ### 4. Compare both halves with what is running
 
@@ -156,16 +149,6 @@ helm --kube-context "$CODE-mgmt" upgrade crossplane \
   crossplane-stable/crossplane --version "$VERSION" \
   -n crossplane-system -f "$VALUES"
 ```
-
-Always pass `-f "$VALUES"` where that file has content, including a
-version-only change where nothing in it is changing: `helm upgrade`
-replaces the release's values with whatever it is given, so omitting the
-file resets them to the chart's defaults and quietly undoes every value
-the composition declares.
-
-The only case without a file is a composed object that declares no
-values at all, which leaves `$VALUES` empty. An empty file is not the
-same as no flag, so drop the flag rather than passing it.
 
 ### 6. Verify, in this order
 
@@ -215,10 +198,9 @@ core being down. Judge it after the pods are back, not during.
 
 **MUST NOT:**
 
-- Pass an empty `-f` file where the object declares no values.
-- Omit `-f` where the object has values, on any change. Helm
-  replaces the release's values with what it is given, so omitting
-  the file resets them to the chart's defaults.
+- Omit `-f`, on any change. Helm replaces a release's values with what
+  it is given, so an upgrade without the file resets them to the
+  chart's defaults.
 - Set `management.bootstrap: true` to make the composition
   authoritative.
 - Judge a composite while the core is restarting.
@@ -247,10 +229,10 @@ lives in Secrets, and any client with cluster access can upgrade it.
 **What this does not share with Argo's.** `management-argo` carries a
 values block whose one key is the Application pointing the plane at
 git, so an upgrade that omits it deletes that Application and prunes
-what lies beneath. `management-crossplane` carries no values block at
-all, so there is nothing to lose by omission — and a configuration
-change here means introducing one rather than editing one. The recipes
-are separate because the hazards are opposite.
+what lies beneath. What this release's values hold is resource sizing,
+so losing them costs a throttled reconciler rather than an installation
+— which is why the two are separate documents rather than one with
+branches.
 
 **What stops while you do it.** The pod being replaced is the one
 reconciling every managed resource, so for the length of the restart
