@@ -4,11 +4,8 @@
 
 ## Status
 
-**Verified.** Followed end to end on this installation's management
-plane, to give Argo's own components resource requests. Eight defects
-in the steps were found by following them and are fixed here; the
-release went from revision 7 to 8 with the chart version unchanged, and
-every Application stayed `Synced`.
+**Verified**, 2026-08-24, on both paths: a configuration change (Argo's
+own resource requests) and a version change (chart 10.2.1 to 10.4.0).
 
 ## Problem
 

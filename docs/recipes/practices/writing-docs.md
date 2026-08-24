@@ -159,12 +159,16 @@ opening with one of three words. A recipe describing a convention
 carries none: there is nothing to have run.
 
 - **Verified** — the steps have been followed as written, and corrected
-  from doing so. Say when, and on what.
+  from doing so. A date and what was run, in a line.
 - **Untested** — nobody has followed them. Say what they were derived
   from, since that is what a reader is trusting instead.
 - **Superseded** — they describe a generation no longer in use. Say
   what still holds, since mechanics often outlive the model around
   them.
+
+A Status says what was run and when, and stops. What went wrong in the
+writing belongs in the commit that fixed it, not in a standing account
+of how the document got to be right.
 
 Being run and being followed are different things: a procedure written
 up after the act is `Untested` until somebody works from the document.
