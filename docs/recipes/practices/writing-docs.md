@@ -46,6 +46,9 @@ partway through something and not reading around it. So:
 - Set the variables the steps share once, at the top of the Solution,
   with an example value. A command carrying `<code>` has to be edited
   before it runs, which is how one gets run against the wrong thing.
+- Put a comment on its own line, never after the command it explains.
+  A trailing comment has to be deleted before the line can be pasted,
+  and interactive zsh does not treat `#` as a comment by default.
 - Name a file in full in every step that touches it. "The same file as
   above" assumes a reader who arrived from above.
 - Let each step stand alone. A step that calls a helper defined in
@@ -156,12 +159,16 @@ opening with one of three words. A recipe describing a convention
 carries none: there is nothing to have run.
 
 - **Verified** — the steps have been followed as written, and corrected
-  from doing so. Say when, and on what.
+  from doing so. A date and what was run, in a line.
 - **Untested** — nobody has followed them. Say what they were derived
   from, since that is what a reader is trusting instead.
 - **Superseded** — they describe a generation no longer in use. Say
   what still holds, since mechanics often outlive the model around
   them.
+
+A Status says what was run and when, and stops. What went wrong in the
+writing belongs in the commit that fixed it, not in a standing account
+of how the document got to be right.
 
 Being run and being followed are different things: a procedure written
 up after the act is `Untested` until somebody works from the document.

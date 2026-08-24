@@ -4,11 +4,8 @@
 
 ## Status
 
-**Verified.** Followed end to end on this installation's management
-plane, to give Argo's own components resource requests. Eight defects
-in the steps were found by following them and are fixed here; the
-release went from revision 7 to 8 with the chart version unchanged, and
-every Application stayed `Synced`.
+**Verified**, 2026-08-24, on both paths: a configuration change (Argo's
+own resource requests) and a version change (chart 10.2.1 to 10.4.0).
 
 ## Problem
 
@@ -17,10 +14,17 @@ resource request, or any other chart value.
 
 ## Solution
 
-Every command below reads these:
+### Who you need to be
+
+- **`grp-gcp-<code>-platform-viewer@`** — every step but 5.
+- **`grp-gcp-<code>-cluster-admin@`** — step 5.
+- Write access to this repository — step 1.
+
+### What every command reads
 
 ```bash
-export CODE=qw01   ## example, qw01
+# the installation code, e.g. qw01
+export CODE=qw01
 export WORK=$(mktemp -d)
 export REL="release.helm.m.crossplane.io/argocd-$CODE-c-mgmt"
 export VALUES="$WORK/argocd-values.json"
@@ -36,7 +40,9 @@ See what the new chart would render, against the values this plane
 actually runs:
 
 ```bash
-export FROM=10.2.1 TO=10.4.0   ## example
+# the version now, and the one being moved to
+export FROM=10.2.1
+export TO=10.4.0
 
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
@@ -110,7 +116,17 @@ That file is the complete set of values a boot plane would install with,
 `extraObjects` included. It is JSON, which `helm -f` reads. Do not add
 to it or retype it.
 
-### 4. Compare it with what is running
+### 4. Compare both halves with what is running
+
+The version and the values move separately, so check both. The chart
+now, against the one step 3 read:
+
+```bash
+helm --kube-context "$CODE-mgmt" list -n argocd
+echo "$VERSION"
+```
+
+Then the values:
 
 ```bash
 JQ='paths(scalars) as $p | "\($p|map(tostring)|join(".")) = \(getpath($p))"'
@@ -125,6 +141,14 @@ One line per value, so a change is a line rather than a brace. Chained,
 because an unreadable `$VALUES` otherwise leaves an empty file and
 `diff` reports every value of the running release as deleted — which
 reads as catastrophe and is a missing file.
+
+What to expect, by what you changed:
+
+- **A version change** — the `CHART` column differs from `$VERSION`,
+  and the values diff is **empty**. An empty diff is the right answer
+  here, not a step that failed.
+- **A configuration change** — the `CHART` column matches `$VERSION`,
+  and the values diff is your change.
 
 Lines marked `>` are your change. Lines marked `<` are values the
 running release has and the composed object does not: drift from an
@@ -146,6 +170,9 @@ helm --kube-context "$CODE-mgmt" upgrade argocd argo/argo-cd \
 # the bootstrap Application still exists
 kubectl --context "$CODE-mgmt" -n argocd get application management-plane
 
+# what landed, and what a rollback would return to
+helm --kube-context "$CODE-mgmt" history argocd -n argocd
+
 # every component came back
 kubectl --context "$CODE-mgmt" -n argocd get pods
 
@@ -154,6 +181,10 @@ kubectl --context "$CODE-mgmt" -n argocd get applications
 ```
 
 The first is the one that matters. Everything else is recoverable.
+
+The newest revision reads `deployed`, against the chart version you
+pinned — which is the only place a version change shows up as having
+happened. The revision below it is where a rollback goes.
 
 ### If it goes wrong
 
@@ -182,6 +213,8 @@ no git at all.
   merging a version change, and read the Argo CD release notes for
   the app versions it crosses.
 - Confirm `management-plane` still exists before anything else.
+- Join `cluster-admin` for the upgrade itself and leave again.
+  Everything else here is a viewer's.
 
 **MUST NOT:**
 
@@ -237,6 +270,38 @@ authoritative and looks like the declarative answer. It also hands the
 plane's Crossplane the Helm release installing the Argo that applies
 what that Crossplane reads. A bad render then leaves nothing standing
 that can fix it except a fresh boot plane.
+
+**Why no bot bumps this.** Renovate has the `argo-cd` and `crossplane`
+charts disabled outright. It reads the boot chart's dependency and
+cannot see the composition, so a bump it made alone would leave the two
+copies disagreeing and fail `check-versions` rather than land — which
+makes `check-versions` the thing that permits hand-bumping rather than
+merely tidying after it. The consequence is that nothing will remind
+you: every other dependency here arrives on a Monday morning, and this
+one waits until somebody looks.
+
+**What the CRDs do, against expectation.** Helm installs a chart's
+`crds/` directory and never upgrades it, so the usual warning about a
+chart's CRDs lagging its version applies almost everywhere. Not here:
+this chart renders them as ordinary templates under `crds.install`,
+so an upgrade updates them like anything else. Worth knowing before
+someone adds a step to check.
+
+**Why `cluster-admin` is step 5 alone.** `platform-viewer` carries
+`container.viewer`, which reads Kubernetes objects and writes none —
+enough to read the composed `Release`, the running values and every
+verification. The upgrade replaces Deployments, a StatefulSet, the CRDs
+and Helm's own release Secrets, which needs `roles/container.admin`. So
+it is joined for that one step and left again, the same shape
+[cluster-rebuild](cluster-rebuild.md) uses for its break-glass moments.
+
+**What the restart costs.** Every component is replaced, so for a minute
+or two nothing syncs: an Application mid-operation resumes on the other
+side, and one that was about to start simply starts later. Argo holds no
+state of its own — what it knows is git and the cluster — so there is
+nothing to lose in the gap. That is what makes this the safe half of the
+tier. Crossplane's own upgrade is the other half, and stops every
+managed resource being reconciled rather than merely being read.
 
 **When to rebuild instead.** A rebuild through a boot plane installs
 from the composition and leaves no divergence, which is worth it when
