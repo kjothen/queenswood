@@ -953,16 +953,7 @@ spec:
                   chart:
                     repository: https://charts.crossplane.io/stable
                     name: crossplane
-                    # Held here. Under 2.4.0 each ProviderRevision takes
-                    # controller ownership of the service account its
-                    # runtime config names, and Kubernetes permits one
-                    # controller owner -- so the ten GCP providers
-                    # sharing crossplane-provider-gcp leave the first
-                    # healthy and the rest UnhealthyPackageRevision,
-                    # with their pods gone. Moving requires a service
-                    # account per provider, and a Workload Identity
-                    # binding for each.
-                    version: "2.3.4"
+                    version: "2.4.0"
                   # The chart's defaults are both binding on a plane of
                   # this size. Measured over seven days: the core holds
                   # 472m sustained against a 500m limit -- throttled
