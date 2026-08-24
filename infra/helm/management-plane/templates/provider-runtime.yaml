@@ -85,6 +85,34 @@ spec:
                 {{- toYaml .Values.resources.providers | nindent 16 }}
 ---
 {{- /*
+  The GCP family provider, which the package manager installs as a
+  dependency of every service provider rather than anything declaring
+  it. Left alone it takes Crossplane's `default` runtime config, which
+  sets nothing -- so it was the one pod in this namespace still
+  BestEffort after every declared one had a ceiling.
+
+  Resources only, like provider-helm's: it holds the family's
+  ProviderConfig and shared controller rather than calling GCP itself,
+  so it has no business borrowing the platform identity.
+*/}}
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: crossplane-provider-family
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              resources:
+                {{- toYaml .Values.resources.providers | nindent 16 }}
+---
+{{- /*
   The composition functions. Each is a pod like a provider's and an
   order of magnitude smaller -- tens of MB rather than hundreds -- but
   BestEffort either way without this, and a starved function is what a
