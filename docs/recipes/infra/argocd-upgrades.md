@@ -19,15 +19,9 @@ resource request, or any other chart value.
 
 ### Who you need to be
 
-- **`grp-gcp-<code>-platform-viewer@`** — reads the plane. Enough for
-  everything except the upgrade itself, and for verifying it
-  afterwards.
-- **`grp-gcp-<code>-cluster-admin@`** — `roles/container.admin` on the
-  folder. Step 5 only: `container.viewer` reads Kubernetes objects and
-  writes none, and an upgrade replaces Deployments, a StatefulSet, the
-  CRDs and Helm's own release Secrets. Join for that step and leave.
-
-Plus write access to this repository, for step 1.
+- **`grp-gcp-<code>-platform-viewer@`** — every step but 5.
+- **`grp-gcp-<code>-cluster-admin@`** — step 5.
+- Write access to this repository — step 1.
 
 ### What every command reads
 
@@ -295,6 +289,14 @@ chart's CRDs lagging its version applies almost everywhere. Not here:
 this chart renders them as ordinary templates under `crds.install`,
 so an upgrade updates them like anything else. Worth knowing before
 someone adds a step to check.
+
+**Why `cluster-admin` is step 5 alone.** `platform-viewer` carries
+`container.viewer`, which reads Kubernetes objects and writes none —
+enough to read the composed `Release`, the running values and every
+verification. The upgrade replaces Deployments, a StatefulSet, the CRDs
+and Helm's own release Secrets, which needs `roles/container.admin`. So
+it is joined for that one step and left again, the same shape
+[cluster-rebuild](cluster-rebuild.md) uses for its break-glass moments.
 
 **What the restart costs.** Every component is replaced, so for a minute
 or two nothing syncs: an Application mid-operation resumes on the other
