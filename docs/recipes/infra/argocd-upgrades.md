@@ -266,6 +266,30 @@ plane's Crossplane the Helm release installing the Argo that applies
 what that Crossplane reads. A bad render then leaves nothing standing
 that can fix it except a fresh boot plane.
 
+**Why no bot bumps this.** Renovate has the `argo-cd` and `crossplane`
+charts disabled outright. It reads the boot chart's dependency and
+cannot see the composition, so a bump it made alone would leave the two
+copies disagreeing and fail `check-versions` rather than land — which
+makes `check-versions` the thing that permits hand-bumping rather than
+merely tidying after it. The consequence is that nothing will remind
+you: every other dependency here arrives on a Monday morning, and this
+one waits until somebody looks.
+
+**What the CRDs do, against expectation.** Helm installs a chart's
+`crds/` directory and never upgrades it, so the usual warning about a
+chart's CRDs lagging its version applies almost everywhere. Not here:
+this chart renders them as ordinary templates under `crds.install`,
+so an upgrade updates them like anything else. Worth knowing before
+someone adds a step to check.
+
+**What the restart costs.** Every component is replaced, so for a minute
+or two nothing syncs: an Application mid-operation resumes on the other
+side, and one that was about to start simply starts later. Argo holds no
+state of its own — what it knows is git and the cluster — so there is
+nothing to lose in the gap. That is what makes this the safe half of the
+tier. Crossplane's own upgrade is the other half, and stops every
+managed resource being reconciled rather than merely being read.
+
 **When to rebuild instead.** A rebuild through a boot plane installs
 from the composition and leaves no divergence, which is worth it when
 several changes have accumulated, or when nobody is sure what the plane
