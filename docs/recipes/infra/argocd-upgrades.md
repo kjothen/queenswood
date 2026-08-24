@@ -13,10 +13,6 @@ follow them should correct them as they go.
 You want to change Argo CD on a management plane: its chart version, a
 resource request, or any other chart value.
 
-Merging the change is not enough. A plane never upgrades the Argo that
-installs its own configuration, so the running plane has to be brought
-forward by hand as well.
-
 ## Solution
 
 ### 1. Change it in git, and merge
