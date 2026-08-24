@@ -15,6 +15,13 @@ resource request, or any other chart value.
 
 ## Solution
 
+Every command below reads these:
+
+```bash
+export CODE=qw01        ## example, qw01
+export VERSION=10.2.1   ## example, whatever the composition pins
+```
+
 ### 1. Change it in git, and merge
 
 Two files, both required:
@@ -36,9 +43,9 @@ Merge before touching the running plane.
 ### 2. Read what the plane is running
 
 ```bash
-kubectl --context <code>-mgmt -n argocd get deploy argocd-server \
+kubectl --context "$CODE-mgmt" -n argocd get deploy argocd-server \
   -o jsonpath='{.metadata.labels.helm\.sh/chart}{"\n"}'
-helm --kube-context <code>-mgmt get values argocd -n argocd -o yaml \
+helm --kube-context "$CODE-mgmt" get values argocd -n argocd -o yaml \
   > argocd-values.yaml
 ```
 
@@ -55,8 +62,8 @@ exactly as it is — `extraObjects` in particular.
 ```bash
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
-helm --kube-context <code>-mgmt upgrade argocd argo/argo-cd \
-  --version <the version in the composition> \
+helm --kube-context "$CODE-mgmt" upgrade argocd argo/argo-cd \
+  --version "$VERSION" \
   -n argocd -f argocd-values.yaml
 ```
 
@@ -64,13 +71,13 @@ helm --kube-context <code>-mgmt upgrade argocd argo/argo-cd \
 
 ```bash
 # the bootstrap Application still exists
-kubectl --context <code>-mgmt -n argocd get application management-plane
+kubectl --context "$CODE-mgmt" -n argocd get application management-plane
 
 # every component came back
-kubectl --context <code>-mgmt -n argocd get pods
+kubectl --context "$CODE-mgmt" -n argocd get pods
 
 # and Argo still reconciles
-kubectl --context <code>-mgmt -n argocd get applications
+kubectl --context "$CODE-mgmt" -n argocd get applications
 ```
 
 The first is the one that matters. Everything else is recoverable.
@@ -78,8 +85,8 @@ The first is the one that matters. Everything else is recoverable.
 ### If it goes wrong
 
 ```bash
-helm --kube-context <code>-mgmt history argocd -n argocd
-helm --kube-context <code>-mgmt rollback argocd <revision> -n argocd
+helm --kube-context "$CODE-mgmt" history argocd -n argocd
+helm --kube-context "$CODE-mgmt" rollback argocd <revision> -n argocd
 ```
 
 If `management-plane` is gone, recreate it from the composition's
