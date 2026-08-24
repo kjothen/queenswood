@@ -138,7 +138,7 @@ spec:
                     running Crossplane and Argo does not need three.
                 machineType:
                   type: string
-                  default: e2-standard-2
+                  default: e2-standard-4
                   description: |
                     What the nodes are. Beside zone rather than under
                     management, because management says which project
@@ -148,8 +148,19 @@ spec:
 
                     Each upjet provider pod is a Terraform runtime, and
                     Argo brings five components, so the floor is higher
-                    than it looks. Smaller is worth trying, measured
-                    rather than assumed.
+                    than it looks. Measured rather than assumed now:
+                    crossplane-system alone holds around 4.1GB across
+                    twenty pods, against the 6GB an e2-standard-2
+                    leaves allocatable -- which is not enough, and
+                    presents as Argo's repo-server and server failing
+                    liveness probes rather than as anything about
+                    memory, since every pod there is BestEffort.
+
+                    One larger node rather than two smaller ones. GKE's
+                    own daemons cost about the same per node whatever
+                    its size, so a small node pays that tax
+                    proportionally harder, and a plane needs no
+                    redundancy a second node would buy.
 
                     Immutable, so a value that merely differs replaces
                     the pool, and on this plane that is the pool running
