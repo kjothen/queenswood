@@ -157,7 +157,15 @@ helm --kube-context "$CODE-mgmt" upgrade crossplane \
   -n crossplane-system -f "$VALUES"
 ```
 
-Drop `-f "$VALUES"` where the composed object declares no values.
+Always pass `-f "$VALUES"` where that file has content, including a
+version-only change where nothing in it is changing: `helm upgrade`
+replaces the release's values with whatever it is given, so omitting the
+file resets them to the chart's defaults and quietly undoes every value
+the composition declares.
+
+The only case without a file is a composed object that declares no
+values at all, which leaves `$VALUES` empty. An empty file is not the
+same as no flag, so drop the flag rather than passing it.
 
 ### 6. Verify, in this order
 
@@ -208,6 +216,9 @@ core being down. Judge it after the pods are back, not during.
 **MUST NOT:**
 
 - Pass an empty `-f` file where the object declares no values.
+- Omit `-f` where the object has values, on any change. Helm
+  replaces the release's values with what it is given, so omitting
+  the file resets them to the chart's defaults.
 - Set `management.bootstrap: true` to make the composition
   authoritative.
 - Judge a composite while the core is restarting.
