@@ -7,6 +7,17 @@
   Wave 0: a provider Deployment takes whatever service account exists
   when it starts.
 */}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.providerServiceAccount | quote }}
+  namespace: crossplane-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    # Without this a token minted for this account is exchangeable for
+    # nothing.
+    iam.gke.io/gcp-service-account: sa-{{ .Values.code }}-platform@{{ .Values.managementProjectId }}.iam.gserviceaccount.com
+---
 apiVersion: pkg.crossplane.io/v1beta1
 kind: DeploymentRuntimeConfig
 metadata:
@@ -19,17 +30,21 @@ spec:
       selector: {}
       template:
         spec:
+          # Named here rather than in serviceAccountTemplate, which
+          # would have the package manager create and own it. One
+          # account is shared by every GCP provider, and only one
+          # ProviderRevision may be its controller owner -- so from
+          # Crossplane 2.4 the second provider to reconcile fails its
+          # runtime hook and loses its Deployment. Upstream calls the
+          # shared-and-owned arrangement a common mistake.
+          #
+          # Unowned, the package manager still creates a generated
+          # account per revision and uses this one for the pod.
+          serviceAccountName: {{ .Values.providerServiceAccount | quote }}
           containers:
             - name: package-runtime
               resources:
                 {{- toYaml .Values.resources.providers | nindent 16 }}
-  serviceAccountTemplate:
-    metadata:
-      name: {{ .Values.providerServiceAccount | quote }}
-      annotations:
-        # Without this a token minted for this account is
-        # exchangeable for nothing.
-        iam.gke.io/gcp-service-account: sa-{{ .Values.code }}-platform@{{ .Values.managementProjectId }}.iam.gserviceaccount.com
 ---
 {{- /*
   provider-kubernetes writes objects on this cluster, so it needs no GCP
