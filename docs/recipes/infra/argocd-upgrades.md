@@ -113,7 +113,17 @@ That file is the complete set of values a boot plane would install with,
 `extraObjects` included. It is JSON, which `helm -f` reads. Do not add
 to it or retype it.
 
-### 4. Compare it with what is running
+### 4. Compare both halves with what is running
+
+The version and the values move separately, so check both. The chart
+now, against the one step 3 read:
+
+```bash
+helm --kube-context "$CODE-mgmt" list -n argocd
+echo "$VERSION"
+```
+
+Then the values:
 
 ```bash
 JQ='paths(scalars) as $p | "\($p|map(tostring)|join(".")) = \(getpath($p))"'
@@ -128,6 +138,14 @@ One line per value, so a change is a line rather than a brace. Chained,
 because an unreadable `$VALUES` otherwise leaves an empty file and
 `diff` reports every value of the running release as deleted — which
 reads as catastrophe and is a missing file.
+
+What to expect, by what you changed:
+
+- **A version change** — the `CHART` column differs from `$VERSION`,
+  and the values diff is **empty**. An empty diff is the right answer
+  here, not a step that failed.
+- **A configuration change** — the `CHART` column matches `$VERSION`,
+  and the values diff is your change.
 
 Lines marked `>` are your change. Lines marked `<` are values the
 running release has and the composed object does not: drift from an
