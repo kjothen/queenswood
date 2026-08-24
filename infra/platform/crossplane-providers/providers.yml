@@ -1,6 +1,24 @@
 # runtimeConfigRef names a DeploymentRuntimeConfig created by the
 # management-plane chart, so the GCP providers share a fixed service
 # account rather than a generated one.
+# The family provider, declared rather than left to arrive as a
+# dependency of the ones below. Two things follow from naming it: the
+# version is stated where the others are, instead of being whatever
+# dependency resolution settles on, and it gets a runtime config -- as
+# a dependency it inherits Crossplane's `default`, which sets no
+# resources, so it was the last BestEffort pod in the namespace.
+#
+# Same version as every service provider here. Declaring it adopts the
+# object the package manager already made rather than replacing it.
+apiVersion: pkg.crossplane.io/v1
+kind: Provider
+metadata:
+  name: upbound-provider-family-gcp
+spec:
+  package: xpkg.upbound.io/upbound/provider-family-gcp:v2.5.1
+  runtimeConfigRef:
+    name: crossplane-provider-family
+---
 apiVersion: pkg.crossplane.io/v1
 kind: Provider
 metadata:
