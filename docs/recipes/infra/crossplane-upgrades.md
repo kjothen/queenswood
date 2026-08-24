@@ -96,6 +96,15 @@ A version change shows in the first, anything else in the second. Until
 your change is there the composite has not reconciled it, and there is
 nothing yet to upgrade to.
 
+Expect a few minutes: Argo polls the repository, then the composite
+reconciles. Longer than that, and it is worth forcing rather than
+waiting:
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd annotate app crossplane-xrds \
+  argocd.argoproj.io/refresh=hard --overwrite
+```
+
 The second prints nothing where the composition declares no values,
 which is this release's state until somebody adds some.
 
