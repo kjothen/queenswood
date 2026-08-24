@@ -175,6 +175,12 @@ reports `Unhealthy` rather than failing loudly.
 
 ```bash
 helm --kube-context "$CODE-mgmt" history crossplane -n crossplane-system
+```
+
+Then roll back to a release revision — the `REVISION` column above, a
+small integer. Not a chart version:
+
+```bash
 helm --kube-context "$CODE-mgmt" rollback crossplane <revision> \
   -n crossplane-system
 ```
