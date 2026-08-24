@@ -72,6 +72,30 @@ flowchart TD
 
 `instances: []` is valid, and the cheapest useful deployment.
 
+### What a plane cannot change about itself
+
+The Releases that installed Crossplane and Argo carry `Observe` alone
+once a plane is running: the plane reconciles the composite describing
+itself, and never acts on the release that installed it. So chart
+values for those two — resource requests among them — reach a plane a
+boot plane builds, and never this one. Setting them in the composition
+and watching nothing happen is the trap; a rebuild or a hand
+`helm upgrade` is the only way in.
+
+What a plane does change about itself is whatever Argo applies from
+git. The `DeploymentRuntimeConfig` objects shaping the providers and
+the composition functions are there, so what those pods reserve is an
+ordinary merge. Worth setting: without it every one of them is
+BestEffort, the scheduler reads a node as a third committed while it is
+full, and the shortfall surfaces as liveness-probe kills and functions
+answering `DeadlineExceeded` rather than as anything naming memory.
+
+The same asymmetry runs through the node pool. A plane can add nodes,
+because a count is mutable; it cannot make them bigger, because a
+machine type is not, and replacing the pool means replacing the one its
+own Crossplane is running on. Size it at build time — see
+[queenswood-installation](queenswood-installation.md).
+
 ### The two values you need
 
 - **A folder id**, written `folders/<folder-id>`, or a parent to create

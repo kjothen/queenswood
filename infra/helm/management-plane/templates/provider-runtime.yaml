@@ -14,6 +14,15 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              resources:
+                {{- toYaml .Values.resources.providers | nindent 16 }}
   serviceAccountTemplate:
     metadata:
       name: {{ .Values.providerServiceAccount | quote }}
@@ -38,9 +47,66 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              resources:
+                {{- toYaml .Values.resources.providers | nindent 16 }}
   serviceAccountTemplate:
     metadata:
       name: crossplane-provider-kubernetes
+---
+{{- /*
+  provider-helm, which pins nothing: its service account is the
+  generated one and its authority comes with the package, so this
+  exists only to say what the pod may take. A config that sets no
+  serviceAccountTemplate leaves the generated name alone, which is
+  what keeps this a resource change rather than an identity one.
+*/}}
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: crossplane-provider-helm
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              resources:
+                {{- toYaml .Values.resources.providers | nindent 16 }}
+---
+{{- /*
+  The composition functions. Each is a pod like a provider's and an
+  order of magnitude smaller -- tens of MB rather than hundreds -- but
+  BestEffort either way without this, and a starved function is what a
+  composite reports as `DeadlineExceeded` on a pipeline step rather
+  than as anything about the node.
+*/}}
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: crossplane-functions
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              resources:
+                {{- toYaml .Values.resources.functions | nindent 16 }}
 ---
 {{- /*
   What it may write, and nothing more, in the one namespace it writes

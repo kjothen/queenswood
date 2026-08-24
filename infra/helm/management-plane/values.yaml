@@ -24,6 +24,38 @@ pathPrefix: "."
 # assumes it.
 providerServiceAccount: crossplane-provider-gcp
 
+# What the plane's own controllers reserve, and the ceiling they may
+# reach. Without this every provider and function pod is BestEffort, so
+# the scheduler reads a node as a third committed while it is full --
+# and the shortfall presents as liveness-probe kills and functions
+# answering `DeadlineExceeded`, never as anything naming memory.
+#
+# From seven days of hourly peaks on a running plane rather than from a
+# guess: the largest provider peaked at 557Mi and they idle between 120
+# and 300, so the request is the steady state and the limit covers the
+# peak. One number for all of them, because they share a runtime config
+# and the spread does not justify a second. Functions are an order of
+# magnitude smaller.
+#
+# Crossplane's own pod and Argo's are not here and cannot be: the
+# Releases that installed them are Observe on a plane that is already
+# running, so only a boot plane can change what they take.
+resources:
+  providers:
+    requests:
+      cpu: 25m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 768Mi
+  functions:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 192Mi
+
 # The external-secrets operator, which reads Secret Manager on the
 # secrets identity's behalf. Pinned here and nowhere else, so nothing
 # can drift -- but Renovate does not read Argo Application sources out
