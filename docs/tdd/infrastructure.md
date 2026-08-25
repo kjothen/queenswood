@@ -372,20 +372,24 @@ commit messages.
   that embeds the project ID. Adding a new MR field that needs
   the project ID means adding a patch in
   `xplatform-composition.yml` — nothing in the chart.
-- **argocd-cm fixes the upstream upbound health-check.**
-  `infra/argocd/health-customizations.yaml` overrides Argo CD's
-  built-in `_.upbound.io/_/health.lua` because that script's
-  empty-status guard has an `or`/`and` precedence bug — Lua reads
-  it as `(status == nil) or (next(status) == nil and contains(...))`
-  rather than the intended `(empty status) and (kind in
-  has_no_status)`. The consequence is that any freshly-applied
-  Crossplane MR grades Healthy until the controller's first
-  reconcile, so child Applications can momentarily aggregate to
-  Healthy before they should — kubectl wait catches that, and
-  things downstream of the wait fail (e.g. `gcloud
-  get-credentials` before GKE is ready). The override is applied
-  by `kind-xp-bootstrap` before any child Application syncs.
-  Remove the ConfigMap once the upstream Lua is fixed.
+- **argocd-cm grades the composites.** Argo ships no health check
+  for `platform.repldriven.com` or `queenswood.repldriven.com`, and
+  a resource whose group has none is reported Healthy whatever it is
+  doing — so an Application applying a manifest that fails to compose
+  reads the same as one that worked. The management-plane chart
+  patches two keys into `argocd-cm`, one per group, sharing a script
+  that reads `Synced` and `Ready`: `Synced` False is Degraded,
+  `Ready` True is Healthy, anything else is Progressing. Two passes
+  rather than one, so a composite that went out of sync after it was
+  once ready reports the failure rather than the stale success.
+  Managed resources are not covered and do not need to be: Crossplane
+  creates them, so they are tree descendants rather than an
+  Application's own resources and never reach its health. Argo's
+  compiled-in `_.upbound.io` script is what grades those in the UI,
+  and it carries an `or`/`and` precedence bug — a resource whose
+  status has not been written yet reports Healthy — which is worth
+  knowing when reading the tree and is not worth vendoring a copy of
+  the script to fix.
 - **Dedicated GKE node SA, not the Compute Engine default.**
   `queenswood-gke-nodes` is bound to the narrow
   `roles/container.defaultNodeServiceAccount` bundle (logging,
