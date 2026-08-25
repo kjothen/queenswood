@@ -153,6 +153,13 @@ Application with it. State such a kind's health explicitly, by exact
 `<group>_<kind>` key, and the answer stops depending on which reading
 the installed release has.
 
+The list is derivable rather than remembered: a kind can never carry a
+status when no served version of its CRD declares a `status`
+subresource and none declares a `status` property.
+`just gcp-plane-statusless-kinds` reads that off a plane and diffs it
+against what Argo compiles in. It is worth re-running on a Crossplane
+upgrade, which is what moves the answer.
+
 Read `Synced` before `Ready` in a check of your own, in a pass of its
 own. One loop answers whichever condition the array happened to hold
 first, and a composite that went out of sync after it was once ready
