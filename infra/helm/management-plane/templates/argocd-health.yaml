@@ -77,6 +77,31 @@ data:
 
     return hs
   resource.customizations.health.queenswood.repldriven.com: *xr_health
+  # A child Application's health is its own, and Argo has none for the
+  # kind -- no Lua under resource_customizations/argoproj.io/Application,
+  # and the Go switch on argoproj.io handles only Workflow. A parent
+  # therefore reads Healthy however its children are doing, and a wave
+  # gate has nothing to wait on: gitops-engine treats a nil health as an
+  # immediate success, the way it does a Secret.
+  #
+  # Restoring it arms the wave gate. A parent holding Applications in
+  # waves now waits for each wave to go Healthy, which is what waves are
+  # for and what an app-of-apps otherwise only appears to do. The cost is
+  # that a child which cannot become Healthy holds its parent's sync
+  # open -- so no parent should hold both an environment's Applications
+  # and anything that must keep reconciling without it.
+  resource.customizations.health.argoproj.io_Application: |
+    local hs = {
+      status = "Progressing",
+      message = "Waiting for the child application"
+    }
+
+    if obj.status ~= nil and obj.status.health ~= nil and obj.status.health.status ~= nil then
+      hs.status = obj.status.health.status
+      hs.message = obj.status.health.message or ""
+    end
+
+    return hs
   resource.customizations.health.apiextensions.crossplane.io_EnvironmentConfig: |
     -- Data, with no controller and so no status. Nothing to wait for.
     return {

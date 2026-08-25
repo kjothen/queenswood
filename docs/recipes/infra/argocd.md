@@ -165,6 +165,29 @@ own. One loop answers whichever condition the array happened to hold
 first, and a composite that went out of sync after it was once ready
 then reports the stale success.
 
+### An app-of-apps only appears to gate
+
+`Application` is one of those groups. Argo ships no health check for
+the kind — no Lua under `resource_customizations/argoproj.io/`, and the
+Go switch on `argoproj.io` handles `Workflow` alone — so a child
+Application has no health, and a parent reads Healthy however its
+children are doing.
+
+That reaches further than reporting. A wave waits for its resources to
+go Healthy before the next one starts, and gitops-engine treats a nil
+health as an immediate success, the way it does a `Secret`. So a parent
+holding Applications in waves does not order them at all: every wave
+succeeds the moment it is applied, and the ordering the waves were
+written for never happens.
+
+Registering a check for the kind restores both, and the second one has
+a cost. A child that cannot become Healthy now holds its parent's sync
+open, and a hung sync retries at the revision it began with — so
+everything else in that parent is re-applied from a stale copy for as
+long as the budget lasts. Before turning it on, make sure no parent
+holds both an environment's Applications and anything that has to keep
+reconciling while that environment is off.
+
 ### Revisions
 
 Argo reads the revision an Application names, not a working tree. A
@@ -179,6 +202,12 @@ field the manifest can set.
   whose kind a child installs into a child of its own.
 - Set `ServerSideApply=true` for charts with large CRDs.
 - Set retry budgets that outlast an operator install.
+- Register a health check for `argoproj.io/Application` if a parent is
+  meant to order its children by wave. Without one the kind has no
+  health, and every wave succeeds on apply.
+- Give an environment's Applications a parent of their own before doing
+  so, or a parent gates the plane's own manifests on that environment's
+  workloads.
 - Register a health check for every XR group a plane serves. A group
   with no check reports Healthy however its composites are doing.
 - Read `.operation.sync.revisions` rather than `status.sync.revisions`
