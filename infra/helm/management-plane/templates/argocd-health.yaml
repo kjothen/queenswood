@@ -1,0 +1,85 @@
+{{- /*
+  How Argo grades a composite.
+
+  Argo ships no health check for either group this plane serves, and a
+  resource with no check is reported Healthy whatever it is doing -- so
+  an Application applying a manifest that fails to compose is
+  indistinguishable from one that worked.
+
+  Managed resources are not covered and do not need to be: Crossplane
+  creates them rather than Argo, so they are tree descendants rather
+  than an Application's own resources and never reach its health.
+  Argo's compiled-in `_.upbound.io` and `_.crossplane.io` scripts grade
+  those, and both carry the same precedence bug -- `A or (B and C)`
+  where `(A or B) and C` was meant, so a resource whose status has not
+  been written yet reports Healthy while the same resource with an
+  empty status reports Progressing.
+
+  EnvironmentConfig is the one place that bug is load-bearing here. It
+  carries no status ever, and it is absent from `_.crossplane.io`'s
+  list of status-less kinds, so today it grades Healthy only because
+  the nil branch short-circuits before the list is consulted. An Argo
+  release that fixes the precedence without adding the kind would leave
+  it Progressing for good, and the installation Application with it.
+  Stated below so the answer is the same either way.
+
+  A patch rather than a file of its own: argocd-cm belongs to the Argo
+  release, which is Observe on a running plane. Argo owns these two
+  keys and Helm keeps the rest. Prune is off, or removing this file
+  would take the whole ConfigMap with it. Argo re-reads argocd-cm, so
+  nothing restarts.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=false,ServerSideApply=true
+data:
+  resource.customizations.health.platform.repldriven.com: &xr_health |
+    -- Synced and Ready are the two conditions a composite carries.
+    -- Synced False is the composition failing to render or a composed
+    -- resource being rejected; Ready True is every composed resource
+    -- reporting ready in turn.
+    local hs = {
+      status = "Progressing",
+      message = "Composing"
+    }
+
+    if obj.status == nil or obj.status.conditions == nil then
+      return hs
+    end
+
+    -- Two passes, so a composite that went out of sync after it was
+    -- once ready reports the failure rather than the stale success.
+    -- One loop would answer whichever condition the array held first.
+    for _, condition in ipairs(obj.status.conditions) do
+      if condition.type == "Synced" and condition.status == "False" then
+        return {
+          status = "Degraded",
+          message = condition.message or "Not synced"
+        }
+      end
+    end
+
+    for _, condition in ipairs(obj.status.conditions) do
+      if condition.type == "Ready" and condition.status == "True" then
+        return {
+          status = "Healthy",
+          message = "Composed"
+        }
+      end
+    end
+
+    return hs
+  resource.customizations.health.queenswood.repldriven.com: *xr_health
+  resource.customizations.health.apiextensions.crossplane.io_EnvironmentConfig: |
+    -- Data, with no controller and so no status. Nothing to wait for.
+    return {
+      status = "Healthy",
+      message = "Configuration data"
+    }

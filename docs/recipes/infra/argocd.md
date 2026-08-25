@@ -123,6 +123,48 @@ away. Quote every short value, and have the chart fail on a non-string
 rather than compose one: coercing is worse, because `false` is a name
 that applies cleanly and is wrong.
 
+### A group with no health check reads Healthy
+
+Argo grades a resource by its API group. A group it has no check for
+is reported Healthy whatever the resource is doing, so an Application
+applying a composite that fails to compose is indistinguishable from
+one that worked. Register a check for every XR group a plane serves.
+
+Only what an Application manages reaches its health. Crossplane creates
+managed resources rather than Argo, so they are tree descendants and
+never feed the Application above them — the composite is the thing
+whose grade matters, and the one upstream covers least.
+
+Argo's compiled-in `_.upbound.io` and `_.crossplane.io` scripts are
+snippets vendored from Crossplane's documentation, and both carry a
+precedence bug: they read as `A or (B and C)` where `(A or B) and C`
+was meant, so a resource whose status has not been written yet reports
+Healthy while the same resource with an empty status reports
+Progressing. Mostly that grades the tree and nothing else, which is
+worth knowing when reading the tree and not worth vendoring a corrected
+copy to fix.
+
+Check what the bug is holding up before correcting it. A kind that
+carries no status ever and is missing from the script's list of
+status-less kinds grades Healthy only because the nil branch answers
+before the list is consulted — `EnvironmentConfig` is one, and a
+corrected script would leave it Progressing for good, taking its
+Application with it. State such a kind's health explicitly, by exact
+`<group>_<kind>` key, and the answer stops depending on which reading
+the installed release has.
+
+The list is derivable rather than remembered: a kind can never carry a
+status when no served version of its CRD declares a `status`
+subresource and none declares a `status` property.
+`just gcp-plane-statusless-kinds` reads that off a plane and diffs it
+against what Argo compiles in. It is worth re-running on a Crossplane
+upgrade, which is what moves the answer.
+
+Read `Synced` before `Ready` in a check of your own, in a pass of its
+own. One loop answers whichever condition the array happened to hold
+first, and a composite that went out of sync after it was once ready
+then reports the stale success.
+
 ### Revisions
 
 Argo reads the revision an Application names, not a working tree. A
@@ -137,6 +179,8 @@ field the manifest can set.
   whose kind a child installs into a child of its own.
 - Set `ServerSideApply=true` for charts with large CRDs.
 - Set retry budgets that outlast an operator install.
+- Register a health check for every XR group a plane serves. A group
+  with no check reports Healthy however its composites are doing.
 - Read `.operation.sync.revisions` rather than `status.sync.revisions`
   when a sync is failing. The first is what is being retried; the
   second is only what would be synced next.
