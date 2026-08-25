@@ -137,6 +137,18 @@ spec:
     repoURL: {{ .Values.manifestRepoURL | quote }}
     targetRevision: {{ .Values.manifestRevision | quote }}
     path: {{ .Values.code | quote }}
+    directory:
+      # Recursive, and narrowed to two things: the installation's own
+      # manifests at the top, and one declaration per unit folder.
+      # Everything else a unit folder holds is installed by the
+      # Application that unit composes, not by this one -- which is what
+      # keeps a unit's health, its waves and its retries out of the
+      # installation's sync.
+      #
+      # The pair with the composition's `source.exclude` default. Both
+      # name unit.yml, and they are the only layout this plane imposes.
+      recurse: true
+      include: '{*.yml,units/*/unit.yml}'
   destination:
     server: https://kubernetes.default.svc
     namespace: crossplane-system
