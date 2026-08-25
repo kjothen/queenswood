@@ -1,0 +1,172 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xmanagedunit.argo
+spec:
+  compositeTypeRef:
+    apiVersion: platform.repldriven.com/v1alpha1
+    kind: XManagedUnit
+  mode: Pipeline
+  pipeline:
+    # =======================================================================
+    # Where this installation's manifests live. Shared rather than
+    # restated, so a unit says which folder it is and never which
+    # repository -- and a fork, a mirror or a moved organisation is one
+    # edit beside the installation rather than one per unit.
+    #
+    # Selected by label, because the config's name follows the
+    # installation code and a Reference takes a literal. Required: a unit
+    # with no installation config has nowhere to read from, and an
+    # Application composed with an empty repository is one that reports
+    # Synced against nothing.
+    # =======================================================================
+    - step: environment
+      functionRef:
+        name: function-environment-configs
+      input:
+        apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+        kind: Input
+        spec:
+          policy:
+            resolution: Required
+          environmentConfigs:
+            - type: Selector
+              selector:
+                mode: Single
+                matchLabels:
+                  - type: FromCompositeFieldPath
+                    key: installation
+                    valueFromFieldPath: spec.code
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # ===================================================================
+          # The Application that installs the folder.
+          #
+          # Composed rather than committed beside the folder for one
+          # reason: an Application that installs a unit cannot also be
+          # the thing that decides whether to. Committed, it would be
+          # applied by the same sync it governs, and a unit could never
+          # be changed while it was in a state that stopped that sync.
+          # Composed, the declaration reconciles from the installation's
+          # own sync and the Application is downstream of it.
+          #
+          # Every field below is either the unit's or the XRD's default.
+          # Nothing is conditional, which is why this is a patch set and
+          # not a template: absence is not meaningful for any of them,
+          # so the XRD answers where the manifest is silent and the
+          # patches are unconditional.
+          # ===================================================================
+          - name: unit-application
+            base:
+              apiVersion: kubernetes.m.crossplane.io/v1alpha1
+              kind: Object
+              metadata:
+                namespace: crossplane-system
+              spec:
+                # Delete included. Removing the unit's declaration should
+                # remove the Application that installs it -- and remove
+                # only that, which is what the missing finalizer below
+                # is for.
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - Delete
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  manifest:
+                    apiVersion: argoproj.io/v1alpha1
+                    kind: Application
+                    metadata:
+                      namespace: argocd
+                      # No finalizer, deliberately.
+                      # resources-finalizer.argocd.argoproj.io cascades
+                      # from an Application into everything it installed,
+                      # so a unit whose declaration was withdrawn would
+                      # take its cluster, its database and its volumes
+                      # with it. Withdrawing a declaration detaches;
+                      # destroying what it made is a separate act, and
+                      # deleting the composites inside the folder is how
+                      # it is done.
+                    spec:
+                      project: default
+                      source:
+                        # Both filled by patch. The literals are what an
+                        # unpatched render shows and never reach a
+                        # cluster.
+                        repoURL: ""
+                        targetRevision: ""
+                        path: ""
+                        directory:
+                          recurse: true
+                          exclude: ""
+                      destination:
+                        # Always this cluster. A folder reaching another
+                        # one does it through an Application of its own,
+                        # carrying its own destination.
+                        server: https://kubernetes.default.svc
+                        namespace: ""
+                      syncPolicy:
+                        automated:
+                          prune: false
+                          selfHeal: true
+                        syncOptions: []
+                        retry:
+                          limit: 5
+                          backoff:
+                            duration: ""
+                            factor: 2
+                            maxDuration: ""
+            patches:
+              # The unit's name is the Application's name, and the
+              # Object's. One name for one thing, so what to look at is
+              # named by what you were looking at.
+              - fromFieldPath: metadata.name
+                toFieldPath: metadata.name
+              - fromFieldPath: metadata.name
+                toFieldPath: spec.forProvider.manifest.metadata.name
+              # Required, unlike the rest. Absence here is not a unit
+              # that meant something by it -- it is an installation
+              # whose shared config was never applied, and an
+              # Application pointed at an empty repository reports
+              # Synced while installing nothing.
+              - type: FromEnvironmentFieldPath
+                policy:
+                  fromFieldPath: Required
+                fromFieldPath: manifestRepoURL
+                toFieldPath: spec.forProvider.manifest.spec.source.repoURL
+              - fromFieldPath: spec.source.path
+                toFieldPath: spec.forProvider.manifest.spec.source.path
+              - fromFieldPath: spec.source.revision
+                toFieldPath: spec.forProvider.manifest.spec.source.targetRevision
+              - fromFieldPath: spec.source.recurse
+                toFieldPath: spec.forProvider.manifest.spec.source.directory.recurse
+              - fromFieldPath: spec.source.exclude
+                toFieldPath: spec.forProvider.manifest.spec.source.directory.exclude
+              - fromFieldPath: spec.destination.namespace
+                toFieldPath: spec.forProvider.manifest.spec.destination.namespace
+              - fromFieldPath: spec.prune
+                toFieldPath: spec.forProvider.manifest.spec.syncPolicy.automated.prune
+              - fromFieldPath: spec.selfHeal
+                toFieldPath: spec.forProvider.manifest.spec.syncPolicy.automated.selfHeal
+              - fromFieldPath: spec.syncOptions
+                toFieldPath: spec.forProvider.manifest.spec.syncPolicy.syncOptions
+              - fromFieldPath: spec.retry.limit
+                toFieldPath: spec.forProvider.manifest.spec.syncPolicy.retry.limit
+              - fromFieldPath: spec.retry.duration
+                toFieldPath: spec.forProvider.manifest.spec.syncPolicy.retry.backoff.duration
+              - fromFieldPath: spec.retry.factor
+                toFieldPath: spec.forProvider.manifest.spec.syncPolicy.retry.backoff.factor
+              - fromFieldPath: spec.retry.maxDuration
+                toFieldPath: spec.forProvider.manifest.spec.syncPolicy.retry.backoff.maxDuration
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready

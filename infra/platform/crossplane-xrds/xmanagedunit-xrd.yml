@@ -1,0 +1,183 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xmanagedunits.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XManagedUnit
+    plural: xmanagedunits
+  defaultCompositionRef:
+    name: xmanagedunit.argo
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            A folder of manifests this plane installs, and the whole of
+            what it has to be told about one.
+
+            The plane's group rather than the product's, because this is
+            what a management plane is for and nothing in it names what
+            is being installed. A Queenswood environment is one managed
+            unit; anything else with an XRD on this plane is another,
+            declared the same way and reconciled by the same
+            composition.
+
+            What it composes is one Argo Application over the folder.
+            That keeps the folder's own ordering inside the folder --
+            sync waves among its files are its business, not the
+            plane's -- while the declaration that installs it lives in
+            the installation's sync, where it goes on reconciling
+            whatever the unit is doing.
+
+            The unit's lifecycle is not here. Whether an environment is
+            running is a property of that environment, declared on its
+            own composite, and a second copy of it here would be a
+            state that can disagree with itself. This says a folder is
+            installed; the folder says what it is.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - source
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. Selects the
+                    shared configuration this unit reads its repository
+                    from, so a unit never spells the repository and a
+                    fork or a mirror is one edit in one place. See
+                    ADR-0023.
+                source:
+                  type: object
+                  required:
+                    - path
+                  properties:
+                    path:
+                      type: string
+                      description: |
+                        Where the folder is, from the root of the
+                        installation's manifests repository. Stated
+                        rather than derived from the name: a folder is
+                        free to be called whatever reads best, and only
+                        this field decides what is installed.
+                    revision:
+                      type: string
+                      default: main
+                      description: |
+                        Which revision of it. Argo reads the revision an
+                        Application names and never a working tree, so a
+                        unit pinned to a tag stays there while the rest
+                        of the installation moves.
+                    recurse:
+                      type: boolean
+                      default: true
+                      description: |
+                        Whether subdirectories of the folder are
+                        installed. On by default, because a unit that
+                        organises itself into subdirectories should not
+                        have to say so and a directory source that does
+                        not recurse reads an ignored subdirectory as
+                        nothing at all.
+                    exclude:
+                      type: string
+                      default: unit.yml
+                      description: |
+                        What in the folder is not installed by the
+                        Application this composes. Defaulted to the file
+                        that declares the unit, and that default is
+                        load-bearing: the installation applies that file
+                        already, so installing it again would put two
+                        managers on one object, each reverting the
+                        other.
+
+                        A unit that keeps its declaration somewhere else
+                        sets this to something harmless rather than
+                        leaving it, since an empty string excludes
+                        nothing.
+                destination:
+                  type: object
+                  # Defaulted as a whole as well as per field: a default
+                  # inside an object that a manifest never writes is a
+                  # default that never applies.
+                  default:
+                    namespace: crossplane-system
+                  properties:
+                    namespace:
+                      type: string
+                      default: crossplane-system
+                      description: |
+                        Where namespaced objects in the folder land.
+                        The cluster is always this one: a unit is
+                        installed onto the plane, and reaching another
+                        cluster is what an Application inside the folder
+                        is for -- it carries its own destination, and
+                        keeping that here would give the plane a
+                        credential into somewhere it has no other reason
+                        to hold one.
+                prune:
+                  type: boolean
+                  default: false
+                  description: |
+                    Whether a resource removed from the folder is
+                    deleted. Off by default, because what a unit
+                    composes outlives its manifest: a deleted file
+                    should stop being reconciled rather than take a
+                    cluster with it. A unit whose contents are all
+                    disposable may turn it on.
+                selfHeal:
+                  type: boolean
+                  default: true
+                  description: |
+                    Whether drift in the folder's resources is
+                    corrected. This is drift only -- a failed sync stays
+                    failed whatever it says, which is what the retry
+                    budget below is for.
+                syncOptions:
+                  type: array
+                  default: []
+                  items:
+                    type: string
+                  description: |
+                    Passed through to the Application unchanged.
+                    ServerSideApply=true belongs here for a folder
+                    carrying large CRDs, whose client-side apply exceeds
+                    the annotation limit.
+                retry:
+                  type: object
+                  # Whole-object default, for the same reason as
+                  # destination above.
+                  default:
+                    limit: 5
+                    duration: 30s
+                    factor: 2
+                    maxDuration: 10m
+                  properties:
+                    limit:
+                      type: integer
+                      default: 5
+                      description: |
+                        How many times a failed sync is retried. An
+                        operation pins the revision it started with and
+                        each retry replays it, so a fix merged while a
+                        budget is running does not arrive -- prefer a
+                        budget that outlasts an ordinary incident, and
+                        know that it is also how long a stale copy is
+                        re-applied for.
+                    duration:
+                      type: string
+                      default: 30s
+                    factor:
+                      type: integer
+                      default: 2
+                    maxDuration:
+                      type: string
+                      default: 10m
