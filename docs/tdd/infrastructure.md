@@ -390,6 +390,16 @@ commit messages.
   status has not been written yet reports Healthy — which is worth
   knowing when reading the tree and is not worth vendoring a copy of
   the script to fix.
+- **argocd-cm also grades child Applications.** Argo ships no health
+  check for `argoproj.io/Application`, so a parent reads Healthy
+  whatever its children are doing — and because gitops-engine treats a
+  nil health as an immediate success, a parent holding Applications in
+  waves never orders them either. The same ConfigMap registers one, so
+  an app-of-apps reports and gates as it appears to. It follows the
+  split that gave each instance's Applications a parent of their own:
+  with a check in place, a parent waits on its children, so the
+  installation's own manifests must not share one with an environment
+  that may be off.
 - **Dedicated GKE node SA, not the Compute Engine default.**
   `queenswood-gke-nodes` is bound to the narrow
   `roles/container.defaultNodeServiceAccount` bundle (logging,
