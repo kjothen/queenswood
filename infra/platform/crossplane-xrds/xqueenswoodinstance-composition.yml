@@ -229,8 +229,16 @@ spec:
           # The endpoint and the CA come back up because instance-argo-
           # cluster reads them from this composite's status, which is
           # unchanged.
+          # Not instance-cluster. That name belonged to the Cluster
+          # managed resource this replaces, and Crossplane matches a
+          # composed resource by it -- so reusing it makes the parent
+          # match the live Cluster to this slot rather than release it,
+          # and both composites then claim the same object. Kubernetes
+          # refuses two controller owner references and the transfer
+          # stops halfway, with the cluster still owned by the instance
+          # and the new kind unable to apply anything.
           # ===================================================================
-          - name: instance-cluster
+          - name: instance-gke
             base:
               apiVersion: platform.repldriven.com/v1alpha1
               kind: XCluster
