@@ -206,3 +206,13 @@ spec:
                   string:
                     fmt: "vpc-%s-%s-%s"
                 toFieldPath: spec.forProvider.networkRef.name
+    # =======================================================================
+    # Composite readiness. Every composition in this repository ends
+    # here, whether or not it composes anything templated:
+    # patch-and-transform computes readiness for its own resources and
+    # go-templating for none, so a composition without this works until
+    # somebody adds a templated step and then silently stops.
+    # =======================================================================
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready

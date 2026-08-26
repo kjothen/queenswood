@@ -740,3 +740,12 @@ spec:
                 instanceRef:
                   name: {{ printf "sql-%s" $name | quote }}
             {{- end }}
+    # =======================================================================
+    # Composite readiness. patch-and-transform sets it for the resources
+    # it composes and go-templating sets it for none, so without this
+    # the database above is never ready and the composite says so
+    # forever -- while the resource it names is Available.
+    # =======================================================================
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready
