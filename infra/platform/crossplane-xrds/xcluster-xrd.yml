@@ -1,0 +1,186 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xclusters.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XCluster
+    plural: xclusters
+  defaultCompositionRef:
+    name: xcluster.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            A GKE cluster, the pool that runs on it, and the identity
+            that pool runs as.
+
+            One kind rather than two, because a cluster with no nodes is
+            not something anything wants separately and half of the pair
+            is useless on its own. The pool is templated rather than
+            patched all the same: its count is a manifest value and a
+            state at once, and no patch can combine the two, since a map
+            transform must name every key it may see.
+
+            The network is not here. A cluster is the disposable tier
+            under ADR-0022 and rebuilds from its own declaration; a VPC
+            is not, because GCP refuses to delete one while a cluster
+            sits in it. The subnet and its secondary ranges are named
+            rather than referenced, and the names are derived the same
+            way XNetwork derives them -- two composites cannot read each
+            other's status, so agreeing on a template is what makes them
+            agree at all.
+
+            Composed rather than declared. No manifest names this kind.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - env
+                - label
+                - projectId
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. See ADR-0023.
+                env:
+                  type: string
+                  pattern: '^[a-z]$'
+                  description: |
+                    One letter, the environment's tier.
+                label:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,10}[a-z0-9]$'
+                  description: |
+                    What this environment is called inside its tier.
+                projectId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    Where the cluster and the node identity live.
+                zone:
+                  type: string
+                  default: europe-west2-a
+                  description: |
+                    Zonal rather than regional. One zonal control plane
+                    falls under the free allowance, and the pool sits in
+                    the same place.
+                regionCode:
+                  type: string
+                  default: euw2
+                  description: |
+                    The region abbreviated, which the subnet name carries.
+                    See cloud-naming.
+                state:
+                  type: string
+                  enum:
+                    - up
+                    - down
+                  default: up
+                  description: |
+                    down is the pool at zero. The cluster stays, because
+                    rebuilding one loses nothing and stopping one is not
+                    a thing GKE offers. See ADR-0022.
+                cluster:
+                  type: object
+                  default: {}
+                  description: |
+                    The shape of the cluster. Grouped rather than flat
+                    because an instance has more than one thing with a
+                    size: diskSize alone would not say whose.
+                  properties:
+                    machineType:
+                      type: string
+                      default: e2-standard-2
+                      description: |
+                        What the nodes are. Immutable, so changing it
+                        replaces the pool and restarts everything on the
+                        cluster.
+
+                        The floor for the bank rather than a measured
+                        answer. An empty cluster already requests about
+                        a third of a node's CPU for system daemons, so
+                        the usable share is smaller than the shape
+                        suggests.
+                    nodeCount:
+                      type: integer
+                      default: 3
+                      description: |
+                        How many nodes when the instance is up. down is
+                        zero regardless, which is why this is a count
+                        rather than a desired state.
+                    diskSize:
+                      type: integer
+                      default: 50
+                      description: |
+                        Each node's boot disk, in GB. Nothing durable
+                        belongs on it: a node is replaced rather than
+                        resumed, so anything stateful takes a
+                        PersistentVolume.
+                    diskType:
+                      type: string
+                      default: pd-standard
+                      description: |
+                        Boot disks only, so the cheapest class is
+                        usually right.
+                    releaseChannel:
+                      type: string
+                      default: REGULAR
+                      description: |
+                        Which GKE release channel upgrades this cluster.
+                        RAPID, REGULAR or STABLE.
+                    upgradeSettings:
+                      type: object
+                      default: {}
+                      description: |
+                        How the node pool is upgraded. Stated rather
+                        than left to GKE: unset, the provider observes
+                        whatever defaults applied when the pool was made
+                        and late-initialises them into the spec, so the
+                        behaviour reads as declared while nobody chose
+                        it and a later rebuild starts from whatever the
+                        defaults are then.
+                      properties:
+                        strategy:
+                          type: string
+                          default: SURGE
+                          description: |
+                            SURGE adds nodes and drains the old ones.
+                            BLUE_GREEN builds the replacement pool
+                            whole, which costs a second pool's capacity
+                            for the length of the upgrade.
+                        maxSurge:
+                          type: integer
+                          default: 1
+                          description: |
+                            How many nodes may be added beyond
+                            nodeCount while upgrading.
+                        maxUnavailable:
+                          type: integer
+                          default: 0
+                          description: |
+                            How many nodes may be taken down before
+                            their replacements are ready.
+            status:
+              type: object
+              properties:
+                endpoint:
+                  type: string
+                  description: |
+                    The API server's address, assigned on create and read
+                    back rather than derived.
+                ca:
+                  type: string
+                  description: |
+                    The cluster's CA, base64 as GKE returns it. What
+                    registers this cluster with anything that has to
+                    trust it.
