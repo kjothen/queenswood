@@ -84,6 +84,38 @@ It is what a payment provider that allowlists a source IP needs, which
 nothing can be given while traffic leaves via whichever node runs the
 adapter.
 
+## `XArgoCluster`
+
+Two resources in the instance composite are not this product's either:
+a `ProjectIAMMember` granting the deployer identity `container.admin`
+on the project, and an `Object` writing the Secret that registers the
+cluster as a destination. Any cluster Argo deploys to needs exactly
+that pair, and nothing about either is Queenswood.
+
+They are a pair in the sense
+[ADR-0025](../adr/0025-building-blocks-and-what-cannot-be-one.md)
+means: half of it is a silent failure. A registration with no binding
+syncs and then fails on every apply; a binding with no registration is
+a cluster Argo cannot see.
+
+It should take the endpoint and the CA as spec fields rather than
+composing the cluster itself. A cluster kind has no business knowing
+how anything deploys to it — that is the line
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) draws
+between what a composite builds and what Argo installs. That leaves the
+values arriving through the composing instance's status, which is the
+coupling that broke this cluster's registration once already; naming it
+in a spec does not remove the round trip, but it makes it a declared
+dependency rather than an incidental one.
+
+One call site today, so the shape would be read off a single example —
+the caveat `XPostgres` carried, and the reason its first version
+hardcoded a database name.
+
+The custom role beside them is unrelated: it is a viewer capability
+granted through the access step rather than anything to do with
+deployment.
+
 ## Smaller things
 
 - **Rename `instance-gke` back to `instance-cluster`**, for consistency
