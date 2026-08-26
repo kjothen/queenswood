@@ -139,236 +139,6 @@ spec:
                 fromFieldPath: metadata.annotations[crossplane.io/external-name]
                 toFieldPath: status.projectId
           # ===================================================================
-          # What this project may be asked to do. A project is created
-          # bare -- nothing is enabled by default -- so each of these
-          # stands between the composition and a resource it will
-          # compose next, and enabling one needs billing already linked.
-          #
-          # Five, not the eight the plane enables for itself: sqladmin,
-          # dns and certificatemanager arrive with the database and the
-          # domain rather than ahead of them.
-          #
-          # Named with the label as well as the environment. The plane's
-          # are svc-<code>-c-<api> because one management project ends
-          # the name there, where two nonprod instances would otherwise
-          # both claim svc-<code>-n-compute.
-          # ===================================================================
-          # The network, its subnets and any address.
-          - name: instance-service-compute
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: compute.googleapis.com
-                  # Leaving an API on when the resource goes is the
-                  # safe direction: disabling one takes every resource
-                  # in the project that depends on it.
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-compute"
-                toFieldPath: metadata.name
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "prj-%s-%s-%s"
-                toFieldPath: spec.forProvider.projectRef.name
-          # The cluster and its node pool.
-          - name: instance-service-container
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: container.googleapis.com
-                  # Leaving an API on when the resource goes is the
-                  # safe direction: disabling one takes every resource
-                  # in the project that depends on it.
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-container"
-                toFieldPath: metadata.name
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "prj-%s-%s-%s"
-                toFieldPath: spec.forProvider.projectRef.name
-          # Service accounts composed inside this project.
-          - name: instance-service-iam
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: iam.googleapis.com
-                  # Leaving an API on when the resource goes is the
-                  # safe direction: disabling one takes every resource
-                  # in the project that depends on it.
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-iam"
-                toFieldPath: metadata.name
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "prj-%s-%s-%s"
-                toFieldPath: spec.forProvider.projectRef.name
-          # Project IAM, which every identity here needs a binding in.
-          - name: instance-service-resourcemanager
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: cloudresourcemanager.googleapis.com
-                  # Leaving an API on when the resource goes is the
-                  # safe direction: disabling one takes every resource
-                  # in the project that depends on it.
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-resourcemanager"
-                toFieldPath: metadata.name
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "prj-%s-%s-%s"
-                toFieldPath: spec.forProvider.projectRef.name
-          # Reading and managing the enablement above.
-          - name: instance-service-serviceusage
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: serviceusage.googleapis.com
-                  # Leaving an API on when the resource goes is the
-                  # safe direction: disabling one takes every resource
-                  # in the project that depends on it.
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-serviceusage"
-                toFieldPath: metadata.name
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "prj-%s-%s-%s"
-                toFieldPath: spec.forProvider.projectRef.name
-          # ===================================================================
           # The network this environment runs in. One VPC per instance,
           # the subnet its nodes sit in with the secondary ranges GKE
           # allocates pods and services from, and the proxy-only subnet
@@ -730,119 +500,6 @@ spec:
               - type: ToCompositeFieldPath
                 fromFieldPath: status.atProvider.masterAuth.clusterCaCertificate
                 toFieldPath: status.clusterCa
-          # ===================================================================
-          # Two more APIs, arriving with the database rather than ahead
-          # of it. servicenetworking is what private services access is
-          # built on, and is enabled for the peering rather than for
-          # Cloud SQL itself.
-          # ===================================================================
-          - name: instance-service-sqladmin
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: sqladmin.googleapis.com
-                  # Leaving an API on when the resource goes is the
-                  # safe direction: disabling one takes every resource
-                  # in the project that depends on it.
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-sqladmin"
-                toFieldPath: metadata.name
-              - &api-project
-                type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "prj-%s-%s-%s"
-                toFieldPath: spec.forProvider.projectRef.name
-          - name: instance-service-servicenetworking
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: servicenetworking.googleapis.com
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-servicenetworking"
-                toFieldPath: metadata.name
-              - *api-project
-          # Secret Manager, for the values external-secrets reads into
-          # the cluster. Enabled here rather than only on the plane:
-          # GCP checks the project a resource lives in as well as the
-          # caller's, and these secrets are the instance's own.
-          - name: instance-service-secretmanager
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: secretmanager.googleapis.com
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-secretmanager"
-                toFieldPath: metadata.name
-              - *api-project
           # The identity external-secrets runs as on this cluster.
           # secretAccessor rather than admin: reading a version is all
           # it does, and writing one stays a person's act.
@@ -929,7 +586,17 @@ spec:
                   string:
                     fmt: "serviceAccount:sa-%s-%s-%s-secrets@%s.iam.gserviceaccount.com"
                 toFieldPath: spec.forProvider.member
-              - *api-project
+              - &api-project
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "prj-%s-%s-%s"
+                toFieldPath: spec.forProvider.projectRef.name
           # Both halves of Workload Identity. The chart installs into
           # its own namespace and names its service account after
           # itself, so the member string is pinned to that pair rather
@@ -1086,42 +753,6 @@ spec:
                 toFieldPath: metadata.annotations[crossplane.io/external-name]
               - fromFieldPath: spec.projectId
                 toFieldPath: spec.forProvider.project
-          # Certificate Manager, for the certificates the instance's
-          # ingress terminates on. Enabled in this project rather than
-          # only in the plane's: GCP checks the project the resource
-          # lives in as well as the caller's, and a certificate is the
-          # instance's own even though the records validating it are
-          # written into a zone that is not.
-          - name: instance-service-certificatemanager
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectService
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  service: certificatemanager.googleapis.com
-                  disableOnDestroy: false
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "svc-%s-%s-%s-certificatemanager"
-                toFieldPath: metadata.name
-              - *api-project
           # ===================================================================
           # The database, and what a private-IP one needs before it can
           # exist: the range this VPC lends Google, the peering that
@@ -1518,6 +1149,87 @@ spec:
                     fmt: "%s-%s-%s-rl-pod-log-reader"
                 toFieldPath: metadata.name
               - *instance-project
+    # =======================================================================
+    # What this project may be asked to do. A project is created bare --
+    # nothing is enabled by default -- so each of these stands between the
+    # composition and a resource it composes next, and enabling one needs
+    # billing already linked.
+    #
+    # A list rather than nine resources differing in one string. The api is
+    # spelled rather than derived from the name, because it does not
+    # follow: resourcemanager is cloudresourcemanager.googleapis.com, an
+    # organisation-level API reached through this project, and a rule that
+    # held for eight of nine would have enabled one that does not exist.
+    #
+    # Named with the label as well as the environment. The plane's are
+    # svc-<code>-c-<api> because one management project ends the name
+    # there, where two nonprod instances would otherwise both claim
+    # svc-<code>-n-compute.
+    # =======================================================================
+    - step: services
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
+            {{- $services := list }}
+            {{- /* The network, its subnets and any address. */}}
+            {{- $services = append $services (dict "name" "compute" "api" "compute.googleapis.com") }}
+            {{- /* The cluster and its node pool. */}}
+            {{- $services = append $services (dict "name" "container" "api" "container.googleapis.com") }}
+            {{- /* Service accounts composed inside this project. */}}
+            {{- $services = append $services (dict "name" "iam" "api" "iam.googleapis.com") }}
+            {{- /* Project IAM, which every identity here needs a binding
+                   in. Organisation-level, reached through this project. */}}
+            {{- $services = append $services (dict "name" "resourcemanager" "api" "cloudresourcemanager.googleapis.com") }}
+            {{- /* Reading and managing the enablement above. */}}
+            {{- $services = append $services (dict "name" "serviceusage" "api" "serviceusage.googleapis.com") }}
+            {{- /* The database, arriving with it rather than ahead of it. */}}
+            {{- $services = append $services (dict "name" "sqladmin" "api" "sqladmin.googleapis.com") }}
+            {{- /* What private services access is built on. Enabled for the
+                   peering rather than for Cloud SQL itself. */}}
+            {{- $services = append $services (dict "name" "servicenetworking" "api" "servicenetworking.googleapis.com") }}
+            {{- /* The values external-secrets reads into the cluster. Here
+                   rather than only on the plane: GCP checks the project a
+                   resource lives in as well as the caller's, and these
+                   secrets are the instance's own. */}}
+            {{- $services = append $services (dict "name" "secretmanager" "api" "secretmanager.googleapis.com") }}
+            {{- /* The certificates the instance's ingress terminates on.
+                   Here for the same reason, even though the records
+                   validating them are written into a zone that is not. */}}
+            {{- $services = append $services (dict "name" "certificatemanager" "api" "certificatemanager.googleapis.com") }}
+            {{- range $s := $services }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectService
+            metadata:
+              name: {{ printf "svc-%s-%s" $name $s.name }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ printf "instance-service-%s" $s.name }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                service: {{ $s.api | quote }}
+                # Leaving an API on when the resource goes is the safe
+                # direction: disabling one takes every resource in the
+                # project that depends on it.
+                disableOnDestroy: false
+                projectRef:
+                  name: {{ printf "prj-%s" $name | quote }}
+            {{- end }}
     - step: nodes
       functionRef:
         name: function-go-templating
