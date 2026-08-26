@@ -93,9 +93,14 @@ spec:
                         from it, and so is anything else reached
                         privately, so it is sized for the tenants rather
                         than for the database.
-                database:
+                server:
                   type: object
                   default: {}
+                  description: |
+                    How the server itself is built, and the one
+                    account that connects to it. Every database on
+                    it is reached through that account, so this is
+                    stated once rather than per database.
                   properties:
                     tier:
                       type: string
@@ -185,6 +190,34 @@ spec:
                             is not the workload's: giving a database
                             its user's rights is not something that
                             user should be able to do.
+                databases:
+                  type: array
+                  default: []
+                  description: |
+                    What to create on the server. A name each, and
+                    nothing else: the account that reaches them, the
+                    database user it is and the roles it holds belong to
+                    the server, because one proxy authenticates as one
+                    account and reaches every database on the instance.
+
+                    So a second consumer adds a name here and composes
+                    nothing. Isolation between them is Postgres grants
+                    rather than separate identities, which is what a
+                    shared proxy means.
+
+                    Empty composes no database, which is a server
+                    nothing has asked anything of yet.
+                  items:
+                    type: object
+                    required:
+                      - name
+                    properties:
+                      name:
+                        type: string
+                        pattern: '^[a-z][a-z0-9-]{0,30}[a-z0-9]$'
+                        description: |
+                          Scoped to this server, so it need not be
+                          unique anywhere else.
             status:
               type: object
               properties:

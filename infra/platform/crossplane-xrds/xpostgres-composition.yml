@@ -200,35 +200,35 @@ spec:
                 toFieldPath: spec.forProvider.region
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.tier
+                fromFieldPath: spec.server.tier
                 toFieldPath: spec.forProvider.settings.tier
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.version
+                fromFieldPath: spec.server.version
                 toFieldPath: spec.forProvider.databaseVersion
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.edition
+                fromFieldPath: spec.server.edition
                 toFieldPath: spec.forProvider.settings.edition
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.diskSize
+                fromFieldPath: spec.server.diskSize
                 toFieldPath: spec.forProvider.settings.diskSize
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.diskType
+                fromFieldPath: spec.server.diskType
                 toFieldPath: spec.forProvider.settings.diskType
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.availabilityType
+                fromFieldPath: spec.server.availabilityType
                 toFieldPath: spec.forProvider.settings.availabilityType
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.backupEnabled
+                fromFieldPath: spec.server.backupEnabled
                 toFieldPath: spec.forProvider.settings.backupConfiguration.enabled
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.database.pointInTimeRecovery
+                fromFieldPath: spec.server.pointInTimeRecovery
                 toFieldPath: spec.forProvider.settings.backupConfiguration.pointInTimeRecoveryEnabled
               - policy:
                   fromFieldPath: Required
@@ -252,49 +252,6 @@ spec:
               - type: ToCompositeFieldPath
                 fromFieldPath: status.atProvider.connectionName
                 toFieldPath: status.connectionName
-          # Keycloak's own database. Named for the instance as well as
-          # for what it holds: a database name is scoped to its Cloud
-          # SQL instance in GCP and to a namespace in Kubernetes, the
-          # same split a node pool has, and the longer name wins in both
-          # rather than the annotation holding a second one.
-          - name: instance-sql-database
-            base:
-              apiVersion: sql.gcp.m.upbound.io/v1beta1
-              kind: Database
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "sql-%s-%s-%s-keycloak"
-                toFieldPath: metadata.name
-              - *instance-project
-              - &sql-instance-ref
-                type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "sql-%s-%s-%s"
-                toFieldPath: spec.forProvider.instanceRef.name
           # ===================================================================
           # The identity that reaches the database, and the database
           # user that is that identity. No password is composed here
@@ -395,7 +352,17 @@ spec:
                     fmt: "sa-%s-%s-%s-sql@%s.iam"
                 toFieldPath: metadata.annotations[crossplane.io/external-name]
               - *instance-project
-              - *sql-instance-ref
+              - &sql-instance-ref
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s"
+                toFieldPath: spec.forProvider.instanceRef.name
           # cloudsql.client authorises the connection, instanceUser
           # authorises logging in as an IAM principal once connected.
           # Both are needed and neither implies the other.
@@ -521,8 +488,8 @@ spec:
                 combine:
                   variables:
                     - fromFieldPath: spec.projectId
-                    - fromFieldPath: spec.database.client.namespace
-                    - fromFieldPath: spec.database.client.serviceAccount
+                    - fromFieldPath: spec.server.client.namespace
+                    - fromFieldPath: spec.server.client.serviceAccount
                   strategy: string
                   string:
                     fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
@@ -717,9 +684,59 @@ spec:
                 combine:
                   variables:
                     - fromFieldPath: spec.projectId
-                    - fromFieldPath: spec.database.client.namespace
-                    - fromFieldPath: spec.database.client.grantServiceAccount
+                    - fromFieldPath: spec.server.client.namespace
+                    - fromFieldPath: spec.server.client.grantServiceAccount
                   strategy: string
                   string:
                     fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
                 toFieldPath: spec.forProvider.member
+    # =======================================================================
+    # A database per name. Templated rather than patched because
+    # patch-and-transform composes a fixed set of resources and has no
+    # way to say "one per element".
+    #
+    # Only the database is per-name. The proxy identity, the database
+    # user that identity is, and the roles it holds are the server's:
+    # one proxy authenticates as one account and reaches every database
+    # on the instance, so a second consumer names another database here
+    # and composes nothing else.
+    # =======================================================================
+    - step: databases
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
+            {{- range $db := (dig "databases" list $xr.spec) }}
+            ---
+            {{- /* Named for the instance as well as for what it holds: a
+                   database name is scoped to its Cloud SQL instance in
+                   GCP and to a namespace in Kubernetes, and the longer
+                   name wins in both rather than the annotation holding a
+                   second one. */}}
+            apiVersion: sql.gcp.m.upbound.io/v1beta1
+            kind: Database
+            metadata:
+              name: {{ printf "sql-%s-%s" $name $db.name }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ printf "instance-sql-database-%s" $db.name }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $xr.spec.projectId | quote }}
+                instanceRef:
+                  name: {{ printf "sql-%s" $name | quote }}
+            {{- end }}
