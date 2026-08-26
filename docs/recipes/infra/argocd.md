@@ -116,16 +116,35 @@ A wave waits for its resources to report Healthy, and only `Healthy` and
 never become Healthy waits for good. No retry, no backoff, no timeout,
 and `retryCount` stays unset, which is how to tell the two apart.
 
-Cancel it with a JSON patch, because a merge patch cannot remove a
-field:
+Cancelling takes one of two acts, and they are not interchangeable.
+
+Removing `.operation` stops one that is *queued* — a retry waiting its
+turn, or a sync nobody has started. It takes a JSON patch, because a
+merge patch cannot remove a field:
 
 ```
 kubectl -n argocd patch app <app> --type json \
   -p '[{"op":"remove","path":"/operation"}]'
 ```
 
-Merge the fix before cancelling. Removing `.operation` starts a fresh
-sync at the current revision, so cancelling first buys one more hang.
+That does nothing to one already in flight. An operation parked in a
+health wait is not waiting to be re-queued, it is waiting for a
+resource, and the controller goes on holding it: the field disappears
+and `operationState.phase` stays `Running` at its original
+`startedAt`. Terminating is what reaches it, and what `argocd app
+terminate-op` does:
+
+```
+kubectl -n argocd patch app <app> --type merge \
+  -p '{"status":{"operationState":{"phase":"Terminating"}}}'
+```
+
+A plain patch reaches `status` because the Application CRD declares no
+status subresource. Check that before relying on it.
+
+Merge the fix before either. Both leave an Application whose automated
+sync starts again at the current revision, so cancelling first buys one
+more hang.
 
 ### One bad object fails the whole sync
 
@@ -215,6 +234,30 @@ long as the budget lasts. Before turning it on, make sure no parent
 holds both an environment's Applications and anything that has to keep
 reconciling while that environment is off.
 
+### A resource keeps the tracking annotation of its last owner
+
+Argo records which Application owns a resource on the resource itself,
+as `argocd.argoproj.io/tracking-id`. Nothing else removes it. So a
+resource that moves between Applications — committed in one and
+composed by something else afterwards, or moved between directories —
+arrives at its new owner still carrying the old one's name.
+
+The former owner then goes on listing it. Where that owner prunes, the
+resource is deleted, which is worse. Where it does not, the resource
+sits in the tree as `OutOfSync` for good, the Application never reports
+Synced again, and its health takes the worst of a resource it no longer
+manages — up through every parent above it.
+
+Strip it once, by hand, as the last step of the handover:
+
+```
+kubectl -n argocd annotate <kind> <name> argocd.argoproj.io/tracking-id-
+```
+
+A controller that took the resource over will not do it for you. It
+writes the fields its manifest declares, and an annotation it never
+mentions is one it never touches.
+
 ### Revisions
 
 Argo reads the revision an Application names, not a working tree. A
@@ -248,6 +291,12 @@ field the manifest can set.
   means the operation is not failing at all: only `Healthy` and
   `Degraded` end a task, so a wave holding anything else waits with no
   retry, no backoff and no timeout.
+- Terminate an operation already in flight, rather than removing
+  `.operation`, which only stops a queued one. Set
+  `status.operationState.phase` to `Terminating`.
+- Strip `argocd.argoproj.io/tracking-id` from a resource handed from one
+  Application to another. Nothing else removes it, and the former owner
+  holds it `OutOfSync` for good.
 - Set `prune: false` where pruning would delete something a missing
   file should not delete.
 - Merge a change before expecting Argo to apply it. It reads the
