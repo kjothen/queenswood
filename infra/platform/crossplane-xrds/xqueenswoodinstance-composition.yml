@@ -211,219 +211,33 @@ spec:
                 fromFieldPath: spec.network.proxyCidr
                 toFieldPath: spec.proxyCidr
           # ===================================================================
-          # The identity this instance's nodes run as. Not the default
-          # compute service account, which is shared by everything in
-          # the project that never chose one and holds whatever the
-          # organisation's policy on automatic grants leaves it holding.
-          # The pool asks for cloud-platform scopes, so whatever it
-          # holds, every workload on the cluster reaches through the
-          # metadata server.
+          # The cluster, the pool that runs on it, and the identity that
+          # pool runs as.
           #
-          # Delete is withheld. ADR-0024 says down leaves the project,
-          # its data, its DNS zone and its identities standing, so an
-          # identity outlives the cluster it runs.
+          # One composite rather than three resources and a step. A
+          # cluster with no nodes is not something anything wants
+          # separately, and the pool keeps its own templated step inside
+          # the kind because its count is a manifest value and a state at
+          # once, which no patch can combine.
           #
-          # The label is in the name where the plane's node identity has
-          # only the environment letter: two nonprod instances in one
-          # installation would otherwise both claim sa-<code>-n-nodes,
-          # and Crossplane holds every instance's resources in one
-          # namespace whatever project each lands in.
-          # ===================================================================
-          - name: instance-nodes-identity
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ServiceAccount
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  displayName: Queenswood instance nodes
-                  description: Runs this environment's cluster nodes
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "sa-%s-%s-%s-nodes"
-                toFieldPath: metadata.name
-              - fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.project
-              # The account id is the external name, so it is stated
-              # rather than left to default from metadata.name: the node
-              # pool below spells the same address, and a generated one
-              # would leave it spelling nothing.
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "sa-%s-%s-%s-nodes"
-                toFieldPath: metadata.annotations[crossplane.io/external-name]
-          # One role rather than the four the older guidance lists.
-          # container.defaultNodeServiceAccount is narrower than they
-          # are -- monitoring.viewer alone grants project-wide read of
-          # every alert policy and dashboard, which a node has no use
-          # for -- and it carries autoscaling.sites.writeMetrics, which
-          # none of them do and horizontal autoscaling needs. Google
-          # maintains it, so a change in what a node requires arrives
-          # here rather than leaving a hand-written list stale.
+          # The network is not in it. A cluster rebuilds from its own
+          # declaration and a VPC does not, so they are separate kinds
+          # with separate lifecycles -- and the subnet is named the same
+          # way XNetwork names it rather than referenced, because two
+          # composites cannot read each other's status.
           #
-          # Nothing grants the platform identity serviceAccountUser on
-          # this account, as the plane's composition has to for its own:
-          # the platform identity created this project, which makes it
-          # owner of it, and attaching a service account to a node pool
-          # is a right owner already holds.
-          - name: instance-nodes-role-default-node-service-account
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/container.defaultNodeServiceAccount
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "%s-%s-%s-nodes-default-node-service-account"
-                toFieldPath: metadata.name
-              - fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.project
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                    - fromFieldPath: spec.projectId
-                  strategy: string
-                  string:
-                    fmt: "serviceAccount:sa-%s-%s-%s-nodes@%s.iam.gserviceaccount.com"
-                toFieldPath: spec.forProvider.member
-          # ===================================================================
-          # The cluster this environment runs on, and where its bill
-          # starts: everything composed above it costs nothing standing
-          # still.
-          #
-          # Fully managed, Delete included, which is what ADR-0022
-          # leaves anything that rebuilds from its own declaration.
-          # Retiring an instance destroys the cluster and leaves the
-          # project, its data, the network and the identities, which is
-          # the line that makes state a word in a file rather than a
-          # teardown.
-          #
-          # No nodeConfig here on purpose. It only ever configures the
-          # default node pool, which removeDefaultNodePool deletes
-          # immediately, and GKE then recomputes node_config on the
-          # cluster. The provider sees a diff on a field that can only
-          # change by replacing the cluster and refuses to reconcile,
-          # leaving it stuck Creating. The real node configuration is on
-          # the pool below.
+          # The endpoint and the CA come back up because instance-argo-
+          # cluster reads them from this composite's status, which is
+          # unchanged.
           # ===================================================================
           - name: instance-cluster
             base:
-              apiVersion: container.gcp.m.upbound.io/v1beta1
-              kind: Cluster
+              apiVersion: platform.repldriven.com/v1alpha1
+              kind: XCluster
               metadata:
                 namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  initialNodeCount: 1
-                  removeDefaultNodePool: true
-                  # The composite is what protects this, through
-                  # managementPolicies and the manifest that declares
-                  # it. A second lock GCP holds outside Crossplane only
-                  # makes a declared teardown fail halfway.
-                  deletionProtection: false
-                  ipAllocationPolicy:
-                    clusterSecondaryRangeName: pods
-                    servicesSecondaryRangeName: services
-                  addonsConfig:
-                    httpLoadBalancing:
-                      disabled: false
-                  # What the proxy-only subnet is for. Upbound's CRD
-                  # nests this at the top level rather than under
-                  # networkConfig, and placing it elsewhere is silently
-                  # dropped.
-                  gatewayApiConfig:
-                    channel: CHANNEL_STANDARD
-                  # Encryption in transit, for the ten paths inside the
-                  # cluster that are not TLS: the backup agents to
-                  # s3proxy, the Gateway to console, api and Keycloak,
-                  # the services to Kafka and to FoundationDB,
-                  # FoundationDB between its own processes, Keycloak and
-                  # the realm exporter to the Cloud SQL proxy, and
-                  # everything to Jaeger. The control asks whether data
-                  # in transit is encrypted rather than whether it is
-                  # TLS, so this answers all ten at once.
-                  #
-                  # Both fields or neither: the encryption is a
-                  # Dataplane V2 feature and inert on LEGACY_DATAPATH,
-                  # which is what GKE defaults to.
-                  #
-                  # Neither can be applied to a live cluster. The
-                  # dataplane is fixed at creation, so the provider
-                  # refuses the diff rather than performing it and the
-                  # refusal lands in LastAsyncOperation -- Synced alone
-                  # does not say. The cluster takes this when it is next
-                  # rebuilt; see docs/recipes/infra/cluster-rebuild.md.
-                  #
-                  # It forecloses enableFqdnNetworkPolicy, which cannot
-                  # coexist with inter-node encryption, so egress
-                  # control has to be a Cloud NAT and CIDRs rather than
-                  # names. And it does not cover two pods on one node,
-                  # because that traffic never reaches a network.
-                  datapathProvider: ADVANCED_DATAPATH
-                  inTransitEncryptionConfig: IN_TRANSIT_ENCRYPTION_INTER_NODE_TRANSPARENT
-                # A kubeconfig for this cluster, written by the provider
-                # on every reconcile. It carries the endpoint and the CA
-                # and no credential: the token comes from the identity
-                # block on whichever provider config reads it. This is
-                # what provider-helm will want when the workloads
-                # arrive.
-                writeConnectionSecretToRef:
-                  name: instance-kubeconfig
+              spec: {}
             patches:
-              # No kind prefix: a cluster is never listed beside other
-              # kinds, and GKE prefixes every name it derives from one
-              # with gke- already.
               - type: CombineFromComposite
                 combine:
                   variables:
@@ -434,70 +248,41 @@ spec:
                   string:
                     fmt: "%s-%s-%s"
                 toFieldPath: metadata.name
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "%s-%s-%s-kubeconfig"
-                toFieldPath: spec.writeConnectionSecretToRef.name
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "vpc-%s-%s-%s"
-                toFieldPath: spec.forProvider.networkRef.name
               - policy:
                   fromFieldPath: Required
-                type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                    - fromFieldPath: spec.regionCode
-                  strategy: string
-                  string:
-                    fmt: "sb-%s-%s-%s-%s"
-                toFieldPath: spec.forProvider.subnetworkRef.name
-              - &cluster-project
+                fromFieldPath: spec.code
+                toFieldPath: spec.code
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.env
+                toFieldPath: spec.env
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.label
+                toFieldPath: spec.label
+              - policy:
+                  fromFieldPath: Required
                 fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.project
-              # The one this rule was learned from. location is required
-              # on Cluster and optional on NodePool, so the same absent
-              # zone failed the first loudly and left the second holding
-              # a pool it could no longer observe.
-              - &cluster-zone
-                policy:
+                toFieldPath: spec.projectId
+              - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.zone
-                toFieldPath: spec.forProvider.location
+                toFieldPath: spec.zone
               - policy:
                   fromFieldPath: Required
-                fromFieldPath: spec.cluster.releaseChannel
-                toFieldPath: spec.forProvider.releaseChannel.channel
-              # Workload Identity, so a pod assumes a service account
-              # rather than holding a key. Nothing binds to the pool
-              # yet; the cluster is where the choice is made available.
-              - fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.workloadIdentityConfig.workloadPool
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s.svc.id.goog"
+                fromFieldPath: spec.regionCode
+                toFieldPath: spec.regionCode
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.state
+                toFieldPath: spec.state
+              - fromFieldPath: spec.cluster
+                toFieldPath: spec.cluster
               - type: ToCompositeFieldPath
-                fromFieldPath: status.atProvider.endpoint
+                fromFieldPath: status.endpoint
                 toFieldPath: status.clusterEndpoint
               - type: ToCompositeFieldPath
-                fromFieldPath: status.atProvider.masterAuth.clusterCaCertificate
+                fromFieldPath: status.ca
                 toFieldPath: status.clusterCa
           # The identity external-secrets runs as on this cluster.
           # secretAccessor rather than admin: reading a version is all
@@ -1292,109 +1077,6 @@ spec:
                 projectRef:
                   name: {{ printf "prj-%s" $name | quote }}
             {{- end }}
-    - step: nodes
-      functionRef:
-        name: function-go-templating
-      input:
-        apiVersion: gotemplating.fn.crossplane.io/v1beta1
-        kind: GoTemplate
-        source: Inline
-        inline:
-          template: |
-            {{- $xr := .observed.composite.resource }}
-            {{- $cluster := $xr.spec.cluster | default dict }}
-            {{- $upgrade := $cluster.upgradeSettings | default dict }}
-            {{- range $f := list "machineType" "nodeCount" "diskSize" "diskType" "upgradeSettings" }}
-            {{- if not (hasKey $cluster $f) }}
-            {{- fail (printf "spec.cluster.%s is absent" $f) }}
-            {{- end }}
-            {{- end }}
-            {{- range $f := list "code" "env" "label" "state" "zone" "projectId" }}
-            {{- if not (hasKey $xr.spec $f) }}
-            {{- fail (printf "spec.%s is absent" $f) }}
-            {{- end }}
-            {{- end }}
-            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
-            {{- $count := 0 }}
-            {{- if eq $xr.spec.state "up" }}
-            {{- $count = $cluster.nodeCount }}
-            {{- end }}
-            apiVersion: container.gcp.m.upbound.io/v1beta1
-            kind: NodePool
-            metadata:
-              name: np-{{ $name }}-primary
-              namespace: crossplane-system
-              annotations:
-                gotemplating.fn.crossplane.io/composition-resource-name: instance-nodes
-            spec:
-              managementPolicies:
-                - Observe
-                - Create
-                - Update
-                - LateInitialize
-              providerConfigRef:
-                kind: ClusterProviderConfig
-                name: default
-              forProvider:
-                cluster: {{ $name }}
-                location: {{ $xr.spec.zone }}
-                # Owned here so late-initialisation cannot. Left unset,
-                # upjet observes the live pool and writes podRange and
-                # podIpv4CidrBlock back into the spec -- harmless while
-                # the pool exists, since it is only describing what is
-                # there. It stops being harmless the moment the pool has
-                # to be created again: the CIDR is then sent as a create
-                # parameter, and GCP refuses it with "Can only set
-                # pod_ipv4_cidr_block if create_pod_range is true",
-                # leaving a cluster with no nodes.
-                #
-                # podRange alone is what is wanted: it names the
-                # secondary range the cluster's ipAllocationPolicy
-                # already points at, rather than asking for a new one.
-                networkConfig:
-                  podRange: pods
-                project: {{ $xr.spec.projectId }}
-                nodeCount: {{ $count | int }}
-                # Composed rather than observed, for the same reason as
-                # networkConfig above: left unset, upjet writes back
-                # whatever GKE defaulted to, so the spec reads as
-                # declared while nobody chose it. maxUnavailable 0 keeps
-                # a replacement node up before the old one goes.
-                upgradeSettings:
-                  strategy: {{ $upgrade.strategy }}
-                  maxSurge: {{ $upgrade.maxSurge | int }}
-                  maxUnavailable: {{ $upgrade.maxUnavailable | int }}
-                nodeConfig:
-                  machineType: {{ $cluster.machineType }}
-                  diskSizeGb: {{ $cluster.diskSize | int }}
-                  diskType: {{ $cluster.diskType }}
-                  serviceAccount: sa-{{ $name }}-nodes@{{ $xr.spec.projectId }}.iam.gserviceaccount.com
-                  oauthScopes:
-                    - https://www.googleapis.com/auth/cloud-platform
-                  workloadMetadataConfig:
-                    mode: GKE_METADATA
-    # =======================================================================
-    # One binding per principal, which patch-and-transform cannot
-    # express: it composes a fixed set of resources and has no way to
-    # say "none" for an empty list. So this mirrors the plane's own
-    # access step rather than inventing a second shape.
-    #
-    # Nothing is emitted where no viewers are named, which is an
-    # installation that has not decided yet rather than one that has
-    # decided nobody.
-    # =======================================================================
-    # =======================================================================
-    # This instance's bucket, in the installation's recovery project.
-    # Templated rather than patched because the block is absent until
-    # an instance keeps something, and because the name is built from
-    # part of another field.
-    #
-    # One bucket per instance rather than one per installation, so an
-    # instance's identity is granted on its own backups and reaches no
-    # other's -- which is the whole reason the project sits outside the
-    # instance in the first place, and would be given back by a bucket
-    # everything shares.
-    # =======================================================================
     - step: recovery
       functionRef:
         name: function-go-templating
