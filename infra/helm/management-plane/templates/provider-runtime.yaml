@@ -189,6 +189,18 @@ rules:
   - apiGroups: [""]
     resources: ["serviceaccounts"]
     verbs: ["get", "list", "watch", "update", "patch"]
+  # The Applications an XManagedUnit composes. Delete included, because
+  # withdrawing a unit's declaration should take the Application that
+  # installed it -- and only that, since the Application carries no
+  # finalizer and its resources are left standing.
+  #
+  # A provider that cannot read a kind cannot manage it, and the refusal
+  # lands on the composed resource rather than on the composite: the
+  # XManagedUnit reports Synced while its Object reports observe failed
+  # and nothing is applied.
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
