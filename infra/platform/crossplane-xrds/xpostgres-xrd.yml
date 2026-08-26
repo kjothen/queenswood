@@ -1,0 +1,196 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xpostgres.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XPostgres
+    plural: xpostgres
+  defaultCompositionRef:
+    name: xpostgres.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            One instance's Cloud SQL server and everything that makes it
+            reachable: the private services access it answers on, the
+            database, and the identities that connect to it.
+
+            Its own composite because a Cloud SQL server is
+            instance-scoped rather than any one workload's. It hosts many
+            databases, so a second consumer names another database and
+            reaches it through the same server rather than bringing its
+            own. See ADR-0025 on what earns a kind.
+
+            Composed by XQueenswoodInstance rather than declared. No
+            manifest names this kind, and its fields are forwarded from
+            the instance that composes it.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - env
+                - label
+                - projectId
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. Every name
+                    derives from it. See ADR-0023.
+                env:
+                  type: string
+                  pattern: '^[dnp]$'
+                  description: |
+                    One letter: d dev, n nonprod, p prod.
+                label:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,10}[a-z0-9]$'
+                  description: |
+                    What this environment is called inside its tier.
+                projectId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    The instance project this server and its identities
+                    live in.
+                region:
+                  type: string
+                  default: europe-west2
+                  description: |
+                    Where the server runs. The instance's region, since a
+                    database reached privately across one VPC gains
+                    nothing from sitting in another.
+                state:
+                  type: string
+                  enum:
+                    - up
+                    - down
+                  default: up
+                  description: |
+                    Whether this environment is running. down is a
+                    stopped server that keeps its storage, not a dropped
+                    one, and nothing is restored on the way back up. See
+                    ADR-0022.
+                network:
+                  type: object
+                  default: {}
+                  properties:
+                    psaPrefixLength:
+                      type: integer
+                      default: 16
+                      description: |
+                        How much address space this VPC lends Google for
+                        private services access. Cloud SQL is allocated
+                        from it, and so is anything else reached
+                        privately, so it is sized for the tenants rather
+                        than for the database.
+                database:
+                  type: object
+                  default: {}
+                  properties:
+                    tier:
+                      type: string
+                      default: db-custom-1-3840
+                      description: |
+                        One vCPU and 3840MB, the smallest shape
+                        ENTERPRISE accepts -- ENTERPRISE_PLUS
+                        refuses a custom shape entirely.
+                    version:
+                      type: string
+                      default: POSTGRES_18
+                      description: |
+                        Immutable downward: Cloud SQL upgrades a
+                        major version in place and never returns.
+                    edition:
+                      type: string
+                      default: ENTERPRISE
+                      description: |
+                        ENTERPRISE or ENTERPRISE_PLUS. The latter
+                        takes only named machine shapes.
+                    diskSize:
+                      type: integer
+                      default: 10
+                      description: |
+                        In GB, and a floor rather than a ceiling:
+                        diskAutoresize grows it and nothing shrinks
+                        it again.
+                    diskType:
+                      type: string
+                      default: PD_HDD
+                      description: |
+                        PD_HDD or PD_SSD. Keycloak's working set is
+                        small and mostly cached.
+                    availabilityType:
+                      type: string
+                      default: ZONAL
+                      description: |
+                        ZONAL or REGIONAL. REGIONAL keeps a standby
+                        in a second zone and roughly doubles the
+                        cost, and is the difference between an
+                        environment that survives a zone and one
+                        that does not.
+                    backupEnabled:
+                      type: boolean
+                      default: true
+                      description: |
+                        Cloud SQL's own scheduled backup, which is
+                        separate from anything FoundationDB does.
+                    pointInTimeRecovery:
+                      type: boolean
+                      default: false
+                      description: |
+                        Write-ahead log retention, so a restore can
+                        name a moment rather than a backup. Costs
+                        storage continuously.
+                    client:
+                      type: object
+                      default: {}
+                      description: |
+                        The Kubernetes service account that reaches
+                        this database, which the composition binds
+                        to the cloud identity it composes for it.
+                        Kubernetes rather than a cloud's vocabulary
+                        on purpose: every cloud has a mechanism for
+                        trusting one, and none of them agree on what
+                        it is called.
+
+                        Whatever creates that account decides these
+                        two strings, so they belong beside the
+                        Application that installs it rather than in
+                        the composition, which would otherwise hold
+                        a copy that a rename elsewhere makes wrong
+                        without making anything say so.
+                      properties:
+                        namespace:
+                          type: string
+                          description: |
+                            Where that account lives.
+                        serviceAccount:
+                          type: string
+                          description: |
+                            The account the workload connects as.
+                        grantServiceAccount:
+                          type: string
+                          description: |
+                            The account the grant Job runs as, which
+                            is not the workload's: giving a database
+                            its user's rights is not something that
+                            user should be able to do.
+            status:
+              type: object
+              properties:
+                connectionName:
+                  type: string
+                  description: |
+                    What the Cloud SQL Auth Proxy connects to:
+                    project:region:instance. Assigned by GCP rather than
+                    derived, so it is read back rather than spelled.

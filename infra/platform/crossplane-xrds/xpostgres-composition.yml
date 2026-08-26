@@ -1,0 +1,725 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xpostgres.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.repldriven.com/v1alpha1
+    kind: XPostgres
+  mode: Pipeline
+  pipeline:
+    - step: patch-and-transform
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # ===================================================================
+          # Private services access: the range this VPC lends to Google,
+          # and the peering that consumes it. A Cloud SQL instance with
+          # a private address lives in Google's own project and reaches
+          # this VPC across that peering, which is why a database needs
+          # two network resources before it needs a database.
+          #
+          # Global rather than regional, and prefixLength rather than a
+          # stated range: Google allocates from the VPC's space, and a
+          # literal here would have to avoid every subnet this instance
+          # will ever have.
+          #
+          # Delete is withheld from both. Tearing down a peering strands
+          # every private-IP service behind it, and the range cannot be
+          # reclaimed while the peering holds it.
+          # ===================================================================
+          - name: instance-psa-range
+            base:
+              apiVersion: compute.gcp.m.upbound.io/v1beta1
+              kind: GlobalAddress
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  purpose: VPC_PEERING
+                  addressType: INTERNAL
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "addr-%s-%s-%s-psa"
+                toFieldPath: metadata.name
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.psaPrefixLength
+                toFieldPath: spec.forProvider.prefixLength
+              - &vpc-ref
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: spec.forProvider.networkRef.name
+              - &instance-project
+                fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
+          - name: instance-psa-connection
+            base:
+              apiVersion: servicenetworking.gcp.m.upbound.io/v1beta1
+              kind: Connection
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  service: servicenetworking.googleapis.com
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "psa-%s-%s-%s"
+                toFieldPath: metadata.name
+              - *vpc-ref
+              # By value rather than by reference: the range's name is
+              # this composition's own, so it is as deterministic as a
+              # ref would be, and a list element takes an index either
+              # way.
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "addr-%s-%s-%s-psa"
+                toFieldPath: spec.forProvider.reservedPeeringRanges[0]
+          # ===================================================================
+          # The database. Private address only: ipv4Enabled false and a
+          # privateNetworkRef into this instance's VPC, reachable across
+          # the peering above and from nowhere on the internet. That is
+          # also what makes sql.restrictPublicIp enforceable, which the
+          # organisation's policy set leaves off pending an instance
+          # that could satisfy it.
+          #
+          # Delete is withheld and deletionProtection is on, which is
+          # the one place this composition deliberately holds two locks.
+          # A cluster is protected by its declaration alone, because
+          # rebuilding one loses nothing; a database is the resource
+          # where a teardown failing halfway is the better outcome. See
+          # ADR-0022 on the lien mattering more than the policy.
+          #
+          # state governs activationPolicy, which is the second thing it
+          # has ever governed. NEVER stops the instance and keeps its
+          # storage: down is a stopped database rather than a dropped
+          # one, and nothing is restored on the way back up.
+          # ===================================================================
+          - name: instance-sql
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: DatabaseInstance
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  deletionProtection: true
+                  settings:
+                    diskAutoresize: true
+                    deletionProtectionEnabled: true
+                    ipConfiguration:
+                      ipv4Enabled: false
+                      # Cloud SQL defaults to accepting unencrypted
+                      # connections, and private IP does not change
+                      # that: it settles who can reach the instance,
+                      # not whether what they send is readable. Stated
+                      # rather than defaulted, because the default is
+                      # the permissive one.
+                      #
+                      # ENCRYPTED_ONLY rather than
+                      # TRUSTED_CLIENT_CERTIFICATE_REQUIRED: the client
+                      # is authenticated by IAM already, and requiring
+                      # a client certificate as well would put a second
+                      # credential in a design that currently has none.
+                      sslMode: ENCRYPTED_ONLY
+                    # No password exists on this instance. Every user is
+                    # an IAM principal, authenticated by a token from the
+                    # metadata server, which is what this flag turns on.
+                    databaseFlags:
+                      - name: cloudsql.iam_authentication
+                        value: "on"
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s"
+                toFieldPath: metadata.name
+              - *instance-project
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.region
+                toFieldPath: spec.forProvider.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.tier
+                toFieldPath: spec.forProvider.settings.tier
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.version
+                toFieldPath: spec.forProvider.databaseVersion
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.edition
+                toFieldPath: spec.forProvider.settings.edition
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.diskSize
+                toFieldPath: spec.forProvider.settings.diskSize
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.diskType
+                toFieldPath: spec.forProvider.settings.diskType
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.availabilityType
+                toFieldPath: spec.forProvider.settings.availabilityType
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.backupEnabled
+                toFieldPath: spec.forProvider.settings.backupConfiguration.enabled
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.database.pointInTimeRecovery
+                toFieldPath: spec.forProvider.settings.backupConfiguration.pointInTimeRecoveryEnabled
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.state
+                toFieldPath: spec.forProvider.settings.activationPolicy
+                transforms:
+                  - type: map
+                    map:
+                      up: ALWAYS
+                      down: NEVER
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "vpc-%s-%s-%s"
+                toFieldPath: spec.forProvider.settings.ipConfiguration.privateNetworkRef.name
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.connectionName
+                toFieldPath: status.connectionName
+          # Keycloak's own database. Named for the instance as well as
+          # for what it holds: a database name is scoped to its Cloud
+          # SQL instance in GCP and to a namespace in Kubernetes, the
+          # same split a node pool has, and the longer name wins in both
+          # rather than the annotation holding a second one.
+          - name: instance-sql-database
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: Database
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s-keycloak"
+                toFieldPath: metadata.name
+              - *instance-project
+              - &sql-instance-ref
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s"
+                toFieldPath: spec.forProvider.instanceRef.name
+          # ===================================================================
+          # The identity that reaches the database, and the database
+          # user that is that identity. No password is composed here
+          # because none exists: with cloudsql.iam_authentication on and
+          # a CLOUD_IAM_SERVICE_ACCOUNT user, the client presents a
+          # token from the metadata server and Cloud SQL checks IAM. The
+          # provider says the same thing -- passwordSecretRef is
+          # required for Postgres "unless type is set to ...
+          # CLOUD_IAM_SERVICE_ACCOUNT".
+          #
+          # That is why an instance still composes no secret store. What
+          # would have needed one is a database password, and there is
+          # not one to keep.
+          # ===================================================================
+          - name: instance-sql-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood database client
+                  description: Reaches this environment's database as itself
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql"
+                toFieldPath: metadata.name
+              - *instance-project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql"
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+          # The one place a composed name has to diverge, and the reason
+          # ADR-0023 allows the annotation at all: Postgres wants an IAM
+          # user named for the service account's address with the
+          # .gserviceaccount.com suffix removed, which carries an @ and
+          # so is not a name Kubernetes can express. User has no name
+          # field either -- the external name is the user name.
+          - name: instance-sql-user
+            base:
+              apiVersion: sql.gcp.m.upbound.io/v1beta1
+              kind: User
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  type: CLOUD_IAM_SERVICE_ACCOUNT
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sql-%s-%s-%s-user"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql@%s.iam"
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - *instance-project
+              - *sql-instance-ref
+          # cloudsql.client authorises the connection, instanceUser
+          # authorises logging in as an IAM principal once connected.
+          # Both are needed and neither implies the other.
+          - name: instance-sql-role-client
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.client
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-client"
+                toFieldPath: metadata.name
+              - *instance-project
+              - &sql-member
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-%s-%s-sql@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          - name: instance-sql-role-instance-user
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/cloudsql.instanceUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-instance-user"
+                toFieldPath: metadata.name
+              - *instance-project
+              - *sql-member
+          # The other half of Workload Identity. The GCP binding has to
+          # name a namespace and a service account the workload really
+          # creates, and both halves have to spell the same pair or
+          # neither reports anything wrong -- so the pair comes from the
+          # manifest, beside the Application that installs the workload,
+          # rather than from a copy kept here.
+          - name: instance-sql-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-wi"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sql"
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+              # serviceAccount:<project>.svc.id.goog[<namespace>/<ksa>]
+              - type: CombineFromComposite
+                policy:
+                  fromFieldPath: Required
+                combine:
+                  variables:
+                    - fromFieldPath: spec.projectId
+                    - fromFieldPath: spec.database.client.namespace
+                    - fromFieldPath: spec.database.client.serviceAccount
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
+                toFieldPath: spec.forProvider.member
+          # ===================================================================
+          # The identity that grants the workload its rights inside the
+          # database, which is a separate system from the one that lets it
+          # in. Cloud SQL authenticates an IAM principal; PostgreSQL then
+          # authorises it, and an IAM user is created holding nothing --
+          # since PostgreSQL 15 only a database's owner may create in
+          # public, so the workload connects and cannot make a table.
+          #
+          # Neither Database nor User can express the fix: one has no
+          # owner field, the other no databaseRoles. So a Job calls the
+          # Admin API, and this is what it runs as. Its own identity
+          # rather than the workload's, because the workload has no
+          # business editing the instance's users -- and because granting
+          # scoped rights later means connecting as a superuser that is
+          # not the workload, which this account becomes without anything
+          # here changing.
+          - name: instance-sql-admin-role
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMCustomRole
+              metadata:
+                namespace: crossplane-system
+                annotations:
+                  # The role id, which is what a custom role is addressed
+                  # by and which `forProvider` has no field for.
+                  # Underscores because a custom role id takes no hyphens,
+                  # so it cannot be the Kubernetes name.
+                  crossplane.io/external-name: rl_sql_user_admin
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  # A custom role rather than cloudsql.admin, which also
+                  # grants deleting the instance and every database on it.
+                  title: Cloud SQL user administrator
+                  description: Grants database roles to this instance's users
+                  # assign-roles writes through the instance, not just
+                  # the user: cloudsql.users.update alone reads as
+                  # authorised and is refused, and every predefined role
+                  # that can do it carries instances.update too. That is
+                  # the cost of narrowing -- it permits changing the
+                  # instance's settings, though not deleting it or any
+                  # database on it, which cloudsql.admin would.
+                  permissions:
+                    - cloudsql.users.update
+                    - cloudsql.users.get
+                    - cloudsql.users.list
+                    - cloudsql.instances.get
+                    - cloudsql.instances.update
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-rl-sql-user-admin"
+                toFieldPath: metadata.name
+              - *instance-project
+          - name: instance-sql-admin-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccount
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: Queenswood database grant
+                  description: Grants this instance's database users their roles
+            patches:
+              - &sql-admin-name
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sqladmin"
+                toFieldPath: metadata.name
+              - *instance-project
+              - <<: *sql-admin-name
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+          - name: instance-sql-admin-role-binding
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ProjectIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sql-user-admin"
+                toFieldPath: metadata.name
+              - *instance-project
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "projects/%s/roles/rl_sql_user_admin"
+                toFieldPath: spec.forProvider.role
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                    - fromFieldPath: spec.projectId
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:sa-%s-%s-%s-sqladmin@%s.iam.gserviceaccount.com"
+                toFieldPath: spec.forProvider.member
+          - name: instance-sql-admin-workload-identity
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.workloadIdentityUser
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s-sqladmin-wi"
+                toFieldPath: metadata.name
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "sa-%s-%s-%s-sqladmin"
+                toFieldPath: spec.forProvider.serviceAccountIdRef.name
+              - type: CombineFromComposite
+                policy:
+                  fromFieldPath: Required
+                combine:
+                  variables:
+                    - fromFieldPath: spec.projectId
+                    - fromFieldPath: spec.database.client.namespace
+                    - fromFieldPath: spec.database.client.grantServiceAccount
+                  strategy: string
+                  string:
+                    fmt: "serviceAccount:%s.svc.id.goog[%s/%s]"
+                toFieldPath: spec.forProvider.member
