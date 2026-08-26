@@ -360,7 +360,6 @@ spec:
                   - Observe
                   - Create
                   - Update
-                  - Delete
                   - LateInitialize
                 providerConfigRef:
                   kind: ClusterProviderConfig
@@ -1332,7 +1331,6 @@ spec:
                 - Observe
                 - Create
                 - Update
-                - Delete
                 - LateInitialize
               providerConfigRef:
                 kind: ClusterProviderConfig
