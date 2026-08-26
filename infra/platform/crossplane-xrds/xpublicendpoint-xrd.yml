@@ -1,0 +1,124 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xpublicendpoints.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XPublicEndpoint
+    plural: xpublicendpoints
+  defaultCompositionRef:
+    name: xpublicendpoint.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Where one environment is reached from the internet: the
+            address it answers on, the certificates it terminates, the
+            authorization that proves the domain to the CA, and the
+            records pointing its names at that address.
+
+            Not the zone those records go in. A zone is the installation's
+            and a public endpoint is an environment's, and they are
+            separated because their lifecycles are opposite. Everything
+            here is disposable and fully managed -- an address and a
+            certificate rebuild from their own declaration, which is what
+            ADR-0022 means by the disposable tier. A zone is not: its
+            nameservers change when it is recreated, the registrar does
+            not follow, and each new zone draws from a finite per-domain
+            pool. Composing both from one kind would put a resource that
+            must never be deleted beside ones that are rebuilt routinely,
+            in a composite that is a unit of replacement.
+
+            So the zone is named rather than owned. The endpoint depends
+            on it and writes into it; the zone knows nothing of its
+            tenants, which is what keeps adding an environment out of the
+            plane. Supplied rather than discovered either way, because
+            two composites cannot read each other's status.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - env
+                - label
+                - projectId
+                - domain
+                - zone
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. See ADR-0023.
+                env:
+                  type: string
+                  pattern: '^[a-z]$'
+                  description: |
+                    One letter, the environment's tier.
+                label:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,10}[a-z0-9]$'
+                  description: |
+                    What this environment is called inside its tier.
+                projectId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    Where the address and the certificates live. Not
+                    where the records go -- those are the zone's.
+                region:
+                  type: string
+                  default: europe-west2
+                  description: |
+                    The address and the certificates are both regional,
+                    and a regional certificate takes a regional
+                    authorization in the same place.
+                domain:
+                  type: string
+                  description: |
+                    The domain this environment answers on. Two
+                    certificates are composed from it, one for the name
+                    and one for its wildcard: a managed certificate's
+                    domain list replaces the certificate rather than
+                    extending it, so a second name is a second
+                    certificate sharing the one authorization.
+                zone:
+                  type: object
+                  required:
+                    - name
+                    - project
+                  description: |
+                    The public zone the records are written into, which
+                    belongs to the installation rather than to this
+                    environment.
+                  properties:
+                    name:
+                      type: string
+                      description: |
+                        The managed zone as Crossplane knows it, since
+                        the records reference it rather than restating
+                        its domain.
+                    project:
+                      type: string
+                      description: |
+                        The project the zone is in, which is not this
+                        environment's.
+                subdomains:
+                  type: array
+                  default: []
+                  items:
+                    type: string
+                  description: |
+                    The names pointed at the address, each an A record.
+                    Subdomains only: an apex served over HTTPS would need
+                    its own certificate and gives a second origin to
+                    anything that has already recorded the first.
+
+                    Empty composes no records, which is an address
+                    nothing answers on yet.
