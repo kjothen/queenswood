@@ -1264,7 +1264,12 @@ spec:
               kind: XPostgres
               metadata:
                 namespace: crossplane-system
-              spec: {}
+              spec:
+                # Constant rather than patched: what this instance keeps
+                # in Postgres is Keycloak's realm, and the server hosts
+                # it rather than being it.
+                databases:
+                  - name: keycloak
             patches:
               - type: CombineFromComposite
                 combine:
@@ -1307,47 +1312,47 @@ spec:
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.tier
-                toFieldPath: spec.database.tier
+                toFieldPath: spec.server.tier
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.version
-                toFieldPath: spec.database.version
+                toFieldPath: spec.server.version
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.edition
-                toFieldPath: spec.database.edition
+                toFieldPath: spec.server.edition
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.diskSize
-                toFieldPath: spec.database.diskSize
+                toFieldPath: spec.server.diskSize
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.diskType
-                toFieldPath: spec.database.diskType
+                toFieldPath: spec.server.diskType
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.availabilityType
-                toFieldPath: spec.database.availabilityType
+                toFieldPath: spec.server.availabilityType
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.backupEnabled
-                toFieldPath: spec.database.backupEnabled
+                toFieldPath: spec.server.backupEnabled
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.pointInTimeRecovery
-                toFieldPath: spec.database.pointInTimeRecovery
+                toFieldPath: spec.server.pointInTimeRecovery
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.client.namespace
-                toFieldPath: spec.database.client.namespace
+                toFieldPath: spec.server.client.namespace
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.client.serviceAccount
-                toFieldPath: spec.database.client.serviceAccount
+                toFieldPath: spec.server.client.serviceAccount
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.keycloak.database.client.grantServiceAccount
-                toFieldPath: spec.database.client.grantServiceAccount
+                toFieldPath: spec.server.client.grantServiceAccount
               - type: ToCompositeFieldPath
                 fromFieldPath: status.connectionName
                 toFieldPath: status.databaseConnectionName
