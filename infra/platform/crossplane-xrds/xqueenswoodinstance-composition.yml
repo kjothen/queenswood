@@ -370,44 +370,25 @@ spec:
                 toFieldPath: spec.forProvider.projectRef.name
           # ===================================================================
           # The network this environment runs in. One VPC per instance,
-          # in the instance's own project, so two environments share
-          # nothing and neither can reach the other by accident.
+          # the subnet its nodes sit in with the secondary ranges GKE
+          # allocates pods and services from, and the proxy-only subnet
+          # a regional load balancer wants.
           #
-          # The ranges are identical in every instance, which is
-          # deliberate while the VPCs are isolated and would have to
-          # change the day two of them peer -- or one peers with the
-          # plane, whose subnet is 10.60.0.0/16 and so does not collide
-          # with these.
-          #
-          # Delete is withheld, as it is on the plane's. ADR-0022 lists
-          # what an instance may fully manage -- clusters, databases,
-          # addresses, certificates -- and a network is not among them:
-          # GCP refuses to delete one while a cluster sits in it, so the
-          # deletion stalls rather than tidies. An instance going down
-          # stops its cluster; retiring one for good is deliberate,
-          # like retiring its project.
-          #
-          # Network and Subnetwork take a project id rather than a ref,
-          # so it comes from the manifest, which always carries it.
+          # Its own composite because a plane's network is the same
+          # shape: same base, same secondary range names, and names that
+          # fall out of the same template with env c and label mgmt. The
+          # plane still composes its own -- moving the network under a
+          # live control plane is not an edit to make casually -- but
+          # the kind is shaped so that move is a caller change and not a
+          # redesign.
           # ===================================================================
-          - name: instance-vpc
+          - name: instance-network
             base:
-              apiVersion: compute.gcp.m.upbound.io/v1beta1
-              kind: Network
+              apiVersion: platform.repldriven.com/v1alpha1
+              kind: XNetwork
               metadata:
                 namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  autoCreateSubnetworks: false
-                  routingMode: REGIONAL
+              spec: {}
             patches:
               - type: CombineFromComposite
                 combine:
@@ -417,148 +398,48 @@ spec:
                     - fromFieldPath: spec.label
                   strategy: string
                   string:
-                    fmt: "vpc-%s-%s-%s"
+                    fmt: "%s-%s-%s"
                 toFieldPath: metadata.name
-              - fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.project
-          # The subnet the nodes sit in, with the two secondary ranges
-          # GKE wants: pods and services are allocated from them rather
-          # than from the primary range, and naming them here is what
-          # lets the cluster ask for them by name.
-          - name: instance-subnet
-            base:
-              apiVersion: compute.gcp.m.upbound.io/v1beta1
-              kind: Subnetwork
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  # The ranges are patched from the manifest. Only the
-                  # secondary range *names* are literal: the cluster
-                  # asks for pods and services by name, so they are
-                  # wiring rather than configuration.
-                  secondaryIpRange:
-                    - rangeName: pods
-                    - rangeName: services
-                  # Lets a node reach a Google API without a public
-                  # address, which is what keeps the pool private.
-                  privateIpGoogleAccess: true
-            patches:
-              # Required, here and on every patch below whose source
-              # the XRD defaults rather than the manifest states. A
-              # default is absent for a window: Argo applies the XRD
-              # and this file in one sync, and the new composition can
-              # be selected before the API server serves the
-              # regenerated CRD. A skipped patch then composes a
-              # resource with a hole in it, which the provider may
-              # create and fail to observe -- and no later reconcile
-              # recovers that, because the resource exists and is
-              # wrong. Failing the composite instead is recoverable by
-              # waiting.
               - policy:
                   fromFieldPath: Required
-                type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                    - fromFieldPath: spec.regionCode
-                  strategy: string
-                  string:
-                    fmt: "sb-%s-%s-%s-%s"
-                toFieldPath: metadata.name
-              - fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.project
+                fromFieldPath: spec.code
+                toFieldPath: spec.code
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.env
+                toFieldPath: spec.env
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.label
+                toFieldPath: spec.label
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.projectId
+                toFieldPath: spec.projectId
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.region
-                toFieldPath: spec.forProvider.region
+                toFieldPath: spec.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.regionCode
+                toFieldPath: spec.regionCode
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.network.subnetCidr
-                toFieldPath: spec.forProvider.ipCidrRange
+                toFieldPath: spec.subnetCidr
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.network.podsCidr
-                toFieldPath: spec.forProvider.secondaryIpRange[0].ipCidrRange
+                toFieldPath: spec.podsCidr
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.network.servicesCidr
-                toFieldPath: spec.forProvider.secondaryIpRange[1].ipCidrRange
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "vpc-%s-%s-%s"
-                toFieldPath: spec.forProvider.networkRef.name
-          # Where a regional load balancer puts its proxies. Its own
-          # subnet because GCP requires one per region reserved for the
-          # purpose, and it holds no instances of ours.
-          - name: instance-subnet-proxy
-            base:
-              apiVersion: compute.gcp.m.upbound.io/v1beta1
-              kind: Subnetwork
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  purpose: REGIONAL_MANAGED_PROXY
-                  role: ACTIVE
-            patches:
-              - policy:
-                  fromFieldPath: Required
-                type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                    - fromFieldPath: spec.regionCode
-                  strategy: string
-                  string:
-                    fmt: "sb-%s-%s-%s-proxy-%s"
-                toFieldPath: metadata.name
-              - fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.project
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.region
-                toFieldPath: spec.forProvider.region
+                toFieldPath: spec.servicesCidr
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.network.proxyCidr
-                toFieldPath: spec.forProvider.ipCidrRange
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "vpc-%s-%s-%s"
-                toFieldPath: spec.forProvider.networkRef.name
+                toFieldPath: spec.proxyCidr
           # ===================================================================
           # The identity this instance's nodes run as. Not the default
           # compute service account, which is shared by everything in
