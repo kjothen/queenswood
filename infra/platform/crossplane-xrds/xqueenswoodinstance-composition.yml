@@ -1155,11 +1155,15 @@ spec:
     # composition and a resource it composes next, and enabling one needs
     # billing already linked.
     #
-    # A list rather than nine resources differing in one string. The api is
-    # spelled rather than derived from the name, because it does not
-    # follow: resourcemanager is cloudresourcemanager.googleapis.com, an
-    # organisation-level API reached through this project, and a rule that
-    # held for eight of nine would have enabled one that does not exist.
+    # Only APIs that host something here. An API called about a project
+    # rather than inside one is enabled on the caller instead: the
+    # management project holds cloudresourcemanager, and every binding
+    # written into this project goes through it from there. Enabling it
+    # here as well did nothing, and an estate of a hundred projects is
+    # what makes that obvious.
+    #
+    # A list of names rather than names beside APIs, which is what is left
+    # once the one entry whose API did not follow its name is gone.
     #
     # Named with the label as well as the environment. The plane's are
     # svc-<code>-c-<api> because one management project ends the name
@@ -1179,39 +1183,36 @@ spec:
             {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
             {{- $services := list }}
             {{- /* The network, its subnets and any address. */}}
-            {{- $services = append $services (dict "name" "compute" "api" "compute.googleapis.com") }}
+            {{- $services = append $services "compute" }}
             {{- /* The cluster and its node pool. */}}
-            {{- $services = append $services (dict "name" "container" "api" "container.googleapis.com") }}
+            {{- $services = append $services "container" }}
             {{- /* Service accounts composed inside this project. */}}
-            {{- $services = append $services (dict "name" "iam" "api" "iam.googleapis.com") }}
-            {{- /* Project IAM, which every identity here needs a binding
-                   in. Organisation-level, reached through this project. */}}
-            {{- $services = append $services (dict "name" "resourcemanager" "api" "cloudresourcemanager.googleapis.com") }}
+            {{- $services = append $services "iam" }}
             {{- /* Reading and managing the enablement above. */}}
-            {{- $services = append $services (dict "name" "serviceusage" "api" "serviceusage.googleapis.com") }}
+            {{- $services = append $services "serviceusage" }}
             {{- /* The database, arriving with it rather than ahead of it. */}}
-            {{- $services = append $services (dict "name" "sqladmin" "api" "sqladmin.googleapis.com") }}
+            {{- $services = append $services "sqladmin" }}
             {{- /* What private services access is built on. Enabled for the
                    peering rather than for Cloud SQL itself. */}}
-            {{- $services = append $services (dict "name" "servicenetworking" "api" "servicenetworking.googleapis.com") }}
+            {{- $services = append $services "servicenetworking" }}
             {{- /* The values external-secrets reads into the cluster. Here
                    rather than only on the plane: GCP checks the project a
                    resource lives in as well as the caller's, and these
                    secrets are the instance's own. */}}
-            {{- $services = append $services (dict "name" "secretmanager" "api" "secretmanager.googleapis.com") }}
+            {{- $services = append $services "secretmanager" }}
             {{- /* The certificates the instance's ingress terminates on.
                    Here for the same reason, even though the records
                    validating them are written into a zone that is not. */}}
-            {{- $services = append $services (dict "name" "certificatemanager" "api" "certificatemanager.googleapis.com") }}
+            {{- $services = append $services "certificatemanager" }}
             {{- range $s := $services }}
             ---
             apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
             kind: ProjectService
             metadata:
-              name: {{ printf "svc-%s-%s" $name $s.name }}
+              name: {{ printf "svc-%s-%s" $name $s }}
               namespace: crossplane-system
               annotations:
-                gotemplating.fn.crossplane.io/composition-resource-name: {{ printf "instance-service-%s" $s.name }}
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ printf "instance-service-%s" $s }}
             spec:
               managementPolicies:
                 - Observe
@@ -1222,7 +1223,7 @@ spec:
                 kind: ClusterProviderConfig
                 name: default
               forProvider:
-                service: {{ $s.api | quote }}
+                service: {{ printf "%s.googleapis.com" $s | quote }}
                 # Leaving an API on when the resource goes is the safe
                 # direction: disabling one takes every resource in the
                 # project that depends on it.
