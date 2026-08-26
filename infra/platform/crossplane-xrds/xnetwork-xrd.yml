@@ -1,0 +1,104 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xnetworks.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XNetwork
+    plural: xnetworks
+  defaultCompositionRef:
+    name: xnetwork.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            One VPC and the subnets a GKE cluster needs in it: the
+            primary range the nodes sit in, the two secondary ranges
+            pods and services are allocated from, and where a regional
+            load balancer puts its proxies.
+
+            Delete is withheld throughout. ADR-0022 lists what may be
+            fully managed -- clusters, databases, addresses,
+            certificates -- and a network is not among them: GCP refuses
+            to delete one while a cluster sits in it, so the deletion
+            stalls rather than tidies.
+
+            Composed rather than declared. No manifest names this kind,
+            and its fields are forwarded from whatever composes it.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - env
+                - label
+                - projectId
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. See
+                    ADR-0023.
+                env:
+                  type: string
+                  pattern: '^[a-z]$'
+                  description: |
+                    One letter. Any letter rather than d, n or p: the
+                    common tier is c, and a management plane's network
+                    is the same shape as an instance's.
+                label:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,10}[a-z0-9]$'
+                  description: |
+                    What this environment is called inside its tier.
+                projectId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    Network and Subnetwork take a project id rather than
+                    a ref, so it is stated rather than referenced.
+                region:
+                  type: string
+                  default: europe-west2
+                  description: |
+                    Where the subnets live. A subnet is regional and a
+                    network is not.
+                regionCode:
+                  type: string
+                  default: euw2
+                  description: |
+                    The region abbreviated, which is what a subnet name
+                    carries. See cloud-naming.
+                subnetCidr:
+                  type: string
+                  description: |
+                    The primary range, which the nodes sit in.
+                podsCidr:
+                  type: string
+                  description: |
+                    The secondary range pods are allocated from, named
+                    pods because the cluster asks for it by name.
+                servicesCidr:
+                  type: string
+                  description: |
+                    The secondary range services are allocated from,
+                    named services for the same reason.
+                proxyCidr:
+                  type: string
+                  description: |
+                    Where a regional load balancer puts its proxies. Its
+                    own subnet because GCP requires one per region
+                    reserved for the purpose, and it holds nothing of
+                    ours.
+
+                    No default, deliberately. The patch that reads it is
+                    Required, so absent composes no proxy subnet at all
+                    -- which is how a network with no load balancer in
+                    front of it says so, without a second composition.
