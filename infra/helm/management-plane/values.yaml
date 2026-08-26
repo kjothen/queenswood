@@ -56,6 +56,16 @@ resources:
       cpu: 200m
       memory: 192Mi
 
+# The composite groups this plane serves, one key each in argocd-cm.
+# Argo grades a resource by its API group and reports Healthy for a
+# group it has no check for -- so a composite that fails to compose
+# reads the same as one that worked, and an XRD added without its group
+# added here is exactly that. The plane's own group is always true; the
+# rest are whatever this installation loaded.
+compositeGroups:
+  - platform.repldriven.com
+  - queenswood.repldriven.com
+
 # The external-secrets operator, which reads Secret Manager on the
 # secrets identity's behalf. Pinned here and nowhere else, so nothing
 # can drift -- but Renovate does not read Argo Application sources out

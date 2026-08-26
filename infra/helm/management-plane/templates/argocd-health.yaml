@@ -40,43 +40,54 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: Prune=false,ServerSideApply=true
 data:
-  resource.customizations.health.platform.repldriven.com: &xr_health |
-    -- Synced and Ready are the two conditions a composite carries.
-    -- Synced False is the composition failing to render or a composed
-    -- resource being rejected; Ready True is every composed resource
-    -- reporting ready in turn.
-    local hs = {
-      status = "Progressing",
-      message = "Composing"
+{{- /*
+  One key per composite group this plane serves, from values rather than
+  spelled here. Argo grades a resource by its API group and reports
+  Healthy for a group it has no check for, so an XRD loaded onto the
+  plane without its group added is a composite that can fail to compose
+  and still read as though it worked.
+*/}}
+{{- $xrHealth := `
+-- Synced and Ready are the two conditions a composite carries.
+-- Synced False is the composition failing to render or a composed
+-- resource being rejected; Ready True is every composed resource
+-- reporting ready in turn.
+local hs = {
+  status = "Progressing",
+  message = "Composing"
+}
+
+if obj.status == nil or obj.status.conditions == nil then
+  return hs
+end
+
+-- Two passes, so a composite that went out of sync after it was
+-- once ready reports the failure rather than the stale success.
+-- One loop would answer whichever condition the array held first.
+for _, condition in ipairs(obj.status.conditions) do
+  if condition.type == "Synced" and condition.status == "False" then
+    return {
+      status = "Degraded",
+      message = condition.message or "Not synced"
     }
+  end
+end
 
-    if obj.status == nil or obj.status.conditions == nil then
-      return hs
-    end
+for _, condition in ipairs(obj.status.conditions) do
+  if condition.type == "Ready" and condition.status == "True" then
+    return {
+      status = "Healthy",
+      message = "Composed"
+    }
+  end
+end
 
-    -- Two passes, so a composite that went out of sync after it was
-    -- once ready reports the failure rather than the stale success.
-    -- One loop would answer whichever condition the array held first.
-    for _, condition in ipairs(obj.status.conditions) do
-      if condition.type == "Synced" and condition.status == "False" then
-        return {
-          status = "Degraded",
-          message = condition.message or "Not synced"
-        }
-      end
-    end
-
-    for _, condition in ipairs(obj.status.conditions) do
-      if condition.type == "Ready" and condition.status == "True" then
-        return {
-          status = "Healthy",
-          message = "Composed"
-        }
-      end
-    end
-
-    return hs
-  resource.customizations.health.queenswood.repldriven.com: *xr_health
+return hs
+` }}
+{{- range .Values.compositeGroups }}
+  resource.customizations.health.{{ . }}: |
+{{ $xrHealth | trim | indent 4 }}
+{{- end }}
   # A child Application's health is its own, and Argo has none for the
   # kind -- no Lua under resource_customizations/argoproj.io/Application,
   # and the Go switch on argoproj.io handles only Workflow. A parent

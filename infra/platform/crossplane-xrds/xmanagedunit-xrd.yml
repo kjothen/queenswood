@@ -89,20 +89,21 @@ spec:
                         nothing at all.
                     exclude:
                       type: string
-                      default: unit.yml
+                      default: ""
                       description: |
                         What in the folder is not installed by the
-                        Application this composes. Defaulted to the file
-                        that declares the unit, and that default is
-                        load-bearing: the installation applies that file
-                        already, so installing it again would put two
-                        managers on one object, each reverting the
-                        other.
+                        Application this composes. Empty by default,
+                        because nothing in a folder needs excluding: a
+                        unit's declaration sits beside the folder rather
+                        than inside it, so the installation and this
+                        Application never reach the same file.
 
-                        A unit that keeps its declaration somewhere else
-                        sets this to something harmless rather than
-                        leaving it, since an empty string excludes
-                        nothing.
+                        It defaulted to that declaration's filename once,
+                        when the declaration lived in the folder. That
+                        arrangement is gone -- an installation's source
+                        is not recursive and no include can narrow it,
+                        since Argo compiles those globs without
+                        separators and `*` crosses `/`.
                 destination:
                   type: object
                   # Defaulted as a whole as well as per field: a default
