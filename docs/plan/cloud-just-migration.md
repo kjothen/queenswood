@@ -216,6 +216,30 @@ Two habits this week paid for, both cheap:
   this week has nothing thirty days old, so the first run that removes
   anything is a month away and the cadence can be chosen from what it
   costs.
+- **Nothing says which APIs a project may have enabled.** The
+  composition declares the eight an instance needs and reconciles those:
+  disable one by hand and it comes back. It has no notion of a closed
+  set, so a ninth enabled by anything else is a service nothing composed
+  and nothing will remove — there is no managed resource for it to
+  reconcile against.
+
+  `disableOnDestroy` is not that control and reads as though it might
+  be. It governs what happens when a declared resource is destroyed, so
+  setting it true would only mean that dropping an entry from the list
+  disables that API on a live project — which is how
+  `cloudresourcemanager` would have been switched off as a side effect
+  of tidying a loop. It closes nothing.
+
+  The control is an org policy, `constraints/serviceusage.allowedServices`,
+  which refuses the enablement rather than racing to undo it. It belongs
+  on the folder with the rest of the installation rather than per
+  instance, which is also what makes it worth having: it covers projects
+  this composition never created, and an estate accumulates those. That
+  places it behind the folder-scoped work rather than beside this one.
+  The detective half already runs — see
+  [security-scanning](../recipes/infra/security-scanning.md) for what is
+  scanned and which findings are accepted.
+
 - **Encryption in transit, decided: Dataplane V2.** Everything crossing
   a network boundary is already TLS — the load balancer, both paths to
   GCS, Cloud SQL, GitHub, the Google APIs, the payment and KYC
