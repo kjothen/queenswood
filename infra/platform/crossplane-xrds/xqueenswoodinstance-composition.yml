@@ -892,6 +892,68 @@ spec:
     # than rebuilt.
     # =======================================================================
           # ===================================================================
+          # Where this environment is reached from the internet: the
+          # address, the certificates it terminates, and the records
+          # pointing its names at that address.
+          #
+          # Its own composite, and not the zone those records go into. A
+          # zone is the installation's and this is an environment's, and
+          # their lifecycles are opposite -- everything here rebuilds from
+          # its own declaration, where a zone recreated gets nameservers
+          # the registrar does not follow. So the zone is named rather
+          # than owned, and the records still leave with the instance.
+          #
+          # domain is Required and has no default, so an environment
+          # naming none composes no endpoint at all -- which is what the
+          # step this replaces said with a conditional.
+          # ===================================================================
+          - name: instance-public-endpoint
+            base:
+              apiVersion: platform.repldriven.com/v1alpha1
+              kind: XPublicEndpoint
+              metadata:
+                namespace: crossplane-system
+              spec: {}
+            patches:
+              - type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.code
+                    - fromFieldPath: spec.env
+                    - fromFieldPath: spec.label
+                  strategy: string
+                  string:
+                    fmt: "%s-%s-%s"
+                toFieldPath: metadata.name
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.code
+                toFieldPath: spec.code
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.env
+                toFieldPath: spec.env
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.label
+                toFieldPath: spec.label
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.projectId
+                toFieldPath: spec.projectId
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.region
+                toFieldPath: spec.region
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.ingress.domain
+                toFieldPath: spec.domain
+              - fromFieldPath: spec.ingress.zone
+                toFieldPath: spec.zone
+              - fromFieldPath: spec.ingress.subdomains
+                toFieldPath: spec.subdomains
+          # ===================================================================
           # What Argo may do here. Granted by the instance rather than
           # by the plane, so Argo's reach grows one environment at a
           # time and every grant sits where that environment is
@@ -1313,203 +1375,6 @@ spec:
                     - https://www.googleapis.com/auth/cloud-platform
                   workloadMetadataConfig:
                     mode: GKE_METADATA
-    # =======================================================================
-    # Where the instance is reached: an address, the names that resolve
-    # to it, and the certificates that terminate them. Templated because
-    # the whole block is absent until an instance is published, and
-    # because two of the values are assigned by the provider and only
-    # exist after a create -- the address, and the record a
-    # DNSAuthorization wants answered.
-    #
-    # The records go into the plane's zone rather than one of this
-    # instance's, so they name a project that is not this instance's.
-    # They leave with the instance all the same.
-    # =======================================================================
-    - step: ingress
-      functionRef:
-        name: function-go-templating
-      input:
-        apiVersion: gotemplating.fn.crossplane.io/v1beta1
-        kind: GoTemplate
-        source: Inline
-        inline:
-          template: |
-            {{- $xr := .observed.composite.resource }}
-            {{- $ingress := dig "ingress" dict $xr.spec }}
-            {{- $domain := dig "domain" "" $ingress }}
-            {{- if $domain }}
-            {{- $zone := dig "zone" dict $ingress }}
-            {{- if not (dig "name" "" $zone) }}
-            {{- fail "spec.ingress.zone.name is absent" }}
-            {{- end }}
-            {{- if not (dig "project" "" $zone) }}
-            {{- fail "spec.ingress.zone.project is absent" }}
-            {{- end }}
-            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
-            {{- $observed := dig "resources" dict .observed }}
-            ---
-            # Kept through `down`. An address is the one thing here whose
-            # identity is published: releasing it means every record
-            # pointing at it is wrong, and the replacement is a different
-            # number rather than the same one returned.
-            apiVersion: compute.gcp.m.upbound.io/v1beta1
-            kind: Address
-            metadata:
-              name: addr-{{ $name }}
-              namespace: crossplane-system
-              annotations:
-                gotemplating.fn.crossplane.io/composition-resource-name: instance-address
-            spec:
-              managementPolicies:
-                - Observe
-                - Create
-                - Update
-                - LateInitialize
-              providerConfigRef:
-                kind: ClusterProviderConfig
-                name: default
-              forProvider:
-                project: {{ $xr.spec.projectId }}
-                region: {{ $xr.spec.region }}
-                addressType: EXTERNAL
-            ---
-            # One authorization covers the domain and its wildcard, so
-            # both certificates below share this one rather than each
-            # validating separately.
-            apiVersion: certificatemanager.gcp.m.upbound.io/v1beta1
-            kind: DNSAuthorization
-            metadata:
-              name: da-{{ $name }}
-              namespace: crossplane-system
-              annotations:
-                gotemplating.fn.crossplane.io/composition-resource-name: instance-dns-auth
-            spec:
-              managementPolicies:
-                - Observe
-                - Create
-                - Update
-                - LateInitialize
-              providerConfigRef:
-                kind: ClusterProviderConfig
-                name: default
-              forProvider:
-                project: {{ $xr.spec.projectId }}
-                # Same region as the certificates below. A regional
-                # certificate takes a regional authorization, and the
-                # gateway class is regional.
-                location: {{ $xr.spec.region }}
-                domain: {{ $domain | quote }}
-            {{- /* Two certificates rather than one with two names:
-                   managed.domains is ForceNew, so a name added to a
-                   live certificate replaces it. See
-                   docs/recipes/infra/crossplane-providers.md. */}}
-            {{- range $c := list (dict "slug" "" "domain" $domain) (dict "slug" "-wildcard" "domain" (printf "*.%s" $domain)) }}
-            ---
-            apiVersion: certificatemanager.gcp.m.upbound.io/v1beta1
-            kind: Certificate
-            metadata:
-              name: crt-{{ $name }}{{ $c.slug }}
-              namespace: crossplane-system
-              annotations:
-                gotemplating.fn.crossplane.io/composition-resource-name: instance-cert{{ $c.slug }}
-            spec:
-              managementPolicies:
-                - Observe
-                - Create
-                - Update
-                - LateInitialize
-              providerConfigRef:
-                kind: ClusterProviderConfig
-                name: default
-              forProvider:
-                project: {{ $xr.spec.projectId }}
-                location: {{ $xr.spec.region }}
-                managed:
-                  domains:
-                    - {{ $c.domain | quote }}
-                  dnsAuthorizationsRefs:
-                    - name: da-{{ $name }}
-            {{- end }}
-            {{- /* The validation record exists only once the
-                   authorization does, so it is read from what is
-                   observed rather than patched from spec. Absent on the
-                   first pass, present on the next. */}}
-            {{- $auth := dig "instance-dns-auth" "resource" "status" "atProvider" "dnsResourceRecord" list $observed }}
-            {{- if $auth }}
-            {{- $record := index $auth 0 }}
-            ---
-            apiVersion: dns.gcp.m.upbound.io/v1beta1
-            kind: RecordSet
-            metadata:
-              name: rs-{{ $name }}-auth-cname
-              namespace: crossplane-system
-              annotations:
-                gotemplating.fn.crossplane.io/composition-resource-name: instance-dns-auth-record
-            spec:
-              managementPolicies:
-                - Observe
-                - Create
-                - Update
-                - LateInitialize
-              providerConfigRef:
-                kind: ClusterProviderConfig
-                name: default
-              forProvider:
-                project: {{ $zone.project | quote }}
-                managedZoneRef:
-                  name: {{ $zone.name | quote }}
-                # Both arrive fully qualified, so the trailing dot is
-                # trimmed before it is added -- appending blindly gives
-                # a name ending in two, which Cloud DNS takes and
-                # nothing resolves.
-                name: {{ printf "%s." (trimSuffix "." $record.name) | quote }}
-                type: CNAME
-                ttl: 300
-                rrdatas:
-                  - {{ printf "%s." (trimSuffix "." $record.data) | quote }}
-            {{- end }}
-            {{- /* Likewise the address: a record pointing at nothing is
-                   worse than no record, so these wait for it. */}}
-            {{- $ip := dig "instance-address" "resource" "status" "atProvider" "address" "" $observed }}
-            {{- if $ip }}
-            {{- /* Subdomains only. Nothing serves the bare domain over
-                   HTTPS -- it appears in the chart's routes solely as
-                   the :80 redirect -- and pointing the console at it as
-                   well would give the SPA a second origin, which a
-                   realm imported once and never overwritten makes
-                   permanent. */}}
-            {{- range $host := dig "subdomains" list $ingress }}
-            {{- $fqdn := printf "%s.%s" $host $domain }}
-            {{- $slug := $host }}
-            ---
-            apiVersion: dns.gcp.m.upbound.io/v1beta1
-            kind: RecordSet
-            metadata:
-              name: rs-{{ $name }}-{{ $slug }}-a
-              namespace: crossplane-system
-              annotations:
-                gotemplating.fn.crossplane.io/composition-resource-name: instance-dns-{{ $slug }}
-            spec:
-              managementPolicies:
-                - Observe
-                - Create
-                - Update
-                - LateInitialize
-              providerConfigRef:
-                kind: ClusterProviderConfig
-                name: default
-              forProvider:
-                project: {{ $zone.project | quote }}
-                managedZoneRef:
-                  name: {{ $zone.name | quote }}
-                name: {{ printf "%s." $fqdn | quote }}
-                type: A
-                ttl: 300
-                rrdatas:
-                  - {{ $ip | quote }}
-            {{- end }}
-            {{- end }}
-            {{- end }}
     # =======================================================================
     # One binding per principal, which patch-and-transform cannot
     # express: it composes a fixed set of resources and has no way to
