@@ -137,6 +137,22 @@ spec:
     repoURL: {{ .Values.manifestRepoURL | quote }}
     targetRevision: {{ .Values.manifestRevision | quote }}
     path: {{ .Values.code | quote }}
+    {{- /*
+      No directory block, and that is load-bearing. This source is not
+      recursive, so it applies the installation's own manifests and one
+      declaration per unit, all of which sit at the top -- and a unit's
+      contents, which sit in a folder, are installed by the Application
+      that unit composes rather than by this one. That is what keeps a
+      unit's waves, health and retries out of the installation's sync.
+
+      An include cannot narrow it instead. Argo matches include and
+      exclude with gobwas/glob compiled with no separators, so `*`
+      crosses `/` and `*.yml` selects every manifest in the tree however
+      deep. An include written to admit the top level admits everything,
+      the unit's Applications come back into this sync carrying their
+      waves, and this Application hangs on the first one that cannot
+      report Healthy.
+    */}}
   destination:
     server: https://kubernetes.default.svc
     namespace: crossplane-system
