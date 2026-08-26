@@ -22,6 +22,17 @@ and that is what gets recreated — so changing a `metadata.name` patch
 renames nothing, and deleting the object rebuilds it under the old
 name. Changing the `- name:` is what makes it a new resource.
 
+That matching does not care what kind sits in the slot, so a composed
+composite is matched like anything else — and reusing a name a managed
+resource already carries is how an extraction wedges. The parent matches
+the live object to the new slot rather than releasing it, both composites
+then claim it, and Kubernetes refuses two owner references with
+`controller: true`. Every apply the new kind attempts fails, the old
+owner never lets go, and nothing looks broken because nothing is: the
+resource keeps running under its original owner while the transfer never
+completes. Read the live `crossplane.io/composition-resource-name`s
+before choosing a name rather than assuming a new kind implies a new one.
+
 ### Patches
 
 A patch whose source field is absent is skipped, silently. That is what
@@ -181,6 +192,16 @@ provider reported it `Available` throughout — no event, no log line.
 Add a `readinessCheck` against the field that carries the real state,
 and alert on composites rather than on managed resources.
 
+Composite readiness is computed by whichever function sets it.
+`function-patch-and-transform` sets it for the resources it composes and
+`function-go-templating` sets it for none, so a pipeline mixing the two
+reports every templated resource unready for ever, naming a resource
+that is `Available`. End every composition with `function-auto-ready`,
+including one composing nothing templated yet: it derives readiness from
+each composed resource's own conditions whatever produced them, and the
+composition that does not need it today is the one that silently stops
+computing readiness the day a template is added to it.
+
 ### Failure
 
 One pipeline step failing fails every composed resource, not its own.
@@ -191,6 +212,47 @@ stopped changing.
 
 A composed kind whose CRD is not installed on the applying plane fails
 the same way: `no matches for kind`.
+
+### Moving a resource to another composite
+
+Extracting a kind moves resources from one composite to another, and
+that is a delete and a create rather than a handover. The parent stops
+declaring them and garbage-collects its copies, the child creates its
+own, and each observes the cloud resource by external name and adopts
+it. What decides whether that is safe is the `managementPolicies` on the
+parent's copy **at the moment of deletion**, not the child's — so a
+resource holding `Delete` is destroyed on the way through rather than
+orphaned and re-adopted.
+
+Withhold `Delete` first, in its own change, and let it reach the plane
+before the extraction follows. The child then carries the full policy
+from birth, because the policy that mattered has already done its work.
+Two changes, not three.
+
+Renaming the slot afterwards is not a tidy-up. A composed composite
+lives in a slot like anything else, so renaming that slot deletes the
+composite — and deleting a composite deletes what it composes, subject
+to *those* resources' policies. The blast radius of renaming a
+composite's slot is its grandchildren: a node pool carrying `Delete`
+goes with it, and the cluster survives only if its own policy says so.
+The same two-step applies, one level down.
+
+### Status
+
+A composite's status is derived on each reconcile rather than
+accumulated. A `ToCompositeFieldPath` patch that stops firing removes
+the field it wrote instead of leaving the last value standing, so
+anything reading that field composes without it — and server-side apply
+then removes it from whatever the reading resource writes. A cluster
+endpoint published by a resource being moved between composites is
+absent for as long as the move takes, and the Secret registering that
+cluster loses it, which reads as a destination that never existed rather
+than as a value briefly missing.
+
+Where a consumer cannot tolerate the gap, the patch reading it wants
+`policy.fromFieldPath: Required` so an absent value drops the consumer
+rather than composing it half-built. Weigh that against what dropping it
+costs, since a dropped composed resource is a deleted one.
 
 ### Removal
 
@@ -220,6 +282,15 @@ Composition for a kind it no longer serves.
 
 - Change a resource's `- name:` to rebuild it under a new
   `metadata.name`. Deleting the object alone rebuilds the old one.
+- Read the live `crossplane.io/composition-resource-name`s before naming
+  a composed resource. Reusing one a managed resource already carries
+  makes two composites claim it, and every apply then fails on the
+  second `controller: true` owner reference.
+- Withhold `Delete` before moving a resource to another composite, in a
+  change of its own that reaches the plane first. The transfer deletes
+  the parent's copy, so the parent's policy is the one that governs.
+- End every composition with `function-auto-ready`, whether or not it
+  composes anything templated. go-templating sets readiness for nothing.
 - Use a Required patch as the switch for an optional block of
   resources: a missing source drops the composed resource entirely, so
   the block composes nothing until the field is set. Such a field
@@ -247,6 +318,10 @@ Install a provider for every kind the composite composes, on every
 - Withhold `Delete` from `managementPolicies` for anything whose loss
   is not recoverable. Deleting the managed resource then orphans the
   cloud resource rather than destroying it.
+- Treat a rendered diff as proof of what a composition produces, not of
+  what applying it will do to what already exists. It cannot see a name
+  colliding with a live object, a composite's own status, or what a
+  deletion cascades to.
 - Give a kind composed from more than one place an XRD of its own,
   fixing the invariants and parameterising the rest, so tightening a
   policy is one edit rather than a version every caller must adopt.
