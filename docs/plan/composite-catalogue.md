@@ -84,7 +84,7 @@ It is what a payment provider that allowlists a source IP needs, which
 nothing can be given while traffic leaves via whichever node runs the
 adapter.
 
-## `XDeployTarget`
+## `XArgoDestination`
 
 Two resources in the instance composite are not this product's either:
 a `ProjectIAMMember` granting the deployer identity `container.admin`
@@ -98,12 +98,18 @@ means: half of it is a silent failure. A registration with no binding
 syncs and then fails on every apply; a binding with no registration is
 a cluster Argo cannot see.
 
-Named for what the cluster becomes rather than for what consumes it.
-The Secret's shape is Argo's, but the concept is somewhere the platform
-may deploy to, and a kind that named the tool would read as though the
-tool were a cluster -- which it is not, and the cluster already has a
-kind. The implementation being Argo-shaped is the composition's
-business, the same way `XPostgres` is not called `XCloudSQL`.
+Named in Argo's own vocabulary. An Application has a `destination`,
+and what this composes is the thing a destination resolves to, so the
+word is borrowed rather than invented -- the same reason
+`XPublicEndpoint` reads as it does.
+
+Not `XArgoCluster`, which parses as a cluster belonging to Argo: Argo
+is not a cluster and the cluster already has a kind. Not a
+tool-agnostic name either. `XPostgres` is the concrete engine where
+`XCloudSQL` would be the generic wrapper, so naming the specific thing
+is what this repository already does -- and every resource here is
+Argo-shaped, so a name pretending otherwise would claim a portability
+the composition does not have.
 
 It should take the endpoint and the CA as spec fields rather than
 composing the cluster itself. A cluster kind has no business knowing
