@@ -100,6 +100,33 @@ second one says what is actually being applied. Compare them before
 concluding anything, and remove `.operation` to let a fresh sync start
 at the current revision.
 
+### An app is stuck applying a previous version
+
+`status.sync.revision` is the revision Argo would sync;
+`status.operationState.syncResult.revision` is the one the running
+operation is applying. Where they differ and the phase is `Running`,
+every merge since the second one is waiting behind an operation that
+started before them.
+
+A retry loop is one cause, and the section above covers it. The other
+reads identically and is worse: an operation that is not failing at all.
+A wave waits for its resources to report Healthy, and only `Healthy` and
+`Degraded` end a task — `Progressing`, `Suspended`, `Missing` and
+`Unknown` all leave it running. So a wave holding a resource that can
+never become Healthy waits for good. No retry, no backoff, no timeout,
+and `retryCount` stays unset, which is how to tell the two apart.
+
+Cancel it with a JSON patch, because a merge patch cannot remove a
+field:
+
+```
+kubectl -n argocd patch app <app> --type json \
+  -p '[{"op":"remove","path":"/operation"}]'
+```
+
+Merge the fix before cancelling. Removing `.operation` starts a fresh
+sync at the current revision, so cancelling first buys one more hang.
+
 ### One bad object fails the whole sync
 
 A sync is one operation over every resource, so a single object the
@@ -214,7 +241,13 @@ field the manifest can set.
   when a sync is failing. The first is what is being retried; the
   second is only what would be synced next.
 - Remove `.operation` to cancel a retry loop replaying a revision whose
-  fault is already fixed. Merging does not reach it.
+  fault is already fixed. Merging does not reach it. Use a JSON patch —
+  a merge patch cannot remove a field — and merge the fix before
+  cancelling, or the fresh sync hangs the same way.
+- Read `retryCount` before calling a stuck sync a retry loop. Unset
+  means the operation is not failing at all: only `Healthy` and
+  `Degraded` end a task, so a wave holding anything else waits with no
+  retry, no backoff and no timeout.
 - Set `prune: false` where pruning would delete something a missing
   file should not delete.
 - Merge a change before expecting Argo to apply it. It reads the
