@@ -324,7 +324,7 @@ of this. Only the release Argo itself runs from is `Observe`.
 
 ## References
 
-- [argocd](argocd.md) — how Argo applies what it does own
+- [argocd-apps](argocd-apps.md) — how Argo applies what it does own
 - [crossplane-app-deployment](crossplane-app-deployment.md) — building a
   plane, and the rebuild path
 - [queenswood-installation](queenswood-installation.md) — what a plane

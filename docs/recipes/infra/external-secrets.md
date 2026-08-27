@@ -50,7 +50,7 @@ and rebuilding the cluster re-reads rather than re-uploads.
 
 Installing that operator through Argo needs `ServerSideApply=true` —
 its `SecretStore` and `ClusterSecretStore` CRDs exceed 256KB. See
-[argocd](argocd.md) for what happens when it is missing, and for the
+[argocd-apps](argocd-apps.md) for what happens when it is missing, and for the
 waves that put the store ahead of what reads from it.
 
 ### Putting a version in
@@ -295,7 +295,7 @@ does, needs a restart after that.
   these, and what Argo does with it.
 - [google-sign-in](google-sign-in.md) — the console act that produces
   the second, and the vault filename it has to land under.
-- [argocd](argocd.md) — server-side apply for the operator's CRDs, and
+- [argocd-apps](argocd-apps.md) — server-side apply for the operator's CRDs, and
   the waves that order a store ahead of its reader.
 - [gcp-iam](gcp-iam.md) — both halves of a Workload Identity binding,
   and why one half alone reports nothing.

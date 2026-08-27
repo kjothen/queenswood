@@ -1,4 +1,4 @@
-# Argo CD
+# Argo CD Applications
 
 <!-- tessl-plugin: deployment -->
 
@@ -47,13 +47,14 @@ ServiceAccount
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
-  | jq -r '.items[] | [
-      .metadata.name,
-      (.spec.syncPolicy.syncOptions // [] | join(",")
-        | if . == "" then "-" else . end),
-      (.spec.syncPolicy.retry.limit // "-"),
-      .spec.syncPolicy.automated.prune
-    ] | @tsv' | column -t -s $'\t'
+  | jq -r '["NAME","SYNC-OPTIONS","RETRY","PRUNE"],
+      (.items[] | [
+        .metadata.name,
+        (.spec.syncPolicy.syncOptions // [] | join(",")
+          | if . == "" then "-" else . end),
+        (.spec.syncPolicy.retry.limit // "-"),
+        .spec.syncPolicy.automated.prune
+      ]) | @tsv' | column -t -s $'\t'
 ```
 
 A retry limit on every row: `-` there is an Application that does not

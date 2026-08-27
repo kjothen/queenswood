@@ -210,7 +210,7 @@ a plane's own manifests with them.
 
 ## References
 
-- [argocd](argocd.md) — Applications, waves, and reading a sync that is
+- [argocd-apps](argocd-apps.md) — Applications, waves, and reading a sync that is
   not applying.
 - [crossplane](crossplane.md) — the composites whose health this is
   about.

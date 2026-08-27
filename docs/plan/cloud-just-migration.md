@@ -387,7 +387,7 @@ reported drift: from Argo's side the Secret was exactly what git said.
 The fix was to generate in the cluster, from the Job that registers it,
 and let the chart declare the Secret with no `data` so server-side
 apply leaves the contents alone. Now in
-[argocd](../recipes/infra/argocd.md).
+[argocd-apps](../recipes/infra/argocd-apps.md).
 
 **Two credentials in a row failed only at the moment of use.** A
 redirect URI missing its last character is accepted by Google at setup

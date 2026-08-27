@@ -265,7 +265,7 @@ project holds.
 
 ## References
 
-- [argocd](argocd.md) — Applications, sync waves, and what a parent may
+- [argocd-apps](argocd-apps.md) — Applications, sync waves, and what a parent may
   hold.
 - [queenswood-installation](queenswood-installation.md) — the private
   repository this reads for Queenswood, and the manifest that names it.
