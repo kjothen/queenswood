@@ -36,7 +36,7 @@ export CODE=qw01
 Merge it first. Then:
 
 ```bash
-just gcp-argo-apps-status
+just argo-apps-status
 ```
 
 - `SYNC` `Synced` on every row.
@@ -145,7 +145,7 @@ nudge — and a nudge is cluster write access. What each Application's
 sync policy carries:
 
 ```bash
-just gcp-argo-apps-sync-policy
+just argo-apps-sync-policy
 ```
 
 - `RETRY` at least 5 on every row. `-` is an Application that does not

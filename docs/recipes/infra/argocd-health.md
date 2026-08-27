@@ -54,7 +54,7 @@ Nothing.
 ### 2. Check every status-less Crossplane kind is handled
 
 ```bash
-just gcp-plane-crossplane-statusless-kinds
+just argo-health-kinds
 ```
 
 `none` under both `missing from` headings.
@@ -77,8 +77,9 @@ whatever an earlier generation wrote.
 and no list names it, so it reports Healthy today from the nil branch
 and goes `Progressing` for ever once the precedence is corrected,
 taking its Application with it. Add it to `has_no_conditions` in
-`infra/helm/management-plane/templates/argocd-cm.yaml` and in
-`scripts/crossplane-statusless-kinds.py`, and upstream.
+`infra/helm/management-plane/templates/argocd-cm.yaml` and to
+`LISTED_CROSSPLANE` or `LISTED_UPBOUND` in `justfiles/argo.just`, and
+upstream.
 
 **An Application `Healthy` over a composite that never composed.** Argo
 assesses a resource by its API group, and a group it has no check for
@@ -110,7 +111,7 @@ status matters.
 **MUST:**
 
 - Re-read `argocd-cm` after an Argo upgrade, and re-run
-  `just gcp-plane-crossplane-statusless-kinds` after a Crossplane one.
+  `just argo-health-kinds` after a Crossplane one.
   An upgrade is what moves either answer.
 - Add an XRD's API group to `compositeGroups` in
   `infra/helm/management-plane/values.yaml`, in the same change as the
@@ -132,8 +133,9 @@ status matters.
 
 - Delete the `*.crossplane.io/*` and `*.upbound.io/*` entries from
   `infra/helm/management-plane/templates/argocd-cm.yaml`, and point
-  `HAS_NO_CONDITIONS` in `scripts/crossplane-statusless-kinds.py` at
-  Argo's own lists, once a release carrying `argoproj/argo-cd#29382`
+  `LISTED_CROSSPLANE` and `LISTED_UPBOUND` in
+  `justfiles/argo.just` at Argo's own lists, once a release carrying
+  `argoproj/argo-cd#29382`
   is the one the plane runs. Keeping them is defensible only for a
   kind upstream still does not list.
 
@@ -178,8 +180,8 @@ wildcard at all, which is why every entry sits in one
 They are meant to be deleted. When a release carrying the fix is the
 one this plane runs, remove both entries from
 `infra/helm/management-plane/templates/argocd-cm.yaml` and point
-`HAS_NO_CONDITIONS` in `scripts/crossplane-statusless-kinds.py` at the
-upstream lists, so step 2 diffs against Argo's again.
+`LISTED_CROSSPLANE` and `LISTED_UPBOUND` in `justfiles/argo.just` at
+the upstream lists, so step 2 diffs against Argo's again.
 
 **What step 2 does not read.** Managed resources. upjet gives every one
 of them a status, so none can be status-less, and their CRDs are large
