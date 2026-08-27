@@ -1698,8 +1698,8 @@ gcp-instance-cluster-ctx env label project="":
 # the rest are not.
 # =========================================================================
 
-# Regenerate the status-less kind list from a plane's CRDs.
-gcp-plane-statusless-kinds ctx=MGMT_CTX:
+# Check the health scripts' kind lists against a plane's Crossplane CRDs.
+gcp-plane-crossplane-statusless-kinds ctx=MGMT_CTX:
     #!/usr/bin/env zsh
     set -e
     # The pipeline's status is awk's, so a denial arrives as no names

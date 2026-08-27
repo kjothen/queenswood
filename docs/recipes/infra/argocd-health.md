@@ -5,8 +5,8 @@
 ## Status
 
 **Verified**, 2026-08-27, on this installation's plane: the entries
-were the ones the chart carries, and `gcp-plane-statusless-kinds`
-reported nothing missing from either list.
+were the ones the chart carries, and step 2 reported nothing missing
+from either list.
 
 ## Problem
 
@@ -46,10 +46,12 @@ Nothing.
 ### 2. Check the lists cover the plane
 
 ```bash
-just gcp-plane-statusless-kinds
+just gcp-plane-crossplane-statusless-kinds
 ```
 
-`none` under both `missing from` headings.
+`none` under both `missing from` headings. It reads the CRDs the two
+copies grade — every `crossplane.io` group, and the config-shaped kinds
+of the `upbound.io` ones — rather than every kind the plane serves.
 
 ## Failures
 
@@ -163,6 +165,15 @@ directory name cannot carry, so `_.crossplane.io/_` is the
 since a ConfigMap key cannot express it at all. That is also why all
 four entries sit in one `resource.customizations` block rather than in
 four dotted keys.
+
+**What step 2 does not read.** Managed resources. upjet gives every one
+of them a status, so none can be status-less, and their CRDs are large
+enough that fetching them all costs hundreds of megabytes — so the
+`upbound.io` half fetches the config-shaped kinds and leaves the rest.
+That is a heuristic rather than a proof: a provider shipping a
+status-less kind whose name is neither a provider config nor a store
+config would not be read. The `crossplane.io` half has no such filter
+and reads every group.
 
 **How a composite is graded.** Two passes over `status.conditions`,
 `Synced` before `Ready`. One loop answers whichever condition the array
