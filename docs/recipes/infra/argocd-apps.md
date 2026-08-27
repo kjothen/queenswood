@@ -61,8 +61,9 @@ kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
   retry at all.
 - `PRUNE` false on `installation`, and on any unit that has not turned
   it on.
-- `SSA` true on `external-secrets`, and on any Application installing a
-  chart whose CRDs exceed 256KB.
+- `SSA` — server-side apply, `ServerSideApply=true` in `syncOptions` —
+  true on `external-secrets`, and on any Application installing a chart
+  whose CRDs exceed 256KB.
 
 ### 3. Check a merged change landed
 
