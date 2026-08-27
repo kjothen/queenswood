@@ -254,16 +254,15 @@ themselves be Applications, which is how one root reaches everything
 without naming any of it — the root names a path, and what sits there
 decides what exists. Order across them comes from sync waves, each
 waiting on the health of the one before it, which is why what `Healthy`
-means is a subject of its own: see
-[argocd-health](argocd-health.md).
+means is a subject of its own — see [argocd-health](argocd-health.md).
 
 **The plane's own tree.** `management-plane` is the parent Application,
-planted by the boot chart and holding nothing but Applications: providers in
-wave 1, the plane's own configuration in 2, the XRDs in 3, and
-`installation` — the composite describing this installation, read from the
-private repository — in 4, beside `external-secrets`. An instance's
-Applications appear next to them rather than nested under them, named for
-the instance.
+planted by the boot chart and holding nothing but Applications:
+providers in wave 1, the plane's own configuration in 2, the XRDs in 3,
+and `installation` — the composite describing this installation, read
+from the private repository — in 4, beside `external-secrets`. An
+instance's Applications appear next to them rather than nested under
+them, named for the instance.
 
 **Why a parent cannot hold a kind its child installs.** A sync is
 planned before it is applied: Argo builds a task per resource, and a
