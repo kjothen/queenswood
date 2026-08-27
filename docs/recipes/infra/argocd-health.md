@@ -118,11 +118,6 @@ status matters.
   registering a check for `argoproj.io/Application`.
 - Read `Synced` before `Ready`, in a pass of its own, when writing a
   check.
-- Delete the `*.crossplane.io/*` and `*.upbound.io/*` entries from
-  `infra/helm/management-plane/templates/argocd-cm.yaml`, and point
-  `HAS_NO_CONDITIONS` in `scripts/crossplane-statusless-kinds.py` at
-  Argo's own lists, once a release carrying `argoproj/argo-cd#29382`
-  is the one the plane runs.
 
 **MUST NOT:**
 
@@ -130,6 +125,15 @@ status matters.
 - Patch one status-less kind rather than the script that checks it.
   There are several, in both groups.
 - Expect a managed resource's health to reach the Application above it.
+
+**SHOULD:**
+
+- Delete the `*.crossplane.io/*` and `*.upbound.io/*` entries from
+  `infra/helm/management-plane/templates/argocd-cm.yaml`, and point
+  `HAS_NO_CONDITIONS` in `scripts/crossplane-statusless-kinds.py` at
+  Argo's own lists, once a release carrying `argoproj/argo-cd#29382`
+  is the one the plane runs. Keeping them is defensible only for a
+  kind upstream still does not list.
 
 ## Discussion
 
