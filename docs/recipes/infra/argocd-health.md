@@ -4,9 +4,8 @@
 
 ## Status
 
-**Verified**, 2026-08-27, on this installation's plane: the entries
-were the ones the chart carries, and step 2 reported nothing missing
-from either list.
+**Verified**, 2026-08-27, on this installation's plane: step 1 gave the
+five and nothing else, and step 2 reported nothing missing.
 
 ## Problem
 
@@ -18,7 +17,8 @@ installation.
 ### Prerequisites
 
 - A management plane running in the installation's folder.
-- `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
+- Steps 1 and 2 — the `platformViewer` capability, e.g. the Google
+  group `grp-gcp-<code>-platform-viewer@`.
 
 ```bash
 # the installation code, e.g. qw01
@@ -95,9 +95,9 @@ do. `Application` has no health check of its own: Argo removed the
 assessment for the kind in 1.8, there is no Lua under
 `resource_customizations/argoproj.io/`, and the Go switch on
 `argoproj.io` handles `Workflow` alone. gitops-engine then treats a
-missing health as an immediate success, the way it does a `Secret`. So every
-wave succeeds the moment it is applied and the next begins, and the
-parent reads Healthy throughout however its children are doing.
+missing health as an immediate success, the way it does a `Secret`. So
+every wave succeeds the moment it is applied and the next begins, and
+the parent reads Healthy throughout however its children are doing.
 
 **A health status that never moves, on a resource Crossplane created.**
 Managed resources are tree descendants rather than an Application's
@@ -113,8 +113,11 @@ status matters.
 - Add a group to `compositeGroups` with the XRD that introduces it.
 - Give an environment's Applications a parent of their own before
   registering a check for `argoproj.io/Application`.
-- Read `Synced` before `Ready`, in a pass of its own, in a check of
-  your own.
+- Read `Synced` before `Ready`, in a pass of its own, when writing a
+  check.
+- Delete the two copies when a release carrying
+  `argoproj/argo-cd#29382` is the one the plane runs, and point
+  `HAS_NO_CONDITIONS` at the upstream lists.
 
 **MUST NOT:**
 
@@ -133,9 +136,9 @@ and gitops-engine counts a missing status as success.
 **Why a missing check is silence rather than an error.** Argo assesses
 by API group and has no notion of a group it ought to know about. A
 resource with no check is not reported as unassessed: it gets the same
-word a working one gets, in the same column. Nothing distinguishes the two,
-which is why the list of groups belongs in the chart beside the XRDs
-rather than in somebody's memory.
+word a working one gets, in the same column. Nothing distinguishes the
+two, which is why the list of groups belongs in the chart beside the
+XRDs rather than in somebody's memory.
 
 **The status-less trap.** The script Argo ships for Crossplane has to
 answer two questions with one piece of Lua: a resource that will have a
@@ -158,8 +161,8 @@ somebody checks whether it has landed. Upstream they are
 twin: a `_` path segment is how that tree spells the wildcard a
 directory name cannot carry, so `_.crossplane.io/_` is the
 `*.crossplane.io/*` entry here. A ConfigMap key cannot express that
-wildcard at all, which is why all four entries sit in one
-`resource.customizations` block rather than in four dotted keys.
+wildcard at all, which is why every entry sits in one
+`resource.customizations` block rather than in five dotted keys.
 
 They are meant to be deleted. When a release carrying the fix is the
 one this plane runs, remove both entries from
