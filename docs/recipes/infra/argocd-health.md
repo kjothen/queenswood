@@ -10,8 +10,8 @@ from either list.
 
 ## Problem
 
-You want to know that Argo is grading a plane with the checks the chart
-carries.
+You want to know that Argo is reporting the correct health status for a
+plane's resources.
 
 ## Solution
 
@@ -50,7 +50,7 @@ just gcp-plane-crossplane-statusless-kinds
 ```
 
 `none` under both `missing from` headings. It reads the CRDs the two
-copies grade — every `crossplane.io` group, and the config-shaped kinds
+copies check — every `crossplane.io` group, and the config-shaped kinds
 of the `upbound.io` ones — rather than every kind the plane serves.
 
 ## Failures
@@ -64,7 +64,7 @@ compose.
 **A `resource.customizations.health.<group>_<kind>` key in step 1.**
 Server-side apply removes a field when the manager that owned it stops
 declaring it, so one that survives is owned by something else. An exact
-key beats a wildcard, so a stale one goes on grading its kind by
+key beats a wildcard, so a stale one goes on assessing its kind by
 whatever an earlier generation wrote.
 
 **A kind named under `missing from` in step 2.** It carries no status
@@ -75,8 +75,8 @@ taking its Application with it. Add it to `has_no_conditions` in
 `scripts/crossplane-statusless-kinds.py`, and upstream.
 
 **An Application `Healthy` over a composite that never composed.** Argo
-grades a resource by its API group, and a group it has no check for is
-graded Healthy unconditionally rather than reported as ungraded. An
+assesses a resource by its API group, and a group it has no check for
+is reported Healthy unconditionally rather than as unassessed. An
 Application applying a composite that fails to compose is
 indistinguishable from one that worked.
 
@@ -86,17 +86,18 @@ does this to every managed resource, and the composite above it looks
 finished the moment it was applied. Step 1 is what tells the two apart.
 
 **A parent whose waves gate nothing.** The waves are doing what waves
-do. `Application` is an ungraded kind — no Lua under
+do. `Application` has no health check of its own: Argo removed the
+assessment for the kind in 1.8, there is no Lua under
 `resource_customizations/argoproj.io/`, and the Go switch on
-`argoproj.io` handles `Workflow` alone — and gitops-engine treats a nil
-health as an immediate success, the way it does a `Secret`. So every
+`argoproj.io` handles `Workflow` alone. gitops-engine then treats a
+missing health as an immediate success, the way it does a `Secret`. So every
 wave succeeds the moment it is applied and the next begins, and the
 parent reads Healthy throughout however its children are doing.
 
-**A grade that never moves, on a resource Crossplane created.** Managed
-resources are tree descendants rather than an Application's own, so
-their grade never reaches it. The composite is the thing whose verdict
-matters.
+**A health status that never moves, on a resource Crossplane created.**
+Managed resources are tree descendants rather than an Application's
+own, so their health never reaches it. The composite is the thing whose
+status matters.
 
 ## Rules
 
@@ -112,22 +113,22 @@ matters.
 
 **MUST NOT:**
 
-- Read `Healthy` on an ungraded group as evidence of anything.
-- Patch one status-less kind rather than the script that grades it.
+- Read `Healthy` on a group with no check as evidence of anything.
+- Patch one status-less kind rather than the script that checks it.
   There are several, in both groups.
-- Expect a managed resource's grade to reach the Application above it.
+- Expect a managed resource's health to reach the Application above it.
 
 ## Discussion
 
-We write a health check for every group we act on the verdict of,
+We write a health check for every group whose health status we act on,
 because Argo's answer for a group it does not know is not "unknown" but
 "Healthy" — and that answer propagates, since a wave advances on health
-and gitops-engine counts a nil verdict as success.
+and gitops-engine counts a missing status as success.
 
-**Why a missing check is silence rather than an error.** Argo grades by
-API group and has no notion of a group it ought to know about. An
-ungraded resource is not reported as ungraded: it gets the same word a
-working one gets, in the same column. Nothing distinguishes the two,
+**Why a missing check is silence rather than an error.** Argo assesses
+by API group and has no notion of a group it ought to know about. A
+resource with no check is not reported as unassessed: it gets the same
+word a working one gets, in the same column. Nothing distinguishes the two,
 which is why the list of groups belongs in the chart beside the XRDs
 rather than in somebody's memory.
 
@@ -137,7 +138,7 @@ status and does not have one yet is Progressing, and a resource that
 will never have one is Healthy. It separates them with a list of kinds,
 and its condition reads as `A or (B and C)` where `(A or B) and C` was
 meant — so the nil check answers first, and every status-less kind
-grades Healthy whether or not the list names it. That makes the list
+reports Healthy whether or not the list names it. That makes the list
 look complete while it is not, and hides the omission until the bug is
 fixed: correcting the precedence without completing the list turns a
 silent success into a permanent `Progressing`. Which is why
@@ -170,15 +171,20 @@ status-less kind whose name is neither a provider config nor a store
 config would not be read. The `crossplane.io` half has no such filter
 and reads every group.
 
-**How a composite is graded.** Two passes over `status.conditions`,
+**How a composite is checked.** Two passes over `status.conditions`,
 `Synced` before `Ready`. One loop answers whichever condition the array
 happened to hold first, and a composite that went out of sync after it
 was once ready then reports the stale success.
 
-**Why the `Application` case costs something.** Registering it is not
-turning waves on — they were always ordering, on a signal that was
-always success. Giving the kind a verdict makes the signal real, and a
-real signal can say no: a child that hangs now hangs its parent, and a
+**Why the `Application` case costs something.** Argo removed the health
+assessment for the kind in 1.8 and documents restoring it for exactly
+this case — an app-of-apps ordering its children by sync wave — so the
+entry in the chart is a documented restoration rather than something
+prised out of the source.
+
+Registering it is not turning waves on — they were always ordering, on
+a signal that was always success. Giving the kind a health status makes the signal real,
+and a real signal can say no: a child that hangs now hangs its parent, and a
 hung sync replays a stale revision. So the fix wants the Applications
 it gates to be ones that can fail without taking a plane's own
 manifests with them.
@@ -187,5 +193,5 @@ manifests with them.
 
 - [argocd](argocd.md) — Applications, waves, and reading a sync that is
   not applying.
-- [crossplane](crossplane.md) — the composites whose verdict this is
+- [crossplane](crossplane.md) — the composites whose health this is
   about.
