@@ -69,9 +69,11 @@ kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
 
 ### 3. Check a merged change landed
 
-Merge it first. Then name the Application that reads what you changed —
-an XRD is `crossplane-xrds`, an installation's manifest is
-`installation`, a chart is the Application that installs it:
+Merge it first. Then name the Application that reads what you changed:
+
+- **A chart** — the Application that installs it.
+- **An XRD** — `crossplane-xrds`.
+- **An installation's manifest** — `installation`.
 
 ```bash
 export APP=installation
