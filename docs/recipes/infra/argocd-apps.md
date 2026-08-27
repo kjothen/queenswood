@@ -23,6 +23,9 @@ XRD, an installation's manifest.
 - Google group memberships, by capability:
   - `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
 
+The `just` recipe reads the installation code from the justfile. The
+`kubectl` commands under Failures take it from the shell:
+
 ```bash
 # the installation code, e.g. qw01
 export CODE=qw01
@@ -33,17 +36,7 @@ export CODE=qw01
 Merge it first. Then:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
-  | jq -r '["NAME","SYNC","HEALTH","REV","PHASE","FINISHED"],
-      (.items[] | [
-        .metadata.name,
-        (.status.sync.status // "-"),
-        (.status.health.status // "-"),
-        (.status.operationState.syncResult.revision // "-"
-          | if . == "" then "-" else .[0:7] end),
-        (.status.operationState.phase // "-"),
-        (.status.operationState.finishedAt // "-")
-      ]) | @tsv' | column -t -s $'\t'
+just gcp-plane-apps
 ```
 
 - `SYNC` `Synced` on every row.

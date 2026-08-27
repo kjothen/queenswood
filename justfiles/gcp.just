@@ -1698,6 +1698,27 @@ gcp-instance-cluster-ctx env label project="":
 # the rest are not.
 # =========================================================================
 
+# What each Application on a plane last did, and whether it finished.
+gcp-plane-apps ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # SYNC and HEALTH describe the comparison between git and the
+    # cluster; PHASE and FINISHED describe the operation. An Application
+    # whose sync never ended reads green in the first two and shows a
+    # phase that is not Succeeded with no finish time.
+    kubectl --context {{ ctx }} -n argocd get applications -o json \
+      | jq -r '["NAME","SYNC","HEALTH","REV","PHASE","FINISHED"],
+          (.items[] | [
+            .metadata.name,
+            (.status.sync.status // "-"),
+            (.status.health.status // "-"),
+            (.status.operationState.syncResult.revision // "-"
+              | if . == "" then "-" else .[0:7] end),
+            (.status.operationState.phase // "-"),
+            (.status.operationState.finishedAt // "-")
+          ]) | @tsv' \
+      | column -t -s $'\t'
+
 # Check the health scripts' kind lists against a plane's Crossplane CRDs.
 gcp-plane-crossplane-statusless-kinds ctx=MGMT_CTX:
     #!/usr/bin/env zsh
