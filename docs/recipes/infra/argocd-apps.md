@@ -72,19 +72,20 @@ kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
 Merge it first. Then:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get applications
-```
-
-Every `SYNC STATUS` is `Synced`. `HEALTH STATUS` reads `Progressing` on
-an instance's Applications while its workloads converge, and that is
-not a finding.
-
-```bash
 kubectl --context "$CODE-mgmt" -n argocd get application <app> \
   -o jsonpath='{.status.operationState.syncResult.revision}{"\n"}'
 ```
 
 The commit you merged.
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get applications
+```
+
+- `SYNC STATUS` `Synced` on every row.
+- `HEALTH STATUS` `Healthy` on every row, eventually. `Progressing` on
+  an instance's Applications while its workloads converge is not a
+  finding.
 
 ## Failures
 
