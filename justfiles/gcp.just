@@ -1699,7 +1699,7 @@ gcp-instance-cluster-ctx env label project="":
 # =========================================================================
 
 # What each Application on a plane last did, and whether it finished.
-gcp-plane-apps ctx=MGMT_CTX:
+gcp-argo-apps-status ctx=MGMT_CTX:
     #!/usr/bin/env zsh
     set -e
     # SYNC and HEALTH describe the comparison between git and the
@@ -1716,6 +1716,23 @@ gcp-plane-apps ctx=MGMT_CTX:
               | if . == "" then "-" else .[0:7] end),
             (.status.operationState.phase // "-"),
             (.status.operationState.finishedAt // "-")
+          ]) | @tsv' \
+      | column -t -s $'\t'
+
+# What each Application's sync policy carries.
+gcp-argo-apps-sync-policy ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # An empty syncOptions list prints as a dash rather than an empty
+    # field, or column shifts every column after it on that row.
+    kubectl --context {{ ctx }} -n argocd get applications -o json \
+      | jq -r '["NAME","SSA","RETRY","PRUNE"],
+          (.items[] | [
+            .metadata.name,
+            (.spec.syncPolicy.syncOptions // []
+              | any(. == "ServerSideApply=true")),
+            (.spec.syncPolicy.retry.limit // "-"),
+            .spec.syncPolicy.automated.prune
           ]) | @tsv' \
       | column -t -s $'\t'
 

@@ -36,7 +36,7 @@ export CODE=qw01
 Merge it first. Then:
 
 ```bash
-just gcp-plane-apps
+just gcp-argo-apps-status
 ```
 
 - `SYNC` `Synced` on every row.
@@ -141,15 +141,7 @@ nudge — and a nudge is cluster write access. What each Application's
 sync policy carries:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
-  | jq -r '["NAME","SSA","RETRY","PRUNE"],
-      (.items[] | [
-        .metadata.name,
-        (.spec.syncPolicy.syncOptions // []
-          | any(. == "ServerSideApply=true")),
-        (.spec.syncPolicy.retry.limit // "-"),
-        .spec.syncPolicy.automated.prune
-      ]) | @tsv' | column -t -s $'\t'
+just gcp-argo-apps-sync-policy
 ```
 
 - `RETRY` at least 5 on every row. `-` is an Application that does not
