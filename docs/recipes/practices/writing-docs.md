@@ -89,11 +89,9 @@ and a step that explains itself has taken a paragraph the reader did
 not ask for and put it between them and the next command.
 
 The Discussion opens with plain prose, before the first bolded
-subsection: whatever a reader needs in order to follow the rest. Where
-the machinery is familiar that is a sentence or two on what was done,
-in the first person plural. Where it is not, it is what the thing is —
-a recipe whose Discussion opens on why one part of a system cannot hold
-another has assumed the reader already knows there are parts.
+subsection: what was done, in the first person plural, and then the
+machinery that makes it work. Lead with the act — a reader who meets
+the mechanism first is holding it with nothing to attach it to.
 
 ```
 ;; Bad — the step carries the mechanism
