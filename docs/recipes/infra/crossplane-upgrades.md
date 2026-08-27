@@ -279,8 +279,8 @@ needs any of this.
 
 - [argocd-upgrades](argocd-upgrades.md) — the same tier, the opposite
   hazards
-- [crossplane](crossplane.md) — what the engine does with what it
-  installs
+- [crossplane-design](crossplane-design.md) — what the engine does with
+  what it installs
 - [crossplane-providers](crossplane-providers.md) — the packages, and
   what late-initialisation owns
 - [crossplane-app-deployment](crossplane-app-deployment.md) — building a

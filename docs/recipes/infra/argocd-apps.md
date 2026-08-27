@@ -310,4 +310,5 @@ long enough to cover an image pull.
 - [argocd-github](argocd-github.md) — reading a private repository.
 - [external-secrets](external-secrets.md) — where a value belongs when
   a chart must not hold it.
-- [crossplane](crossplane.md) — what Argo is usually delivering here.
+- [crossplane-design](crossplane-design.md) — the XRDs and Compositions
+  Argo is usually delivering here.

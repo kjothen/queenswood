@@ -23,8 +23,8 @@ cloud: every one of them composes GCP resources and nothing else.
 
 The mechanics — what a transfer does, what it costs, and the three ways
 it went wrong — are in
-[crossplane](../recipes/infra/crossplane.md). This plan is what is left
-to do, not how to do it.
+[crossplane-changes](../recipes/infra/crossplane-changes.md). This plan
+is what is left to do, not how to do it.
 
 ## Hollowing out the plane
 
@@ -135,7 +135,8 @@ deployment.
   with every other slot. Not free: renaming the slot deletes the
   composite in it, which deletes the pool, which carries `Delete`. It
   wants the two-step from
-  [crossplane](../recipes/infra/crossplane.md) applied one level down —
+  [crossplane-changes](../recipes/infra/crossplane-changes.md) applied
+  one level down —
   withhold `Delete` from the pool inside `XCluster` first, rename, then
   restore. Worth doing for the name alone, but not casually.
 - **Stop enabling `serviceusage` on an instance project.** The same

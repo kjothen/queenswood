@@ -192,9 +192,13 @@ topic.
   GitHub App that reaches the private one, the manifest's fields, and
   who holds which access capability. See
   [queenswood-installation.md](docs/recipes/infra/queenswood-installation.md).
-- **Crossplane** — what identifies a composed resource, what a patch
-  does when its source is absent, which condition carries which error.
-  See [crossplane.md](docs/recipes/infra/crossplane.md).
+- **Diagnosing an installation** — where a failure reports, which field
+  manager owns what, and why a status field disappears. See
+  [crossplane-diagnosis.md](docs/recipes/infra/crossplane-diagnosis.md).
+- **Moving or withdrawing a kind** — why the parent's deletion policy is
+  the one that governs, the two merges a move takes, and what a
+  withdrawal removes. See
+  [crossplane-changes.md](docs/recipes/infra/crossplane-changes.md).
 - **Crossplane providers** — upjet's refusal to replace, external names
   as cloud identifiers, late-initialisation, reading the CRD rather
   than the Terraform docs. See

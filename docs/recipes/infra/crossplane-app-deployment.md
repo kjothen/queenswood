@@ -286,8 +286,10 @@ generations.
   this plane reads, field by field.
 - [cloud-account](cloud-account.md) — the organisation, access groups and
   billing account, none of which has an API.
-- [crossplane](crossplane.md) — what identifies a composed resource, and
-  what a composition owns.
+- [crossplane-design](crossplane-design.md) — what a kind covers, and
+  what identifies each part of it.
+- [crossplane-diagnosis](crossplane-diagnosis.md) — what a composition
+  owns, and where a failure reports.
 - [gcp-iam](gcp-iam.md) — Workload Identity's two halves, and rights held
   by accident.
 - [infrastructure](../../tdd/infrastructure.md) — the bootstrap chain, sync

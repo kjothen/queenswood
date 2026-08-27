@@ -149,5 +149,8 @@ turns out not to exist.
 
 ## References
 
-- [crossplane](crossplane.md) — the engine underneath.
+- [crossplane-design](crossplane-design.md) — the engine underneath,
+  and how a kind is designed on it.
+- [crossplane-diagnosis](crossplane-diagnosis.md) — why an
+  installation is not healthy.
 - [gcp-iam](gcp-iam.md) — what the provider's identity needs.

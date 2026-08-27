@@ -308,8 +308,10 @@ once the manifests do.
 
 ## References
 
-- [crossplane](crossplane.md) — what identifies a composed resource,
-  and where a failure reports.
+- [crossplane-diagnosis](crossplane-diagnosis.md) — why an
+  installation is not healthy.
+- [crossplane-changes](crossplane-changes.md) — moving a resource
+  between kinds, and withdrawing one.
 - [crossplane-providers](crossplane-providers.md) — what
   Terraform-backed providers add to this.
 - [ADR-0025](../../adr/0025-building-blocks-and-what-cannot-be-one.md) —

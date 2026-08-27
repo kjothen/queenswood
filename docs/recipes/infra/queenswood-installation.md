@@ -202,7 +202,7 @@ fields, a release channel and an upgrade strategy cannot.
   applies to any field an XRD defaults and a composition patches from.
   A default is absent until the regenerated CRD arrives, which is a
   window a composition can reconcile inside. See
-  [crossplane](crossplane.md).
+  [crossplane-design](crossplane-design.md).
 - **`management.projectId`** — always supplied. A project id is consumed
   permanently and cannot be undeleted into usefulness, so carrying it in
   the file is what stops a rebuilt plane minting a second management
@@ -271,9 +271,9 @@ spec:
 
 `code`, `env`, `label` and `projectId` are the only required fields;
 everything else defaults. State them anyway, for the reason
-[crossplane](crossplane.md) gives — a defaulted field is absent for as
-long as a regenerated CRD takes to arrive, and a manifest that states
-its values does not care.
+[crossplane-design](crossplane-design.md) gives — a defaulted field is
+absent for as long as a regenerated CRD takes to arrive, and a manifest
+that states its values does not care.
 
 `adopt`, `displayName` and `billingAccountId` are omitted rather than
 defaulted. The first takes over an existing project, the second names
