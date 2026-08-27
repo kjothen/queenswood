@@ -9,8 +9,7 @@ installation's manifest — to reach your installation.
 
 ## Solution
 
-Lay Applications out so that a fix can always land, and read a sync
-that is not applying for whether it is retrying, waiting, or finished.
+Lay Applications out so that a fix can always land.
 
 ### Prerequisites
 
