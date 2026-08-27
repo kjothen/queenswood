@@ -18,10 +18,10 @@ what its own pods may take, or any other chart value.
 
 - A management plane running in the installation's folder.
 - Step 1 — write access to this repository.
-- Steps 2, 3, 4 and 6 — the `platformViewer` capability, e.g. the
-  Google group `grp-gcp-<code>-platform-viewer@`.
-- Step 5 — the `clusterAdmin` capability, e.g. the Google group
-  `grp-gcp-<code>-cluster-admin@`.
+- Google group memberships, by capability:
+  - Steps 2, 3, 4 and 6 — `platformViewer`, e.g.
+    `grp-gcp-<code>-platform-viewer@`.
+  - Step 5 — `clusterAdmin`, e.g. `grp-gcp-<code>-cluster-admin@`.
 
 ```bash
 # the installation code, e.g. qw01

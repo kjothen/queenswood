@@ -27,8 +27,9 @@ reads.
 - Step 1 — write access to the manifests repository.
 - Steps 3 and 4 — an owner of the GitHub organisation.
 - Google group memberships, by capability:
+  - Steps 2 and 6 — `platformViewer`, e.g.
+    `grp-gcp-<code>-platform-viewer@`.
   - Step 5 — `secretsAdmin`, e.g. `grp-gcp-<code>-secrets-admin@`.
-  - Steps 2 and 6 — `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
 
 ```bash
 # the installation code, e.g. qw01

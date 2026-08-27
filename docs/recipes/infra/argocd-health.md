@@ -17,8 +17,9 @@ installation.
 ### Prerequisites
 
 - A management plane running in the installation's folder.
-- Steps 1 and 2 — the `platformViewer` capability, e.g. the Google
-  group `grp-gcp-<code>-platform-viewer@`.
+- Google group memberships, by capability:
+  - Steps 1 and 2 — `platformViewer`, e.g.
+    `grp-gcp-<code>-platform-viewer@`.
 
 ```bash
 # the installation code, e.g. qw01
