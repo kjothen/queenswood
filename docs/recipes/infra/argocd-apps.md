@@ -257,9 +257,8 @@ relying on it.
 **The plane's own tree.** `management-plane` is the parent Application,
 planted by the boot chart and holding nothing but Applications:
 providers in wave 1, the plane's own configuration in 2, the XRDs in 3,
-and
-`installation` — the composite describing this installation, read from
-the private repository — in 4, beside `external-secrets`. An instance's
+and `installation` — the composite describing this installation, read
+from the private repository — in 4, beside `external-secrets`. An instance's
 Applications appear next to them rather than nested under them, named
 for the instance.
 
