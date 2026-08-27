@@ -46,15 +46,21 @@ ServiceAccount
 ### 2. Check what each Application sets
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get applications -o json | jq -r '
-  .items[] | [ .metadata.name,
-               (.spec.syncPolicy.syncOptions // ["-"] | join(",")),
-               (.spec.syncPolicy.retry.limit // "-"),
-               (.spec.syncPolicy.automated.prune) ] | @tsv'
+kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
+  | jq -r '.items[] | [
+      .metadata.name,
+      (.spec.syncPolicy.syncOptions // [] | join(",")
+        | if . == "" then "-" else . end),
+      (.spec.syncPolicy.retry.limit // "-"),
+      .spec.syncPolicy.automated.prune
+    ] | @tsv' | column -t -s $'\t'
 ```
 
-`prune` false on `installation` and true elsewhere, a retry limit on
-every one of them, and `ServerSideApply=true` on `external-secrets`.
+A retry limit on every row: `-` there is an Application that does not
+retry at all. `ServerSideApply=true` wherever the chart it installs has
+large CRDs. `prune` false on `installation`, and on a unit that has not
+turned it on — an `XManagedUnit` defaults it off, because what a unit
+composes outlives its manifest.
 
 ### 3. Check a merged change landed
 
