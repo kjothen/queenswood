@@ -199,9 +199,10 @@ topic.
   missing kinds, server-side apply for large CRDs, retry budgets, and
   reading a sync that is not applying. See
   [argocd.md](docs/recipes/infra/argocd.md).
-- **What `Healthy` means** — the groups Argo grades unconditionally,
-  the status-less kinds a precedence bug grades Healthy rather than the
-  list intended to, and what a verdict for `Application` turns on. See
+- **Checking a plane grades what it serves** — the entries a plane
+  should carry, the status-less kinds a precedence bug grades Healthy
+  rather than the list intended to, and why the chart carries corrected
+  copies until the upstream fix ships. See
   [argocd-health.md](docs/recipes/infra/argocd-health.md).
 - **Reading a private repository** — the GitHub App, the one entry its
   three values live in, and the field both URLs derive from. See
