@@ -25,15 +25,16 @@ installation.
 export CODE=qw01
 ```
 
-### 1. Check the entries are registered
+### 1. Check Argo has the health checks
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
   -o json | jq -r '.data["resource.customizations"]' | grep -E '^\S.*:$'
 ```
 
-One line per group in `compositeGroups`, plus `argoproj.io/Application`
-and the two wildcards.
+`argoproj.io/Application`, `*.crossplane.io/*`, `*.upbound.io/*`, and
+one `<group>/*` line per composite group in the chart's
+`compositeGroups`.
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
@@ -43,15 +44,16 @@ kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
 
 Nothing.
 
-### 2. Check the lists cover the plane
+### 2. Check the `has_no_conditions` lists cover the plane
 
 ```bash
 just gcp-plane-crossplane-statusless-kinds
 ```
 
-`none` under both `missing from` headings. It reads the CRDs the two
-copies check — every `crossplane.io` group, and the config-shaped kinds
-of the `upbound.io` ones — rather than every kind the plane serves.
+`none` under both `missing from` headings. It reads the CRDs
+`*.crossplane.io/*` and `*.upbound.io/*` check — every `crossplane.io`
+group, and the config-shaped kinds of the `upbound.io` ones — rather
+than every kind the plane serves.
 
 ## Failures
 
