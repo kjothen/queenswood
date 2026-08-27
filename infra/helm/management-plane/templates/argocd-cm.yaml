@@ -1,5 +1,5 @@
 {{- /*
-  How Argo grades what this plane applies.
+  How Argo reports the health of what this plane applies.
 
   Four sets of checks, in one `resource.customizations` block rather
   than as `resource.customizations.health.<group>_<kind>` keys: two of
@@ -94,8 +94,8 @@ return hs
   twin: a `_` path segment is how that tree spells the wildcard a
   directory name cannot carry, so `_.crossplane.io/_` is the
   `*.crossplane.io/*` below. They are temporary: when that lands in a release this
-  plane runs, delete both entries and point HAS_NO_CONDITIONS in
-  scripts/crossplane-statusless-kinds.py at the upstream lists.
+  plane runs, delete both entries and point LISTED_CROSSPLANE and
+  LISTED_UPBOUND in justfiles/argo.just at the upstream lists.
 
   Kept as two copies, differing in their kind list and in which Ready-
   shaped conditions they accept, because upstream keeps two.

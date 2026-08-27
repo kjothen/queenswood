@@ -1,69 +1,85 @@
-# Argo CD
+# Argo CD Applications
 
 <!-- tessl-plugin: deployment -->
 
+## Status
+
+**Verified**, 2026-08-27, on this installation's plane: a merged change
+showed as a new `REV` with `PHASE` `Succeeded` and a `FINISHED` later
+than the merge, about a minute after it landed. Both checks under
+Failures were run, and clearing a stale `operationState` held across
+five minutes of reconciles.
+
 ## Problem
 
-You want what you merge to reach the cluster.
+You need Argo CD to apply a change you have merged — to a chart, an
+XRD, an installation's manifest.
 
 ## Solution
-
-Lay Applications out so that a fix can always land, and read a sync
-that is not applying for whether it is retrying, waiting, or finished.
 
 ### Prerequisites
 
 - A management plane running in the installation's folder.
-- `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
+- Google group memberships, by capability:
+  - `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
+
+The `just` recipe reads the installation code from the justfile. The
+`kubectl` commands under Failures take it from the shell:
 
 ```bash
 # the installation code, e.g. qw01
 export CODE=qw01
 ```
 
-### Laying out Applications
+### Check a merged change landed
 
-- A parent holds Applications, and resources of kinds that always
-  exist. Anything of a kind one of its children installs belongs in a
-  child of its own.
-- `ServerSideApply=true` on a chart with large CRDs.
-- `argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true`
-  on a resource whose CRD an earlier wave installs.
-- Retry budgets that outlast an operator install, image pull included.
-- `prune: false` where pruning would delete something a missing file
-  should not delete.
-
-### Applying a change
-
-Merge it. Argo reads the revision an Application names, never a working
-tree, so a change is not testable until it is merged — unless the
-revision is a field the manifest can set.
-
-### Checking it landed
+Merge it first. Then:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get applications
+just argo-apps-status
 ```
 
-Every `SYNC STATUS` is `Synced`. `HEALTH STATUS` reads `Progressing` on
-an instance's Applications while its workloads converge, and that is
-not a finding.
-
-Then the revision one of them applied, against the commit you merged:
-
-```bash
-kubectl --context "$CODE-mgmt" -n argocd get application <app> \
-  -o jsonpath='{.status.operationState.syncResult.revision}{"\n"}'
-```
+- `SYNC` `Synced` on every row.
+- `HEALTH` `Healthy` on every row, eventually. `Progressing` on an
+  instance's Applications while its workloads converge is not a
+  finding.
+- `REV` the commit you merged, on whatever reads it. An Application
+  whose source is a Helm repository shows a chart version instead.
+- `PHASE` `Succeeded` wherever there is an operation at all. `-` in
+  `PHASE`, `REV` and `FINISHED` together is an Application that has not
+  synced since the controller restarted or since somebody cleared the
+  record: unremarkable on a row your change does not touch, and the
+  finding itself on one that should have applied it.
+- `FINISHED` a time later than your merge, on the rows that carry your
+  change.
 
 ## Failures
 
 **A child that never applies, holding the kind the parent needed.** The
-parent fails building a sync task for a kind the API server does not
-serve, and stops before applying the child that would install it. The
-fix cannot reach the cluster on its own: breaking the cycle takes a
+parent Application fails building a sync task for a kind the API server
+does not serve, and stops before applying the child that would install
+it. What it holds:
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get application management-plane \
+  -o json | jq -r '[.status.resources[].kind] | unique | .[]'
+```
+
+Exactly these six, and nothing else:
+
+```
+Application
+ConfigMap
+DeploymentRuntimeConfig
+Role
+RoleBinding
+ServiceAccount
+```
+
+Anything else is a resource to move into a child of its own. The fix
+cannot reach the cluster on its own: breaking the cycle takes a
 hand-applied patch, and hand-applying takes cluster write access an
-operator should not hold. Move the resource into a child of its own.
+operator should not hold.
 
 **A workload crash-looping because its own kinds do not exist.** Not a
 failed CRD — a CRD over 256KB, whose whole body client-side apply
@@ -76,7 +92,7 @@ retrying.** An operation pins the revision it started with and each
 retry replays that revision's manifests, so a fix merged mid-loop is
 never applied however many attempts remain — an hour of it, with a
 budget backing off to ten minutes. The status reads as though the fix
-landed: `status.sync.revisions` shows the revision Argo *would* sync
+landed: `status.sync.revisions` shows the revision Argo _would_ sync
 and updates the moment the merge is polled, where
 `.operation.sync.revisions` shows the one being retried. Compare the
 two, then merge the fix and remove `.operation`, which takes a JSON
@@ -87,26 +103,58 @@ kubectl -n argocd patch app <app> --type json \
   -p '[{"op":"remove","path":"/operation"}]'
 ```
 
-**An operation `Running` with `retryCount` unset.** It is not failing
-at all. Only `Healthy` and `Degraded` end a sync task — `Progressing`,
-`Suspended`, `Missing` and `Unknown` all leave it running — so a wave
-holding a resource that can never go Healthy waits for good, with no
-retry, no backoff and no timeout. Removing `.operation` does nothing to
-one already in flight: the field disappears and
+**An operation that never finished, on an Application reporting `Synced`
+and `Healthy`.** Those two describe the comparison between git and the
+cluster, not the operation, so the first three columns stay green while
+a sync sits open — `PHASE` and `FINISHED` are what show it, as a phase
+that is not `Succeeded` and no finish time at all. With `retryCount` unset it
+is not failing at all: only `Healthy` and `Degraded` end a sync task —
+`Progressing`, `Suspended`, `Missing` and `Unknown` all leave it running
+— so a wave holding a resource that can never go Healthy waits for good,
+with no retry, no backoff and no timeout. Removing `.operation` does
+nothing to one already in flight: the field disappears and
 `operationState.phase` stays `Running` at its original `startedAt`.
 Terminating is what reaches it, and is what `argocd app terminate-op`
-does:
+does — but only while `.operation` is still there to drive the
+processing:
 
 ```
 kubectl -n argocd patch app <app> --type merge \
   -p '{"status":{"operationState":{"phase":"Terminating"}}}'
 ```
 
+**A `PHASE` of `Terminating` that never ends.** Operation processing is
+driven by `.operation`, so removing it strands whatever `operationState`
+was left behind: the controller goes on reconciling the Application —
+`setop_ms=0` on every pass — and never looks at that phase again.
+Nothing is running, and the row is a record of something that stopped
+being processed rather than something in progress. Remove the stale
+state, which a plain patch reaches because the Application CRD declares
+no status subresource:
+
+```
+kubectl -n argocd patch app <app> --type json \
+  -p '[{"op":"remove","path":"/status/operationState"}]'
+```
+
 **An Application that stays failed after the drift was corrected.**
 `selfHeal` corrects drift and does not retry a failed sync. One that
 has exhausted its retry budget stops until the revision changes or
 somebody syncs it, so a fix merged after the budget ran out needs a
-nudge — and a nudge is cluster write access.
+nudge — and a nudge is cluster write access. What each Application's
+sync policy carries:
+
+```bash
+just argo-apps-sync-policy
+```
+
+- `RETRY` at least 5 on every row. `-` is an Application that does not
+  retry at all.
+- `PRUNE` false on `installation`, and on any unit that has not turned
+  it on.
+- `SSA` — server-side apply, `ServerSideApply=true` in `syncOptions` —
+  true on `external-secrets`, and on any Application installing a chart
+  whose CRDs exceed 256KB.
 
 **Every resource `OutOfSync`, and the message naming one of them.** A
 sync is one operation over every resource, so a single object the API
@@ -130,21 +178,32 @@ cleanly and is wrong.
 **A resource `OutOfSync` in an Application that no longer manages it.**
 Under annotation tracking, Argo records the owning Application on the
 resource itself as `argocd.argoproj.io/tracking-id`, and nothing else
-removes it. A
-resource that moves between Applications arrives at its new owner still
-carrying the old one's name, and the former owner goes on listing it —
-holding it `OutOfSync` for good, and taking the worst of a resource it
-no longer manages up through every parent above. Where that owner
-prunes, it deletes it instead. Strip the annotation by hand, as the
-last act of the handover:
+removes it. A resource that moves between Applications arrives at its
+new owner still carrying the old one's name, and the former owner goes
+on listing it — holding it `OutOfSync` for good, and taking the worst of
+a resource it no longer manages up through every parent above. Where
+that owner prunes, it deletes it instead. Strip the annotation by hand,
+as the last act of the handover:
 
 ```
 kubectl -n argocd annotate <kind> <name> argocd.argoproj.io/tracking-id-
 ```
 
+That annotation is the marker of annotation tracking. Which method a
+plane uses:
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
+  -o json | jq -r '.data["application.resourceTrackingMethod"] // "unset"'
+```
+
+Unset means the installed Argo's default decides. Changing it re-tracks
+every resource, so read it before setting it.
+
 **A Secret whose contents change on every sync.** A chart that mints a
-value and preserves it with `lookup` mints a fresh one each render —
-see [external-secrets](external-secrets.md).
+value and keeps it by reading the live object back with Helm's
+`lookup` mints a fresh one each render instead — see
+[external-secrets](external-secrets.md).
 
 ## Rules
 
@@ -164,6 +223,10 @@ see [external-secrets](external-secrets.md).
 - Remove `.operation` to cancel a queued sync, with a JSON patch, and
   terminate one already in flight by setting
   `status.operationState.phase` to `Terminating`.
+- Terminate before removing `.operation`, never after. Operation
+  processing is driven by that field, so removing it first leaves
+  nothing to act on the phase and the state sits `Terminating` for
+  good.
 - Strip `argocd.argoproj.io/tracking-id` from a resource handed from
   one Application to another.
 - Set `prune: false` where pruning would delete something a missing
@@ -178,14 +241,33 @@ see [external-secrets](external-secrets.md).
   skips the dry run and nothing else.
 - Expect a merged fix to reach an Application whose retries have
   already been exhausted.
-- Rely on `lookup` to preserve anything.
+- Rely on Helm's `lookup` to keep a value a chart generated once. Argo
+  renders with `helm template`, where it returns nothing, so the branch
+  that mints a fresh one wins on every sync.
 
 ## Discussion
 
-We keep a parent Application free of concrete resources, give every
-sync a budget that outlasts an install, and read a failing one from
-`.operation` rather than from `status`, because Argo reports what it
-would do next far more legibly than what it is doing now.
+We change this plane by merging, and that is the whole act. Argo
+reconciles files in git onto a cluster: an Application names where they
+are — a repository, a revision, a path — and where they go, then
+renders what it finds, applies it, and compares the result against what
+is live. Nothing else about a change reaches it, so a merge is simply a
+new revision at a path an Application already reads.
+
+The files at that path may themselves be Applications, which is how one
+root reaches everything without naming any of it — the root names a
+path, and what sits there decides what exists. Order across them comes
+from sync waves, each waiting on the health of the one before it, which
+is why what `Healthy` means is a subject of its own — see
+[argocd-health](argocd-health.md).
+
+**The plane's own tree.** `management-plane` is the parent Application,
+planted by the boot chart and holding nothing but Applications:
+providers in wave 1, the plane's own configuration in 2, the XRDs in 3,
+and `installation` — the composite describing this installation, read
+from the private repository — in 4, beside `external-secrets`. An
+instance's Applications appear next to them rather than nested under
+them, named for the instance.
 
 **Why a parent cannot hold a kind its child installs.** A sync is
 planned before it is applied: Argo builds a task per resource, and a
@@ -199,7 +281,7 @@ be correct and the cluster still unable to reach it.
 attached, and retries belong to the operation rather than to the
 Application. So the revision is fixed at the moment the first attempt
 started, and every subsequent attempt applies those manifests — a merge
-during the loop changes what Argo *would* sync without changing what it
+during the loop changes what Argo _would_ sync without changing what it
 is syncing. That is why the two revision fields disagree, and why the
 one everybody reads first is the one that does not matter.
 
@@ -212,14 +294,6 @@ controller goes on holding it after the field is gone. Terminating sets
 a phase the controller reads. A plain patch reaches `status` because
 the Application CRD declares no status subresource; check that before
 relying on it.
-
-**The plane's own tree.** `management-plane` is the parent, planted by
-the boot chart and holding nothing but Applications: providers in wave
-1, the plane's own configuration in 2, the XRDs in 3, and
-`installation` — the composite describing this installation, read from
-the private repository — in 4, beside `external-secrets`. An instance's
-Applications appear next to them rather than nested under them, named
-for the instance.
 
 **Waves and the kinds they cannot conjure.** A wave orders applies. It
 does not make a kind exist, and an operator install is asynchronous:

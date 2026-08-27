@@ -88,9 +88,10 @@ where both of those live — how it works, and why we did it this way —
 and a step that explains itself has taken a paragraph the reader did
 not ask for and put it between them and the next command.
 
-The Discussion opens with a sentence or two of plain prose, before the
-first bolded subsection: what was done, in the first person plural, as
-a summary somebody can stop at.
+The Discussion opens with plain prose, before the first bolded
+subsection: what was done, in the first person plural, and then the
+machinery that makes it work. Lead with the act — a reader who meets
+the mechanism first is holding it with nothing to attach it to.
 
 ```
 ;; Bad — the step carries the mechanism
@@ -134,10 +135,11 @@ operator syncs holds no version, and both halves succeeded separately.
 
 Three things look alike here and belong in three places:
 
-- **A recovery action** somebody runs mid-procedure — roll back to this
-  revision, recreate this object before anything else — stays in the
-  Solution as its last step. It is a step, and it belongs beside the
-  steps it undoes.
+- **A recovery action that undoes a step you just ran** stays in the
+  Solution, beside that step. Where the recovery is for the procedure
+  having failed rather than for one step, it belongs in Failures, keyed
+  on how you know — which is the discipline a section called "if it
+  goes wrong" escapes.
 - **A failure that reports as something else** goes in Failures.
 - **Why the system can fail that way at all** goes in Discussion.
 

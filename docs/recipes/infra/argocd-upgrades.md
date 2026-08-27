@@ -14,13 +14,14 @@ resource request, or any other chart value.
 
 ## Solution
 
-### Who you need to be
+### Prerequisites
 
-- **`grp-gcp-<code>-platform-viewer@`** — every step but 5.
-- **`grp-gcp-<code>-cluster-admin@`** — step 5.
-- Write access to this repository — step 1.
-
-### What every command reads
+- A management plane running in the installation's folder.
+- Step 1 — write access to this repository.
+- Google group memberships, by capability:
+  - Steps 2, 3, 4 and 6 — `platformViewer`, e.g.
+    `grp-gcp-<code>-platform-viewer@`.
+  - Step 5 — `clusterAdmin`, e.g. `grp-gcp-<code>-cluster-admin@`.
 
 ```bash
 # the installation code, e.g. qw01
@@ -29,10 +30,6 @@ export WORK=$(mktemp -d)
 export REL="release.helm.m.crossplane.io/argocd-$CODE-c-mgmt"
 export VALUES="$WORK/argocd-values.json"
 ```
-
-`$WORK` keeps the values file out of a repository. It carries the
-management project's id, and a checkout is the one place that must not
-acquire one.
 
 ### 1a. A version change
 
@@ -180,28 +177,28 @@ kubectl --context "$CODE-mgmt" -n argocd get pods
 kubectl --context "$CODE-mgmt" -n argocd get applications
 ```
 
-The first is the one that matters. Everything else is recoverable.
-
 The newest revision reads `deployed`, against the chart version you
 pinned — which is the only place a version change shows up as having
-happened. The revision below it is where a rollback goes.
+happened.
 
-### If it goes wrong
+## Failures
+
+**No `management-plane` Application after the upgrade.** The first check
+in step 6, and the one that matters: without it the plane reads no git
+at all, and nothing else it reconciles will recover on its own. Recreate
+it from `values.extraObjects` on the same composed `Release` step 3
+read, before anything else.
+
+**A newest revision that is not `deployed`, or not the version you
+pinned.** Roll back, and to a release revision rather than a chart
+version — the `REVISION` column is a small integer counting this
+release's upgrades, and the revision below the newest is where a
+rollback goes:
 
 ```bash
 helm --kube-context "$CODE-mgmt" history argocd -n argocd
-```
-
-Then roll back to a release revision — the `REVISION` column above, a
-small integer. Not a chart version:
-
-```bash
 helm --kube-context "$CODE-mgmt" rollback argocd <revision> -n argocd
 ```
-
-If `management-plane` is gone, recreate it from the same object's
-`values.extraObjects` before anything else: without it the plane reads
-no git at all.
 
 ## Rules
 
@@ -236,6 +233,10 @@ no git at all.
   Nothing detects it.
 
 ## Discussion
+
+**Why the values file goes to a temporary directory.** `$WORK` keeps it
+out of a repository. It carries the management project's id, and a
+checkout is the one place that must not acquire one.
 
 **Why merging is not enough.** A boot plane installs Argo, and the
 `Release` describing it carries `Observe` alone once the plane is
@@ -323,7 +324,7 @@ of this. Only the release Argo itself runs from is `Observe`.
 
 ## References
 
-- [argocd](argocd.md) — how Argo applies what it does own
+- [argocd-apps](argocd-apps.md) — how Argo applies what it does own
 - [crossplane-app-deployment](crossplane-app-deployment.md) — building a
   plane, and the rebuild path
 - [queenswood-installation](queenswood-installation.md) — what a plane

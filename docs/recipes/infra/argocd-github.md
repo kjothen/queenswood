@@ -27,8 +27,9 @@ reads.
 - Step 1 — write access to the manifests repository.
 - Steps 3 and 4 — an owner of the GitHub organisation.
 - Google group memberships, by capability:
+  - Steps 2 and 6 — `platformViewer`, e.g.
+    `grp-gcp-<code>-platform-viewer@`.
   - Step 5 — `secretsAdmin`, e.g. `grp-gcp-<code>-secrets-admin@`.
-  - Steps 2 and 6 — `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
 
 ```bash
 # the installation code, e.g. qw01
@@ -264,8 +265,8 @@ project holds.
 
 ## References
 
-- [argocd](argocd.md) — Applications, sync waves, and what a parent may
-  hold.
+- [argocd-apps](argocd-apps.md) — Applications, sync waves, and what a
+  parent may hold.
 - [queenswood-installation](queenswood-installation.md) — the private
   repository this reads for Queenswood, and the manifest that names it.
 - [external-secrets](external-secrets.md) — how the key gets into that
