@@ -111,7 +111,8 @@ status matters.
 - Re-read `argocd-cm` after an Argo upgrade, and re-run
   `just gcp-plane-crossplane-statusless-kinds` after a Crossplane one.
   An upgrade is what moves either answer.
-- Add an XRD's API group to `compositeGroups` in the same change as the
+- Add an XRD's API group to `compositeGroups` in
+  `infra/helm/management-plane/values.yaml`, in the same change as the
   XRD, where the group is not there already. One entry covers every
   kind in a group.
 - Give an environment's Applications a parent of their own before
