@@ -34,9 +34,11 @@ Merge it first. Then:
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
-  | jq -r '["NAME","REVISION","PHASE","FINISHED"],
+  | jq -r '["NAME","SYNC","HEALTH","REV","PHASE","FINISHED"],
       (.items[] | [
         .metadata.name,
+        (.status.sync.status // "-"),
+        (.status.health.status // "-"),
         (.status.operationState.syncResult.revision // "-"
           | if . == "" then "-" else .[0:7] end),
         (.status.operationState.phase // "-"),
@@ -44,21 +46,15 @@ kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
       ]) | @tsv' | column -t -s $'\t'
 ```
 
-- `REVISION` the commit you merged, on whatever reads it. An
-  Application whose source is a Helm repository shows a chart version
-  instead.
+- `SYNC` `Synced` on every row.
+- `HEALTH` `Healthy` on every row, eventually. `Progressing` on an
+  instance's Applications while its workloads converge is not a
+  finding.
+- `REV` the commit you merged, on whatever reads it. An Application
+  whose source is a Helm repository shows a chart version instead.
 - `PHASE` `Succeeded` on every row.
 - `FINISHED` a time later than your merge, on the rows that carry your
   change.
-
-```bash
-kubectl --context "$CODE-mgmt" -n argocd get applications
-```
-
-- `SYNC STATUS` `Synced` on every row.
-- `HEALTH STATUS` `Healthy` on every row, eventually. `Progressing` on
-  an instance's Applications while its workloads converge is not a
-  finding.
 
 ## Failures
 
@@ -112,9 +108,9 @@ kubectl -n argocd patch app <app> --type json \
 
 **An operation that never finished, on an Application reporting `Synced`
 and `Healthy`.** Those two describe the comparison between git and the
-cluster, not the operation, so `get applications` stays green while a
-sync sits open — the listing above is what shows it, as a `PHASE` that
-is not `Succeeded` and an empty `FINISHED`. With `retryCount` unset it
+cluster, not the operation, so the first three columns stay green while
+a sync sits open — `PHASE` and `FINISHED` are what show it, as a phase
+that is not `Succeeded` and no finish time at all. With `retryCount` unset it
 is not failing at all: only `Healthy` and `Degraded` end a sync task —
 `Progressing`, `Suspended`, `Missing` and `Unknown` all leave it running
 — so a wave holding a resource that can never go Healthy waits for good,
