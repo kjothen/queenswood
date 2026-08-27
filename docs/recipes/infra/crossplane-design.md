@@ -2,98 +2,177 @@
 
 <!-- tessl-plugin: deployment -->
 
+## Status
+
+**Verified**, 2026-08-27, in what it claims rather than in being
+followed: the three commands run, and every statement about this
+installation checked against the compositions — the split of `Delete`,
+the two observed Releases, and `function-auto-ready` ending all seven.
+No kind has yet been designed by working from these steps.
+
 ## Problem
 
-You need Crossplane to manage a set of cloud resources.
+You need to use Crossplane to manage a set of cloud resources.
 
 ## Solution
 
-Five decisions, in the order you answer them.
+Eight decisions, in the order you answer them.
 
 ### 1. How much one kind covers
 
-Managed resources go straight into a Composition that already exists,
-until a second place needs the same arrangement. Extract then, not at
-the first call site: what varies is guesswork from one example, and the
-invariants are the same either way. Keep the block contiguous until it
-moves, so the extraction is a move rather than a rewrite.
+One kind for the application, and it is the unit you deploy. An
+instance is created, taken down and destroyed as one thing, so anything
+left outside its kind fractures that act, for example:
 
-What an XRD buys is that one edit reaches every XR of the kind. What it
-costs is a CRD on every plane that composes it, and a failure inside
-the child reporting on the child rather than on the XR that asked for
-it — one more hop in the direction that already misleads.
+- **`XQueenswoodInstance`** — an instance: its project, identities,
+  buckets and secrets, and the four kinds below.
+- **`XManagementPlane`** — a plane, not yet decomposed.
 
-See [ADR-0025](../../adr/0025-building-blocks-and-what-cannot-be-one.md)
-for what cannot be a kind at all.
+Inside it, decompose into kinds that group related concepts into a
+whole. Each is several managed resources that only make sense together
+and that are created and destroyed as one, and leaving them loose puts
+detail in the application's Composition that does not differentiate
+it, for example:
 
-### 2. What the caller chooses
+- **`XNetwork`** — a network and the subnetworks carved out of it.
+- **`XCluster`** — a cluster, its node pool, and the identity the nodes
+  run as.
+- **`XPublicEndpoint`** — an address, a certificate, the DNS
+  authorization that proves the domain, and the records that answer it.
+- **`XPostgres`** — a server and a user, the private connection they
+  are reached over, the identities and grants that reach them, and a
+  database for each name the caller asks for.
 
-The invariants are the reason the kind exists: fix them in `base`, and
-parameterise only what genuinely differs. Then every field the caller
-does supply is one of three things.
+What each composes today, and how many:
 
-- **Required** — `policy.fromFieldPath: Required`, where absence is a
-  mistake rather than a meaning. A patch whose source is absent is
-  otherwise skipped in silence.
-- **Defaulted** — a value in the XRD, for what most callers should not
-  think about. Every patch reading a defaulted field wants `Required`
-  as well: the default is absent for a window, because Argo applies an
-  XRD and a Composition in one sync and the new Composition can be
-  selected before the API server serves the regenerated CRD.
-- **The switch for a block** — a Required patch whose source is absent
-  drops the whole composed resource rather than the one field, so a
-  block composes nothing until the field is set. Such a field cannot
-  carry an XRD default, which would make it always present.
+```bash
+just crossplane-kinds
+```
+
+### 2. What the caller must supply
+
+The invariants are the reason the kind exists: fix them in each
+composed resource's `base` — the literal manifest, before any patch.
+What is left for the caller is whatever does not change that guarantee:
+how big, how many, how long something is kept. Constants belong in
+`base` too rather than in a patch, because a `Format` transform with no
+verb for its input appends `%!(EXTRA string=…)` to the value.
+
+Every patch reading a field the caller must supply carries
+`policy: {fromFieldPath: Required}`. Without it a missing source is
+skipped and the field is quietly left unset.
 
 Two sources into one field is one `CombineFromComposite`; two patches
-to one field is the second overwriting the first. Constants belong in
-`base`, because a `Format` transform with no verb for its input appends
-`%!(EXTRA string=…)` to the value.
+to one field is the second overwriting the first.
 
-A field whose *count* varies with the caller — a binding per member,
-none where a capability is not provided — cannot be
-`patch-and-transform`, which composes a fixed set and cannot express
-"no resource at all". That needs `function-go-templating`.
+### 3. What the caller may omit
 
-### 3. What each part is called
+A patch with no `policy` block is optional, which is the default. A
+missing source is skipped, and the resource composes without that
+field — the skip is the point rather than a hazard.
 
-The `- name:` in the resources list is the identity, not
+A Required patch behaves differently: a missing source drops its whole
+composed resource rather than the one field, so one field can switch a
+group of resources on and off. Such a field cannot then carry a
+default, which would make it always present.
+
+Where the _number_ of composed resources varies with the caller,
+`patch-and-transform` cannot express it: it composes a fixed set and
+has no way to say "no resource at all". That needs
+`function-go-templating`, ranging over the field.
+
+### 4. What the XRD supplies instead
+
+`default:` in the XRD's schema, for a field the caller may not want to
+decide right now — a region, a disk type, a release channel. The choice
+stays theirs; the default only means they need not make it today.
+
+Mark every patch reading a defaulted field `Required` as well. The
+default is in the XRD and the patch is in the Composition, and there is
+a moment after both are applied when the default is not yet in force —
+`Required` makes the resource wait for it rather than compose without
+the field.
+
+### 5. What each part is called
+
+The kind first. Name the thing itself, at the most specific level that
+stays true, borrowing the vocabulary of whatever domain it belongs to:
+`XPostgres` is the engine, where `XCloudSQL` would be the category.
+
+Then the slots. The `- name:` in the resources list is the identity, not
 `metadata.name`. Crossplane records it as
 `crossplane.io/composition-resource-name` and matches on it, so
 changing a `metadata.name` patch renames nothing, and changing the
 `- name:` is what makes a slot a new resource.
 
-Read the live `crossplane.io/composition-resource-name`s before
-choosing one. The matching does not care what kind sits in the slot, so
-reusing a name a managed resource already carries makes two XRs claim
-the same object.
+Read the slot names already in use before choosing one:
 
-### 4. What may be deleted
+```bash
+just crossplane-slots
+```
 
-`managementPolicies` per composed resource, and `Delete` withheld from
-anything whose loss is not recoverable — a database, a DNS zone, a
-bucket holding backups. Without `Delete`, removing the managed resource
-orphans the cloud resource rather than destroying it.
+### 6. What may be deleted
 
-Decide this while designing rather than when something is about to be
-deleted: an XR deletes what it composed, subject to each resource's own
-policy, and the policy that governs a transfer is the one on the copy
-being deleted.
+> [!WARNING]
+> Withholding `Delete` is the prudent answer. Crossplane goes on creating
+> and updating as before and never issues the delete, so removing the
+> managed resource leaves the cloud resource standing:
+>
+> ```yaml
+> managementPolicies:
+>   - Observe
+>   - Create
+>   - Update
+>   - LateInitialize
+> ```
 
-### 5. When it is ready
+Withhold `Delete` where a rebuild would not return what was there:
+
+- **Data, or a secret.** A database, a bucket, a Secret Manager entry.
+- **Folders and projects.** They contain everything else, so deleting
+  one takes what is inside it — and a new project carries a new random
+  suffix, which every name and binding was written against.
+- **Service accounts.** A new one is a different principal: the
+  bindings that granted the old one its rights do not follow it, and a
+  Workload Identity annotation names an address that no longer exists.
+- **An agreement held outside GCP.** A public zone's nameservers sit at
+  the registrar, and a recreated zone draws new ones.
+
+What Crossplane may do to each composed resource today:
+
+```bash
+just crossplane-policies
+```
+
+### 7. What may be observed
+
+`Observe` alone is the other end of the same field: Crossplane reads
+the resource and never acts on it — no create, no update, no delete.
+The composed object exists so the XR can see the resource and patch
+from its status, while something else owns its lifecycle.
+
+There should be almost none, and the `OBSERVED` column of
+`just crossplane-policies` says how many. Two today, both Helm releases
+a boot plane installed: Crossplane's own and Argo's. A plane that
+upgraded either would be upgrading the thing performing the upgrade, so
+they are observed and changed by hand instead — see
+[argocd-upgrades](argocd-upgrades.md) and
+[crossplane-upgrades](crossplane-upgrades.md).
+
+### 8. When it is ready
 
 A managed resource reports `Ready` from its own conditions, which may
 not reflect the cloud: a GCP folder deleted through the console sits in
 `DELETE_REQUESTED` for thirty days and reads as existing throughout.
 Add a `readinessCheck` against the field carrying the real state.
 
-End every Composition with `function-auto-ready`, including one that
-composes nothing templated yet. `function-patch-and-transform` sets
-readiness for the resources it composes and `function-go-templating`
-sets it for none, so a pipeline mixing the two reports every templated
-resource unready for ever — and the Composition that does not need
-`function-auto-ready` today is the one that silently stops computing
-readiness the day a template is added to it.
+End every Composition with `function-auto-ready`, the function that
+derives readiness from each composed resource's own conditions.
+`function-patch-and-transform` sets readiness for what it composes and
+`function-go-templating` sets it for nothing, so a pipeline mixing the
+two needs it — and so does one with no template in it yet. The
+`AUTO-READY` column of `just crossplane-kinds` should read `yes`
+throughout.
 
 ## Failures
 
@@ -101,6 +180,12 @@ readiness the day a template is added to it.
 source field is absent is skipped silently. That is what makes an
 optional field work, and what turns an unapplied XRD into an empty
 value nothing complains about.
+
+**A kind named after what reads it.** One that registers a cluster with
+Argo, called `XArgoCluster`, parses as a cluster belonging to Argo —
+and the cluster already has a kind. A name borrowed from a reader also
+inherits that reader's lifetime, so the kind looks retirable the moment
+the reader is.
 
 **Two XRs claiming one object, while nothing looks broken.** A slot
 name reused from a live managed resource: the parent matches the live
@@ -114,19 +199,21 @@ transfer never completes.
 created with.** A Composition has no way to withhold a field: a patch
 always writes something, a map transform must name every key it may
 see, and `patch-and-transform` cannot express "not this field, this
-time". So a value that is a *transition* rather than a *state* — Cloud
+time". So a value that is a _transition_ rather than a _state_ — Cloud
 SQL's `activationPolicy: NEVER`, which stops a database and cannot
 create one stopped — fails rather than being skipped. Reading observed
 state in a templating step does not rescue it, because the resource
 would still have to be created legal and moved afterwards. Say so in
 the XRD, where whoever writes the manifest is looking.
 
-**A resource composed with a hole in it.** The window where an XRD
-default has not been applied yet. What it costs depends on the target:
-a field the provider's CRD requires fails the apply, which retries and
-heals, while an optional one composes a resource the provider may then
-fail to observe — a state no later reconcile recovers, because the
-resource exists and is wrong.
+**A resource composed with a hole in it.** An XRD default is absent for
+a window: Argo applies the XRD and the Composition in one sync, and the
+new Composition can be selected before the API server serves the
+regenerated CRD, so a patch reading that default is skipped. What it
+costs depends on the target — a field the provider's CRD requires fails
+the apply, which retries and heals, while an optional one composes a
+resource the provider may then fail to observe, a state no later
+reconcile recovers because the resource exists and is wrong.
 
 **Every templated resource unready for ever, naming one that is
 `Available`.** A pipeline mixing `function-patch-and-transform` and
@@ -142,9 +229,11 @@ are different paths.
 
 **MUST:**
 
-- Extract a kind at the second call site, fixing the invariants and
-  parameterising the rest.
-- Read the live `crossplane.io/composition-resource-name`s before
+- Give the application one kind, and decompose inside it into kinds
+  that group managed resources created and destroyed as one.
+- Fix the invariants in `base`, and leave the caller only what does not
+  change what the kind guarantees.
+- Read the slot names already in use — `just crossplane-slots` — before
   naming a composed resource.
 - Change a resource's `- name:` to rebuild it under a new
   `metadata.name`. Deleting the object alone rebuilds the old one.
@@ -154,8 +243,8 @@ are different paths.
 - Put constants in `base`.
 - Use `function-go-templating` where the number of composed resources
   varies with the caller.
-- Withhold `Delete` from `managementPolicies` for anything whose loss
-  is not recoverable.
+- Carry `Delete` in `managementPolicies` only where a rebuild returns
+  what was there. Withholding it is the prudent default.
 - End every Composition with `function-auto-ready`.
 - Add a `readinessCheck` against the field carrying the real state,
   where a managed resource's own conditions do not reflect the cloud.
@@ -171,17 +260,19 @@ are different paths.
 - Set `compositionUpdatePolicy: Manual` on an XR. Pinning divides an
   estate into the XRs that took an edit and the ones that did not,
   which is the problem versioning an XRD would have caused.
-- Give an XRD default to a field that switches a block of resources on.
-  A default makes it always present, so the block always composes.
 - Expect a Composition to withhold a field.
 - Compose a cluster-scoped kind from a namespaced XR.
+- Compose resources with different deletion criteria into one kind.
+  Deleting a kind deletes what it composed, so something that must
+  never be deleted does not belong with something rebuilt routinely —
+  a public zone with a public endpoint, a network with a cluster.
 
 ## Discussion
 
-We design a kind by deciding what it covers, what its caller may
-choose, what its parts are called, what may be destroyed and when it is
-finished — and we make each of those decisions once, because nothing
-here revisits them.
+We design a kind by deciding what it covers, what its caller supplies,
+omits or is given, what its parts are called, what may be destroyed or
+merely watched, and when it is finished — and we make each of those
+decisions once, because nothing here revisits them.
 
 **The four things, in Crossplane's words.** An **XRD** defines the
 schema and creates the API endpoint. A **Composition** configures how
@@ -217,9 +308,9 @@ once the manifests do.
 
 ## References
 
-- [crossplane](crossplane.md) — operating a kind that exists.
+- [crossplane](crossplane.md) — what identifies a composed resource,
+  and where a failure reports.
 - [crossplane-providers](crossplane-providers.md) — what
   Terraform-backed providers add to this.
 - [ADR-0025](../../adr/0025-building-blocks-and-what-cannot-be-one.md) —
-  when repetition wants a kind, and what cannot be one.
-- [argocd-apps](argocd-apps.md) — how a Composition reaches a plane.
+  what cannot be a kind at all.

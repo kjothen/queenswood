@@ -159,9 +159,13 @@ topic.
   layout, one management plane on GKE, foundations protected rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
-- **Building blocks, and what cannot be one** — proposed: when
-  repetition wants a composite rather than a loop, why a pair that must
-  agree earns a kind, and the boundary a catalogue cannot cross. See
+- **Designing a Crossplane kind** — how much one kind covers, what the
+  caller chooses, what each part is called, what may be deleted, when
+  it is ready. See
+  [crossplane-design.md](docs/recipes/infra/crossplane-design.md).
+- **What cannot be a building block** — the things with no API at all,
+  which are a recipe rather than a kind nobody got round to writing.
+  See
   [ADR-0025](docs/adr/0025-building-blocks-and-what-cannot-be-one.md).
 - **Recovering data** — proposed: why `down` no longer empties anything
   and so no restore path exists, why a destructive state must not share
