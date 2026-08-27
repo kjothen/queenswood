@@ -10,8 +10,8 @@ from either list.
 
 ## Problem
 
-You want to know that Argo is reporting the correct health status for a
-plane's resources.
+You need Argo CD to report the correct health status for your
+installation.
 
 ## Solution
 
@@ -183,11 +183,11 @@ entry in the chart is a documented restoration rather than something
 prised out of the source.
 
 Registering it is not turning waves on — they were always ordering, on
-a signal that was always success. Giving the kind a health status makes the signal real,
-and a real signal can say no: a child that hangs now hangs its parent, and a
-hung sync replays a stale revision. So the fix wants the Applications
-it gates to be ones that can fail without taking a plane's own
-manifests with them.
+a signal that was always success. Giving the kind a health status makes
+the signal real, and a real signal can say no: a child that hangs now
+hangs its parent, and a hung sync replays a stale revision. So the fix
+wants the Applications it gates to be ones that can fail without taking
+a plane's own manifests with them.
 
 ## References
 
