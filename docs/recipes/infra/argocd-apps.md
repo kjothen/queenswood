@@ -4,11 +4,11 @@
 
 ## Status
 
-**Verified**, 2026-08-27, on this installation's plane, for the two
-checks under Failures: the parent Application held the six kinds
-listed, and every row of the sync-policy table met all three of its
-checks. The step itself has not been run against a change merged for
-the purpose.
+**Verified**, 2026-08-27, on this installation's plane: a merged change
+showed as a new `REV` with `PHASE` `Succeeded` and a `FINISHED` later
+than the merge, about a minute after it landed. Both checks under
+Failures were run, and clearing a stale `operationState` held across
+five minutes of reconciles.
 
 ## Problem
 
@@ -45,7 +45,10 @@ just gcp-argo-apps-status
   finding.
 - `REV` the commit you merged, on whatever reads it. An Application
   whose source is a Helm repository shows a chart version instead.
-- `PHASE` `Succeeded` on every row.
+- `PHASE` `Succeeded` on every row. `-` in `PHASE`, `REV` and
+  `FINISHED` together is an Application with no operation on record —
+  one that has not synced since the controller last restarted, or since
+  somebody cleared the record.
 - `FINISHED` a time later than your merge, on the rows that carry your
   change.
 
