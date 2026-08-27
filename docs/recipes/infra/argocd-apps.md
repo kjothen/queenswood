@@ -69,22 +69,26 @@ kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
 
 ### 3. Check a merged change landed
 
-Merge it first. Then name the Application that reads what you changed:
-
-- **A chart** — the Application that installs it.
-- **An XRD** — `crossplane-xrds`.
-- **An installation's manifest** — `installation`.
+Merge it first. Then:
 
 ```bash
-export APP=installation
+kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
+  | jq -r '["NAME","REVISION","PHASE","FINISHED"],
+      (.items[] | [
+        .metadata.name,
+        (.status.operationState.syncResult.revision // "-"
+          | if . == "" then "-" else .[0:7] end),
+        (.status.operationState.phase // "-"),
+        (.status.operationState.finishedAt // "-")
+      ]) | @tsv' | column -t -s $'\t'
 ```
 
-```bash
-kubectl --context "$CODE-mgmt" -n argocd get application "$APP" \
-  -o jsonpath='{.status.operationState.syncResult.revision}{"\n"}'
-```
-
-The commit you merged.
+- `REVISION` the commit you merged, on whatever reads it. An
+  Application whose source is a Helm repository shows a chart version
+  instead.
+- `PHASE` `Succeeded` on every row.
+- `FINISHED` a time later than your merge, on the rows that carry your
+  change.
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get applications
