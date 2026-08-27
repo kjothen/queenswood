@@ -34,7 +34,7 @@ kubectl --context "$CODE-mgmt" -n argocd get application management-plane \
   -o json | jq -r '[.status.resources[].kind] | unique | .[]'
 ```
 
-`Application`, and kinds no child of it installs:
+Exactly these six, and nothing else:
 
 ```
 Application
