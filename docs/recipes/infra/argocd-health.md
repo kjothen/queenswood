@@ -42,9 +42,6 @@ argoproj.io/Application:
 "*.upbound.io/*":
 ```
 
-The first two are this project's own API groups, so the list is the
-same on every installation.
-
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
   -o json | jq -r '.data | keys[]
