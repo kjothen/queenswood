@@ -4,8 +4,8 @@
 
 ## Problem
 
-You need a change you have merged — to a chart, an XRD, an
-installation's manifest — to reach your installation.
+You need Argo CD to apply a change you have merged — to a chart, an
+XRD, an installation's manifest.
 
 ## Solution
 
