@@ -237,24 +237,18 @@ see [external-secrets](external-secrets.md).
 
 ## Discussion
 
-We keep a parent Application free of concrete resources, give every
-sync a budget that outlasts an install, and read a failing one from
-`.operation` rather than from `status`, because Argo reports what it
-would do next far more legibly than what it is doing now.
+Argo reconciles files in git onto a cluster. An Application names where
+they are — a repository, a revision, a path — and where they go, then
+renders what it finds, applies it, and compares the result against what
+is live. Nothing else about a change reaches it: a merge is a new
+revision at a path it already reads.
 
-**What an Application does.** Argo reconciles files in git onto a
-cluster. An Application names where they are — a repository, a
-revision, a path — and where they go, then renders what it finds,
-applies it, and compares the result against what is live. Nothing else
-about a change reaches it: a merge is a new revision at a path it
-already reads.
-
-**Applications holding Applications.** The files at that path may
-themselves be Applications, which is how one root reaches everything
-without naming any of it — the root names a path, and what sits there
-decides what exists. Order across them comes from sync waves, each
-waiting on the health of the one before it, which is why what `Healthy`
-means is a subject of its own — see [argocd-health](argocd-health.md).
+The files at that path may themselves be Applications, which is how one
+root reaches everything without naming any of it — the root names a
+path, and what sits there decides what exists. Order across them comes
+from sync waves, each waiting on the health of the one before it, which
+is why what `Healthy` means is a subject of its own — see
+[argocd-health](argocd-health.md).
 
 **The plane's own tree.** `management-plane` is the parent Application,
 planted by the boot chart and holding nothing but Applications:

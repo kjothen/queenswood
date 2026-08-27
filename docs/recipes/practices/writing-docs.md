@@ -88,9 +88,12 @@ where both of those live — how it works, and why we did it this way —
 and a step that explains itself has taken a paragraph the reader did
 not ask for and put it between them and the next command.
 
-The Discussion opens with a sentence or two of plain prose, before the
-first bolded subsection: what was done, in the first person plural, as
-a summary somebody can stop at.
+The Discussion opens with plain prose, before the first bolded
+subsection: whatever a reader needs in order to follow the rest. Where
+the machinery is familiar that is a sentence or two on what was done,
+in the first person plural. Where it is not, it is what the thing is —
+a recipe whose Discussion opens on why one part of a system cannot hold
+another has assumed the reader already knows there are parts.
 
 ```
 ;; Bad — the step carries the mechanism
