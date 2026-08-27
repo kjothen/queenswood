@@ -4,8 +4,10 @@
 
 ## Status
 
-**Untested.** The commands are derived from the chart and the composite
-rather than from following these steps on a plane.
+**Verified**, 2026-08-27, for steps 1 and 2 on this installation's
+plane: step 1 gave the six kinds below, and every row of step 2 met all
+three checks. Step 3 has not been run against a change merged for the
+purpose.
 
 ## Problem
 
