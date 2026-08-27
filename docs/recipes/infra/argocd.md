@@ -9,8 +9,6 @@ installation's manifest — to reach your installation.
 
 ## Solution
 
-Lay Applications out so that a fix can always land.
-
 ### Prerequisites
 
 - A management plane running in the installation's folder.
@@ -21,11 +19,14 @@ Lay Applications out so that a fix can always land.
 export CODE=qw01
 ```
 
-### Laying out Applications
+### What an Application may hold
 
-- A parent holds Applications, and resources of kinds that always
-  exist. Anything of a kind one of its children installs belongs in a
-  child of its own.
+A parent holds Applications, and resources of kinds that always exist.
+Anything of a kind one of its children installs belongs in a child of
+its own, or the fix for it cannot reach the cluster.
+
+### What an Application sets
+
 - `ServerSideApply=true` on a chart with large CRDs.
 - `argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true`
   on a resource whose CRD an earlier wave installs.
