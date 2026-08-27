@@ -14,13 +14,14 @@ what its own pods may take, or any other chart value.
 
 ## Solution
 
-### Who you need to be
+### Prerequisites
 
-- **`grp-gcp-<code>-platform-viewer@`** — every step but 5.
-- **`grp-gcp-<code>-cluster-admin@`** — step 5.
-- Write access to this repository — step 1.
-
-### What every command reads
+- A management plane running in the installation's folder.
+- Step 1 — write access to this repository.
+- Steps 2, 3, 4 and 6 — the `platformViewer` capability, e.g. the
+  Google group `grp-gcp-<code>-platform-viewer@`.
+- Step 5 — the `clusterAdmin` capability, e.g. the Google group
+  `grp-gcp-<code>-cluster-admin@`.
 
 ```bash
 # the installation code, e.g. qw01

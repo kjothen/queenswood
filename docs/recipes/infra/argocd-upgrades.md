@@ -14,13 +14,14 @@ resource request, or any other chart value.
 
 ## Solution
 
-### Who you need to be
+### Prerequisites
 
-- **`grp-gcp-<code>-platform-viewer@`** — every step but 5.
-- **`grp-gcp-<code>-cluster-admin@`** — step 5.
-- Write access to this repository — step 1.
-
-### What every command reads
+- A management plane running in the installation's folder.
+- Step 1 — write access to this repository.
+- Steps 2, 3, 4 and 6 — the `platformViewer` capability, e.g. the
+  Google group `grp-gcp-<code>-platform-viewer@`.
+- Step 5 — the `clusterAdmin` capability, e.g. the Google group
+  `grp-gcp-<code>-cluster-admin@`.
 
 ```bash
 # the installation code, e.g. qw01
@@ -29,10 +30,6 @@ export WORK=$(mktemp -d)
 export REL="release.helm.m.crossplane.io/argocd-$CODE-c-mgmt"
 export VALUES="$WORK/argocd-values.json"
 ```
-
-`$WORK` keeps the values file out of a repository. It carries the
-management project's id, and a checkout is the one place that must not
-acquire one.
 
 ### 1a. A version change
 
@@ -236,6 +233,10 @@ no git at all.
   Nothing detects it.
 
 ## Discussion
+
+**Why the values file goes to a temporary directory.** `$WORK` keeps it
+out of a repository. It carries the management project's id, and a
+checkout is the one place that must not acquire one.
 
 **Why merging is not enough.** A boot plane installs Argo, and the
 `Release` describing it carries `Observe` alone once the plane is
