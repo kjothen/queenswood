@@ -47,21 +47,22 @@ ServiceAccount
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
-  | jq -r '["NAME","SYNC-OPTIONS","RETRY","PRUNE"],
+  | jq -r '["NAME","SSA","RETRY","PRUNE"],
       (.items[] | [
         .metadata.name,
-        (.spec.syncPolicy.syncOptions // [] | join(",")
-          | if . == "" then "-" else . end),
+        (.spec.syncPolicy.syncOptions // []
+          | any(. == "ServerSideApply=true")),
         (.spec.syncPolicy.retry.limit // "-"),
         .spec.syncPolicy.automated.prune
       ]) | @tsv' | column -t -s $'\t'
 ```
 
-A retry limit on every row: `-` there is an Application that does not
-retry at all. `ServerSideApply=true` wherever the chart it installs has
-large CRDs. `prune` false on `installation`, and on a unit that has not
-turned it on — an `XManagedUnit` defaults it off, because what a unit
-composes outlives its manifest.
+- `RETRY` at least 5 on every row. `-` is an Application that does not
+  retry at all.
+- `PRUNE` false on `installation`, and on any unit that has not turned
+  it on.
+- `SSA` true on `external-secrets`, and on any Application installing a
+  chart whose CRDs exceed 256KB.
 
 ### 3. Check a merged change landed
 
