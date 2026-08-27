@@ -4,265 +4,147 @@
 
 ## Problem
 
-An Application that cannot apply one resource stops applying the rest,
-and the resource it cannot apply is often the one whose installer it
-was about to run.
+You want what you merge to reach the cluster.
 
 ## Solution
 
-Keep concrete resources out of parents, and know which failures retry
-and which wait for a human.
+Lay Applications out so that a fix can always land, and read a sync
+that is not applying for whether it is retrying, waiting, or finished.
 
-### App of apps
+### Prerequisites
 
-A parent holds Applications and resources of kinds that always exist.
-Anything of a kind installed by one of its children belongs in a child
-of its own.
+- A management plane running in the installation's folder.
+- `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
 
-Otherwise: the parent fails building a sync task for an unknown kind,
-never applies the child that would install it, and the fix cannot
-reach the cluster. Breaking that needs a hand-applied patch, and
-hand-applying needs write access an operator should not hold.
+```bash
+# the installation code, e.g. qw01
+export CODE=qw01
+```
 
-### Waves and missing kinds
+### Laying out Applications
 
-Waves order applies. They do not make a kind exist. A resource whose
-CRD arrives in an earlier wave still fails validation without
-`argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true`,
-and that skips the dry run only — the apply still fails until the CRD
-is registered.
+- A parent holds Applications, and resources of kinds that always
+  exist. Anything of a kind one of its children installs belongs in a
+  child of its own.
+- `ServerSideApply=true` on a chart with large CRDs.
+- `argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true`
+  on a resource whose CRD an earlier wave installs.
+- Retry budgets that outlast an operator install, image pull included.
+- `prune: false` where pruning would delete something a missing file
+  should not delete.
 
-An operator install is asynchronous. Argo reports a `Provider` or a
-chart applied long before its CRDs exist, so the retry budget must
-outlast an image pull.
+### Applying a change
 
-### Server-side apply
+Merge it. Argo reads the revision an Application names, never a working
+tree, so a change is not testable until it is merged — unless the
+revision is a field the manifest can set.
 
-CRDs over 256KB fail client-side apply: the whole resource is written
-into `last-applied-configuration`, which the API server rejects as
-`Too long`. The symptom is a crash-looping workload complaining that
-its own kinds do not exist, not a failed CRD. Set
+### Checking it landed
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get applications
+```
+
+Every `SYNC STATUS` is `Synced`. `HEALTH STATUS` reads `Progressing` on
+an instance's Applications while its workloads converge, and that is
+not a finding.
+
+Then the revision one of them applied, against the commit you merged:
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get application <app> \
+  -o jsonpath='{.status.operationState.syncResult.revision}{"\n"}'
+```
+
+## Failures
+
+**A child that never applies, holding the kind the parent needed.** The
+parent fails building a sync task for a kind the API server does not
+serve, and stops before applying the child that would install it. The
+fix cannot reach the cluster on its own: breaking the cycle takes a
+hand-applied patch, and hand-applying takes cluster write access an
+operator should not hold. Move the resource into a child of its own.
+
+**A workload crash-looping because its own kinds do not exist.** Not a
+failed CRD — a CRD over 256KB, whose whole body client-side apply
+writes into `last-applied-configuration`, which the API server rejects
+as `Too long`. The Application reports the chart applied. Set
 `ServerSideApply=true`.
 
-### A rendered chart holds no generated value
-
-Argo renders with `helm template`, where `lookup` returns nothing. A
-chart that mints a value and preserves it by looking up the live object
-therefore mints a fresh one on every render, and the sync applies it —
-so the "generate once" branch is the only branch that ever runs.
-
-The damage is quiet where the value has a counterpart somewhere else.
-A self-signed keypair whose public half was registered on another
-system keeps verifying against the half that was registered, while the
-pods sign with the half that was rendered last, and the two only ever
-meet at a failed authentication. Nothing reports a drifted secret,
-because from Argo's side the Secret is exactly what git says.
-
-Generate such a value in the cluster instead, from a Job that reads
-what is stored before it makes anything, and let the chart declare the
-Secret with no `data` at all. Server-side apply then leaves the
-contents to whichever manager wrote them: Argo never declares that
-field, so it never owns it and never clears it. Where the value has a
-counterpart, generating and registering it belong to the same Job, or
-they drift apart again for a different reason.
-
-Rendering key material has a second cost even where nothing drifts —
-the private half exists in the repo-server, in whatever the render is
-cached in, and in the Application's live manifest view. See
-[external-secrets](external-secrets.md) for the values that come from
-outside and belong in Secret Manager, and for why a value you can
-regenerate belongs in neither place.
-
-### Retries
-
-`selfHeal` corrects drift. It does not retry a failed sync — those are
-different things, and an Application whose sync failed stays failed
-whatever `selfHeal` says. One that exhausts its retry budget then
-stops until the revision changes or someone syncs it. A fix merged
-after the budget ran out still needs a nudge, and a nudge is cluster
-write access. Prefer budgets that outlast an ordinary incident.
-
-Trigger a sync without the CLI by setting `.operation` on the
-Application, and cancel one by removing it.
-
-Cancelling is the part worth knowing, because a **running** retry loop
-is worse than an exhausted one. An operation pins the revision it
-started with, and each retry replays that revision's manifests — so a
-fix merged while it is retrying never arrives, however many attempts
-remain. With a budget backing off to ten minutes, that is an hour of
-replaying a fault that no longer exists in git.
-
-The status reads as though the fix has landed.
-`status.sync.revisions` shows the revision Argo *would* sync, which
-updates the moment the merge is polled;
-`.operation.sync.revisions` shows the one being retried, and only that
-second one says what is actually being applied. Compare them before
-concluding anything, and remove `.operation` to let a fresh sync start
-at the current revision.
-
-### An app is stuck applying a previous version
-
-`status.sync.revision` is the revision Argo would sync;
-`status.operationState.syncResult.revision` is the one the running
-operation is applying. Where they differ and the phase is `Running`,
-every merge since the second one is waiting behind an operation that
-started before them.
-
-A retry loop is one cause, and the section above covers it. The other
-reads identically and is worse: an operation that is not failing at all.
-A wave waits for its resources to report Healthy, and only `Healthy` and
-`Degraded` end a task — `Progressing`, `Suspended`, `Missing` and
-`Unknown` all leave it running. So a wave holding a resource that can
-never become Healthy waits for good. No retry, no backoff, no timeout,
-and `retryCount` stays unset, which is how to tell the two apart.
-
-Cancelling takes one of two acts, and they are not interchangeable.
-
-Removing `.operation` stops one that is *queued* — a retry waiting its
-turn, or a sync nobody has started. It takes a JSON patch, because a
-merge patch cannot remove a field:
+**A merged fix that never arrives, on an Application that is
+retrying.** An operation pins the revision it started with and each
+retry replays that revision's manifests, so a fix merged mid-loop is
+never applied however many attempts remain — an hour of it, with a
+budget backing off to ten minutes. The status reads as though the fix
+landed: `status.sync.revisions` shows the revision Argo *would* sync
+and updates the moment the merge is polled, where
+`.operation.sync.revisions` shows the one being retried. Compare the
+two, then merge the fix and remove `.operation`, which takes a JSON
+patch because a merge patch cannot remove a field:
 
 ```
 kubectl -n argocd patch app <app> --type json \
   -p '[{"op":"remove","path":"/operation"}]'
 ```
 
-That does nothing to one already in flight. An operation parked in a
-health wait is not waiting to be re-queued, it is waiting for a
-resource, and the controller goes on holding it: the field disappears
-and `operationState.phase` stays `Running` at its original
-`startedAt`. Terminating is what reaches it, and what `argocd app
-terminate-op` does:
+**An operation `Running` with `retryCount` unset.** It is not failing
+at all. Only `Healthy` and `Degraded` end a sync task — `Progressing`,
+`Suspended`, `Missing` and `Unknown` all leave it running — so a wave
+holding a resource that can never go Healthy waits for good, with no
+retry, no backoff and no timeout. Removing `.operation` does nothing to
+one already in flight: the field disappears and
+`operationState.phase` stays `Running` at its original `startedAt`.
+Terminating is what reaches it, and is what `argocd app terminate-op`
+does:
 
 ```
 kubectl -n argocd patch app <app> --type merge \
   -p '{"status":{"operationState":{"phase":"Terminating"}}}'
 ```
 
-A plain patch reaches `status` because the Application CRD declares no
-status subresource. Check that before relying on it.
+**An Application that stays failed after the drift was corrected.**
+`selfHeal` corrects drift and does not retry a failed sync. One that
+has exhausted its retry budget stops until the revision changes or
+somebody syncs it, so a fix merged after the budget ran out needs a
+nudge — and a nudge is cluster write access.
 
-Merge the fix before either. Both leave an Application whose automated
-sync starts again at the current revision, so cancelling first buys one
-more hang.
+**Every resource `OutOfSync`, and the message naming one of them.** A
+sync is one operation over every resource, so a single object the API
+server rejects leaves every well-formed one beside it unapplied. The
+cluster looks mostly right while the Application keeps failing.
 
-### One bad object fails the whole sync
+**`field not declared in schema`, on a template that renders.**
+Server-side apply refuses an undeclared field rather than dropping it,
+and only the API server holds the schema. `helm template` renders it
+happily. A template that renders is not a template that applies.
 
-A sync is one operation over every resource, so a single object the
-API server rejects leaves every well-formed one beside it reported
-`OutOfSync` — and the message names the fault, not the resources
-waiting behind it. The cluster looks mostly right while the
-Application keeps failing.
+**A resource name containing `%!s(bool=false)`.** A `valuesObject` is
+YAML, so a bare `n`, `y`, `no` or `yes` in one is a boolean rather than
+a short string, and a chart building a name with `printf "%s"` renders
+that. What fails is the API server refusing a name containing a `%`,
+which reads as a templating fault rather than as a missing pair of
+quotes two files away. Quote every short value, and have the chart fail
+on a non-string rather than coerce one — `false` is a name that applies
+cleanly and is wrong.
 
-Server-side apply is stricter than a rendered manifest looks. An
-undeclared field is refused outright rather than dropped, so
-`.spec.foo: field not declared in schema` fails the object entirely.
-`helm template` renders it happily; only the API server has the
-schema. A template that renders is not a template that applies.
-
-A `valuesObject` is YAML, so a bare `n`, `y`, `no` or `yes` in one is a
-boolean rather than a short string. A chart building a name with
-`printf "%s"` then renders `%!s(bool=false)`, and what fails is the API
-server refusing a resource name containing a `%` — which reads as a
-templating fault rather than as a missing pair of quotes two files
-away. Quote every short value, and have the chart fail on a non-string
-rather than compose one: coercing is worse, because `false` is a name
-that applies cleanly and is wrong.
-
-### A group with no health check reads Healthy
-
-Argo grades a resource by its API group. A group it has no check for
-is reported Healthy whatever the resource is doing, so an Application
-applying a composite that fails to compose is indistinguishable from
-one that worked. Register a check for every XR group a plane serves.
-
-Only what an Application manages reaches its health. Crossplane creates
-managed resources rather than Argo, so they are tree descendants and
-never feed the Application above them — the composite is the thing
-whose grade matters, and the one upstream covers least.
-
-Argo's compiled-in `_.upbound.io` and `_.crossplane.io` scripts are
-snippets vendored from Crossplane's documentation, and both carry a
-precedence bug: they read as `A or (B and C)` where `(A or B) and C`
-was meant, so a resource whose status has not been written yet reports
-Healthy while the same resource with an empty status reports
-Progressing. Mostly that grades the tree and nothing else, which is
-worth knowing when reading the tree and not worth vendoring a corrected
-copy to fix.
-
-Check what the bug is holding up before correcting it. A kind that
-carries no status ever and is missing from the script's list of
-status-less kinds grades Healthy only because the nil branch answers
-before the list is consulted — `EnvironmentConfig` is one, and a
-corrected script would leave it Progressing for good, taking its
-Application with it. State such a kind's health explicitly, by exact
-`<group>_<kind>` key, and the answer stops depending on which reading
-the installed release has.
-
-The list is derivable rather than remembered: a kind can never carry a
-status when no served version of its CRD declares a `status`
-subresource and none declares a `status` property.
-`just gcp-plane-statusless-kinds` reads that off a plane and diffs it
-against what Argo compiles in. It is worth re-running on a Crossplane
-upgrade, which is what moves the answer.
-
-Read `Synced` before `Ready` in a check of your own, in a pass of its
-own. One loop answers whichever condition the array happened to hold
-first, and a composite that went out of sync after it was once ready
-then reports the stale success.
-
-### An app-of-apps only appears to gate
-
-`Application` is one of those groups. Argo ships no health check for
-the kind — no Lua under `resource_customizations/argoproj.io/`, and the
-Go switch on `argoproj.io` handles `Workflow` alone — so a child
-Application has no health, and a parent reads Healthy however its
-children are doing.
-
-That reaches further than reporting. A wave waits for its resources to
-go Healthy before the next one starts, and gitops-engine treats a nil
-health as an immediate success, the way it does a `Secret`. So a parent
-holding Applications in waves does not order them at all: every wave
-succeeds the moment it is applied, and the ordering the waves were
-written for never happens.
-
-Registering a check for the kind restores both, and the second one has
-a cost. A child that cannot become Healthy now holds its parent's sync
-open, and a hung sync retries at the revision it began with — so
-everything else in that parent is re-applied from a stale copy for as
-long as the budget lasts. Before turning it on, make sure no parent
-holds both an environment's Applications and anything that has to keep
-reconciling while that environment is off.
-
-### A resource keeps the tracking annotation of its last owner
-
-Argo records which Application owns a resource on the resource itself,
-as `argocd.argoproj.io/tracking-id`. Nothing else removes it. So a
-resource that moves between Applications — committed in one and
-composed by something else afterwards, or moved between directories —
-arrives at its new owner still carrying the old one's name.
-
-The former owner then goes on listing it. Where that owner prunes, the
-resource is deleted, which is worse. Where it does not, the resource
-sits in the tree as `OutOfSync` for good, the Application never reports
-Synced again, and its health takes the worst of a resource it no longer
-manages — up through every parent above it.
-
-Strip it once, by hand, as the last step of the handover:
+**A resource `OutOfSync` in an Application that no longer manages it.**
+Under annotation tracking, Argo records the owning Application on the
+resource itself as `argocd.argoproj.io/tracking-id`, and nothing else
+removes it. A
+resource that moves between Applications arrives at its new owner still
+carrying the old one's name, and the former owner goes on listing it —
+holding it `OutOfSync` for good, and taking the worst of a resource it
+no longer manages up through every parent above. Where that owner
+prunes, it deletes it instead. Strip the annotation by hand, as the
+last act of the handover:
 
 ```
 kubectl -n argocd annotate <kind> <name> argocd.argoproj.io/tracking-id-
 ```
 
-A controller that took the resource over will not do it for you. It
-writes the fields its manifest declares, and an annotation it never
-mentions is one it never touches.
-
-### Revisions
-
-Argo reads the revision an Application names, not a working tree. A
-change is not testable until it is merged, unless the revision is a
-field the manifest can set.
+**A Secret whose contents change on every sync.** A chart that mints a
+value and preserves it with `lookup` mints a fresh one each render —
+see [external-secrets](external-secrets.md).
 
 ## Rules
 
@@ -272,49 +154,86 @@ field the manifest can set.
   whose kind a child installs into a child of its own.
 - Set `ServerSideApply=true` for charts with large CRDs.
 - Set retry budgets that outlast an operator install.
-- Register a health check for `argoproj.io/Application` if a parent is
-  meant to order its children by wave. Without one the kind has no
-  health, and every wave succeeds on apply.
-- Give an environment's Applications a parent of their own before doing
-  so, or a parent gates the plane's own manifests on that environment's
-  workloads.
-- Register a health check for every XR group a plane serves. A group
-  with no check reports Healthy however its composites are doing.
 - Read `.operation.sync.revisions` rather than `status.sync.revisions`
   when a sync is failing. The first is what is being retried; the
   second is only what would be synced next.
-- Remove `.operation` to cancel a retry loop replaying a revision whose
-  fault is already fixed. Merging does not reach it. Use a JSON patch —
-  a merge patch cannot remove a field — and merge the fix before
-  cancelling, or the fresh sync hangs the same way.
 - Read `retryCount` before calling a stuck sync a retry loop. Unset
-  means the operation is not failing at all: only `Healthy` and
-  `Degraded` end a task, so a wave holding anything else waits with no
-  retry, no backoff and no timeout.
-- Terminate an operation already in flight, rather than removing
-  `.operation`, which only stops a queued one. Set
+  means the operation is not failing at all.
+- Merge the fix before cancelling anything, or the fresh sync hangs the
+  same way.
+- Remove `.operation` to cancel a queued sync, with a JSON patch, and
+  terminate one already in flight by setting
   `status.operationState.phase` to `Terminating`.
-- Strip `argocd.argoproj.io/tracking-id` from a resource handed from one
-  Application to another. Nothing else removes it, and the former owner
-  holds it `OutOfSync` for good.
+- Strip `argocd.argoproj.io/tracking-id` from a resource handed from
+  one Application to another.
 - Set `prune: false` where pruning would delete something a missing
   file should not delete.
 - Merge a change before expecting Argo to apply it. It reads the
   revision an Application names, never a working tree.
-- Generate a value in the cluster, not in a chart Argo renders, and
-  let the chart declare the Secret without `data` so server-side apply
-  leaves the contents to the Job that writes them.
 
 **MUST NOT:**
 
 - Expect sync waves to resolve a missing kind.
-- Expect `SkipDryRunOnMissingResource` to make an apply succeed.
+- Expect `SkipDryRunOnMissingResource` to make an apply succeed. It
+  skips the dry run and nothing else.
 - Expect a merged fix to reach an Application whose retries have
   already been exhausted.
-- Rely on `lookup` to preserve anything. Argo renders with `helm
-  template`, where it returns nothing and the generate branch always
-  wins.
+- Rely on `lookup` to preserve anything.
+
+## Discussion
+
+We keep a parent Application free of concrete resources, give every
+sync a budget that outlasts an install, and read a failing one from
+`.operation` rather than from `status`, because Argo reports what it
+would do next far more legibly than what it is doing now.
+
+**Why a parent cannot hold a kind its child installs.** A sync is
+planned before it is applied: Argo builds a task per resource, and a
+kind the API server does not serve has no task to build. The plan
+fails, so nothing in that Application applies — including the child
+whose chart registers the kind. Nothing about that is recoverable
+through git, which is the part worth internalising: the repository can
+be correct and the cluster still unable to reach it.
+
+**What an operation pins.** A sync is an operation with a revision
+attached, and retries belong to the operation rather than to the
+Application. So the revision is fixed at the moment the first attempt
+started, and every subsequent attempt applies those manifests — a merge
+during the loop changes what Argo *would* sync without changing what it
+is syncing. That is why the two revision fields disagree, and why the
+one everybody reads first is the one that does not matter.
+
+**Why cancelling takes two different acts.** `.operation` is the field
+that asks for a sync — setting it starts one without the CLI, and
+removing it un-queues something that has not started, or is between
+retries. An operation parked in a health wait has started and is not
+waiting to be re-queued: it is waiting for a resource, so the
+controller goes on holding it after the field is gone. Terminating sets
+a phase the controller reads. A plain patch reaches `status` because
+the Application CRD declares no status subresource; check that before
+relying on it.
+
+**The plane's own tree.** `management-plane` is the parent, planted by
+the boot chart and holding nothing but Applications: providers in wave
+1, the plane's own configuration in 2, the XRDs in 3, and
+`installation` — the composite describing this installation, read from
+the private repository — in 4, beside `external-secrets`. An instance's
+Applications appear next to them rather than nested under them, named
+for the instance.
+
+**Waves and the kinds they cannot conjure.** A wave orders applies. It
+does not make a kind exist, and an operator install is asynchronous:
+Argo reports a chart applied long before its CRDs are registered, so
+the next wave can begin against an API server that does not yet serve
+what it needs. `SkipDryRunOnMissingResource` skips validation, not the
+apply. The only thing that reliably absorbs the gap is a retry budget
+long enough to cover an image pull.
 
 ## References
 
+- [argocd-health](argocd-health.md) — what `Healthy` means, and what a
+  parent's waves do not gate without it.
+- [argocd-github](argocd-github.md) — reading a private repository.
+- [external-secrets](external-secrets.md) — where a value belongs when
+  a chart must not hold it.
 - [crossplane](crossplane.md) — what Argo is usually delivering here.

@@ -19,14 +19,17 @@ split that determines which vocabulary is allowed where.
 
 ### What a recipe is made of
 
-Six sections, in this order, each answering one question and only
+Seven sections, in this order, each answering one question and only
 one:
 
 - **`## Status`** — has this been run? A procedure only; see below.
-- **`## Problem`** — *what* you want, in a sentence or two. Not why it
-  is hard, not what it costs, not what makes it awkward.
+- **`## Problem`** — *what* you want, in a sentence or two, opening
+  with **You**. Not why it is hard, not what it costs, not what makes
+  it awkward.
 - **`## Solution`** — *how*. The steps, or the convention, and nothing
   else.
+- **`## Failures`** — what it looks like when it did not work, keyed on
+  what the reader is looking at. Optional; see below.
 - **`## Rules`** — MUST, MUST NOT, MAY. The normative summary, and what
   the tessl plugins distil into agent rules.
 - **`## Discussion`** — *why*. Everything the sections above left out.
@@ -41,11 +44,19 @@ down where somebody has chosen to read it.
 ### Steps are followed, not read
 
 A Solution made of steps is copied into a terminal by somebody who is
-partway through something and not reading around it. So:
+partway through something and not reading around it. It opens with a
+`### Prerequisites` heading holding two things: what must already exist
+and who you must be to run each step — one line each, led by the step
+it applies to, and no rationale — then the shell the steps assume, as
+`export` lines with an example value. Then:
 
-- Set the variables the steps share once, at the top of the Solution,
-  with an example value. A command carrying `<code>` has to be edited
-  before it runs, which is how one gets run against the wrong thing.
+- Let no command carry a placeholder. A command carrying `<code>` has
+  to be edited before it runs, which is how one gets run against the
+  wrong thing. What the steps share and you know before starting is
+  exported under `### Prerequisites`; a value a step produces is
+  exported at that step, beside where you read it off, because somebody
+  working down the page does not scroll back to the top to record
+  something.
 - Put a comment on its own line, never after the command it explains.
   A trailing comment has to be deleted before the line can be pasted,
   and interactive zsh does not treat `#` as a comment by default.
@@ -55,6 +66,80 @@ partway through something and not reading around it. So:
   another step fails for anybody who came back to it in a new shell.
 - Say what the output means, especially when nothing appears to have
   happened. A step whose success looks like failure gets repeated.
+
+A step whose damage does not undo — a credential left on a disk, a
+delete with nothing behind it — carries a GitHub alert, which renders
+as a callout and is hard to skim past:
+
+```
+> [!WARNING]
+> Delete the key file once the secret store holds it.
+```
+
+`[!WARNING]` is the only type used. A second invites a third, and a
+document where four things are highlighted highlights nothing.
+
+### A Solution instructs, a Discussion explains
+
+A step says what to do, the command that does it, and what the output
+should say. It does not say why it is that way, what is happening
+underneath, or what would have happened otherwise. The Discussion is
+where both of those live — how it works, and why we did it this way —
+and a step that explains itself has taken a paragraph the reader did
+not ask for and put it between them and the next command.
+
+The Discussion opens with a sentence or two of plain prose, before the
+first bolded subsection: what was done, in the first person plural, as
+a summary somebody can stop at.
+
+```
+;; Bad — the step carries the mechanism
+### 5. Store the values
+
+All three go into one entry so the identifiers travel with the key
+rather than through a second channel, and the recipe reads the key
+with --rawfile so it never reaches a command line:
+
+;; OK — the step is the instruction, the Discussion holds the rest
+### 5. Store the values
+```
+
+### A failure earns its entry by misleading
+
+`## Failures` is an index of the ways this goes wrong that a reader
+cannot work out from what they are looking at. The test is one line:
+**the message names something other than its cause.**
+
+`verifyManagedZoneDnsNameOwnership` says exactly what is wrong and
+earns no entry — the reader will fix it without you. `401
+invalid_client` on a rebuilt environment, `Ready: True` over an empty
+Secret, a repository reported unreachable because nobody wrote the
+version: each points somewhere other than where the fault is, and
+misleading is the whole justification for the section. Without that
+test it becomes a list of every way the thing has ever broken.
+
+Key each entry on the observable, because that is what the reader
+arrived with. Nobody has a container with no version. They have a
+repository reported unreachable.
+
+```
+;; Bad — keyed on the cause, findable only by somebody who knows it
+**A container with no version.** ... so Argo reports the repository
+as unreachable.
+
+;; OK — keyed on what the reader is looking at
+**A repository reported unreachable.** ... because the entry the
+operator syncs holds no version, and both halves succeeded separately.
+```
+
+Three things look alike here and belong in three places:
+
+- **A recovery action** somebody runs mid-procedure — roll back to this
+  revision, recreate this object before anything else — stays in the
+  Solution as its last step. It is a step, and it belongs beside the
+  steps it undoes.
+- **A failure that reports as something else** goes in Failures.
+- **Why the system can fail that way at all** goes in Discussion.
 
 ### Hard-wrap at 80 columns
 
@@ -361,8 +446,20 @@ without naming the operation.
 **MUST:**
 
 - Hard-wrap markdown at 80 columns under `docs/`.
-- Structure a recipe as Problem, Solution, Rules and — where there
-  is one to give — Discussion. What, how, normative, why.
+- Structure a recipe as Problem, Solution, Failures, Rules,
+  Discussion — what, how, what it looks like when it did not work,
+  normative, why. Failures and Discussion appear only where there is
+  one to give.
+- Open a Problem with **You**, and say what you want in a sentence or
+  two.
+- Key a Failures entry on what the reader observes, never on its
+  cause.
+- Open a step-based Solution with `### Prerequisites`.
+- Export a value a step produces at that step. `### Prerequisites`
+  carries what is known before step 1.
+- Keep a step to its instruction, its command, and what the output
+  should say.
+- Open a Discussion with a short unbolded summary of what was done.
 - Keep rationale out of the Solution. A reader following steps has
   not asked for it.
 - Open a procedure's `## Status` with **Verified**, **Untested** or
@@ -376,6 +473,10 @@ without naming the operation.
 
 **MUST NOT:**
 
+- Give a failure an entry where the message already names its cause.
+- Explain a step inside the step. Mechanism and rationale are the
+  Discussion's.
+- Use any GitHub alert type other than `[!WARNING]`.
 - Put `)` immediately after a link's closing paren.
 - Wrap link text across lines.
 - Use inline code as an entire link text.

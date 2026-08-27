@@ -1061,6 +1061,12 @@ spec:
                     # sit well clear of what was observed rather than
                     # close to it.
                     controller:
+                      # Default is 50. A plane serving a provider's
+                      # worth of CRDs spends the budget on discovery
+                      # alone, and syncs queue behind it.
+                      env:
+                        - name: ARGOCD_K8S_CLIENT_QPS
+                          value: "300"
                       resources:
                         requests:
                           cpu: 150m
