@@ -110,12 +110,16 @@ kubectl -n argocd patch app <app> --type json \
   -p '[{"op":"remove","path":"/operation"}]'
 ```
 
-**An operation `Running` with `retryCount` unset.** It is not failing
-at all. Only `Healthy` and `Degraded` end a sync task — `Progressing`,
-`Suspended`, `Missing` and `Unknown` all leave it running — so a wave
-holding a resource that can never go Healthy waits for good, with no
-retry, no backoff and no timeout. Removing `.operation` does nothing to
-one already in flight: the field disappears and
+**An operation that never finished, on an Application reporting `Synced`
+and `Healthy`.** Those two describe the comparison between git and the
+cluster, not the operation, so `get applications` stays green while a
+sync sits open — the listing above is what shows it, as a `PHASE` that
+is not `Succeeded` and an empty `FINISHED`. With `retryCount` unset it
+is not failing at all: only `Healthy` and `Degraded` end a sync task —
+`Progressing`, `Suspended`, `Missing` and `Unknown` all leave it running
+— so a wave holding a resource that can never go Healthy waits for good,
+with no retry, no backoff and no timeout. Removing `.operation` does
+nothing to one already in flight: the field disappears and
 `operationState.phase` stays `Running` at its original `startedAt`.
 Terminating is what reaches it, and is what `argocd app terminate-op`
 does:
@@ -174,13 +178,12 @@ cleanly and is wrong.
 **A resource `OutOfSync` in an Application that no longer manages it.**
 Under annotation tracking, Argo records the owning Application on the
 resource itself as `argocd.argoproj.io/tracking-id`, and nothing else
-removes it. A
-resource that moves between Applications arrives at its new owner still
-carrying the old one's name, and the former owner goes on listing it —
-holding it `OutOfSync` for good, and taking the worst of a resource it
-no longer manages up through every parent above. Where that owner
-prunes, it deletes it instead. Strip the annotation by hand, as the
-last act of the handover:
+removes it. A resource that moves between Applications arrives at its
+new owner still carrying the old one's name, and the former owner goes
+on listing it — holding it `OutOfSync` for good, and taking the worst of
+a resource it no longer manages up through every parent above. Where
+that owner prunes, it deletes it instead. Strip the annotation by hand,
+as the last act of the handover:
 
 ```
 kubectl -n argocd annotate <kind> <name> argocd.argoproj.io/tracking-id-
@@ -199,8 +202,8 @@ every resource, so read it before setting it.
 
 **A Secret whose contents change on every sync.** A chart that mints a
 value and keeps it by reading the live object back with Helm's
-`lookup` mints a fresh one each render instead —
-see [external-secrets](external-secrets.md).
+`lookup` mints a fresh one each render instead — see
+[external-secrets](external-secrets.md).
 
 ## Rules
 
