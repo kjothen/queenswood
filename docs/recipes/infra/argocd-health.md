@@ -59,10 +59,7 @@ Nothing.
 just gcp-plane-crossplane-statusless-kinds
 ```
 
-`none` under both `missing from` headings. It reads the CRDs
-`*.crossplane.io/*` and `*.upbound.io/*` check — every `crossplane.io`
-group, and the config-shaped kinds of the `upbound.io` ones — rather
-than every kind the plane serves.
+`none` under both `missing from` headings.
 
 ## Failures
 
