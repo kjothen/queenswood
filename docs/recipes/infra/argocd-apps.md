@@ -27,7 +27,7 @@ XRD, an installation's manifest.
 export CODE=qw01
 ```
 
-### 1. Check what the parent holds
+### 1. Check what the parent Application holds
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get application management-plane \
@@ -89,8 +89,8 @@ The commit you merged.
 ## Failures
 
 **A child that never applies, holding the kind the parent needed.** The
-parent fails building a sync task for a kind the API server does not
-serve, and stops before applying the child that would install it. The
+parent Application fails building a sync task for a kind the API server
+does not serve, and stops before applying the child that would install it. The
 fix cannot reach the cluster on its own: breaking the cycle takes a
 hand-applied patch, and hand-applying takes cluster write access an
 operator should not hold. Move the resource into a child of its own.
@@ -254,9 +254,10 @@ a phase the controller reads. A plain patch reaches `status` because
 the Application CRD declares no status subresource; check that before
 relying on it.
 
-**The plane's own tree.** `management-plane` is the parent, planted by
-the boot chart and holding nothing but Applications: providers in wave
-1, the plane's own configuration in 2, the XRDs in 3, and
+**The plane's own tree.** `management-plane` is the parent Application,
+planted by the boot chart and holding nothing but Applications:
+providers in wave 1, the plane's own configuration in 2, the XRDs in 3,
+and
 `installation` — the composite describing this installation, read from
 the private repository — in 4, beside `external-secrets`. An instance's
 Applications appear next to them rather than nested under them, named
