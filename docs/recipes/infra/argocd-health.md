@@ -108,7 +108,8 @@ status matters.
 
 **MUST:**
 
-- Run step 1 after an Argo upgrade and step 2 after a Crossplane one.
+- Re-read `argocd-cm` after an Argo upgrade, and re-run
+  `just gcp-plane-crossplane-statusless-kinds` after a Crossplane one.
   An upgrade is what moves either answer.
 - Add an XRD's API group to `compositeGroups` in the same change as the
   XRD, where the group is not there already. One entry covers every
@@ -117,9 +118,11 @@ status matters.
   registering a check for `argoproj.io/Application`.
 - Read `Synced` before `Ready`, in a pass of its own, when writing a
   check.
-- Delete the two copies when a release carrying
-  `argoproj/argo-cd#29382` is the one the plane runs, and point
-  `HAS_NO_CONDITIONS` at the upstream lists.
+- Delete the `*.crossplane.io/*` and `*.upbound.io/*` entries from
+  `infra/helm/management-plane/templates/argocd-cm.yaml`, and point
+  `HAS_NO_CONDITIONS` in `scripts/crossplane-statusless-kinds.py` at
+  Argo's own lists, once a release carrying `argoproj/argo-cd#29382`
+  is the one the plane runs.
 
 **MUST NOT:**
 
