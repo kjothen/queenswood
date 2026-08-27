@@ -45,10 +45,11 @@ just gcp-argo-apps-status
   finding.
 - `REV` the commit you merged, on whatever reads it. An Application
   whose source is a Helm repository shows a chart version instead.
-- `PHASE` `Succeeded` on every row. `-` in `PHASE`, `REV` and
-  `FINISHED` together is an Application with no operation on record —
-  one that has not synced since the controller last restarted, or since
-  somebody cleared the record.
+- `PHASE` `Succeeded` wherever there is an operation at all. `-` in
+  `PHASE`, `REV` and `FINISHED` together is an Application that has not
+  synced since the controller restarted or since somebody cleared the
+  record: unremarkable on a row your change does not touch, and the
+  finding itself on one that should have applied it.
 - `FINISHED` a time later than your merge, on the rows that carry your
   change.
 
