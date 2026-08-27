@@ -198,7 +198,8 @@ Unset means the installed Argo's default decides. Changing it re-tracks
 every resource, so read it before setting it.
 
 **A Secret whose contents change on every sync.** A chart that mints a
-value and preserves it with `lookup` mints a fresh one each render —
+value and keeps it by reading the live object back with Helm's
+`lookup` mints a fresh one each render instead —
 see [external-secrets](external-secrets.md).
 
 ## Rules
@@ -233,7 +234,9 @@ see [external-secrets](external-secrets.md).
   skips the dry run and nothing else.
 - Expect a merged fix to reach an Application whose retries have
   already been exhausted.
-- Rely on `lookup` to preserve anything.
+- Rely on Helm's `lookup` to keep a value a chart generated once. Argo
+  renders with `helm template`, where it returns nothing, so the branch
+  that mints a fresh one wins on every sync.
 
 ## Discussion
 
