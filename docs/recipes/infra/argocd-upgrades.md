@@ -177,28 +177,28 @@ kubectl --context "$CODE-mgmt" -n argocd get pods
 kubectl --context "$CODE-mgmt" -n argocd get applications
 ```
 
-The first is the one that matters. Everything else is recoverable.
-
 The newest revision reads `deployed`, against the chart version you
 pinned — which is the only place a version change shows up as having
-happened. The revision below it is where a rollback goes.
+happened.
 
-### If it goes wrong
+## Failures
+
+**No `management-plane` Application after the upgrade.** The first check
+in step 6, and the one that matters: without it the plane reads no git
+at all, and nothing else it reconciles will recover on its own. Recreate
+it from `values.extraObjects` on the same composed `Release` step 3
+read, before anything else.
+
+**A newest revision that is not `deployed`, or not the version you
+pinned.** Roll back, and to a release revision rather than a chart
+version — the `REVISION` column is a small integer counting this
+release's upgrades, and the revision below the newest is where a
+rollback goes:
 
 ```bash
 helm --kube-context "$CODE-mgmt" history argocd -n argocd
-```
-
-Then roll back to a release revision — the `REVISION` column above, a
-small integer. Not a chart version:
-
-```bash
 helm --kube-context "$CODE-mgmt" rollback argocd <revision> -n argocd
 ```
-
-If `management-plane` is gone, recreate it from the same object's
-`values.extraObjects` before anything else: without it the plane reads
-no git at all.
 
 ## Rules
 
