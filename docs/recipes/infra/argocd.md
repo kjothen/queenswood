@@ -4,7 +4,8 @@
 
 ## Problem
 
-You want what you merge to reach the cluster.
+You need a change you have merged — to a chart, an XRD, an
+installation's manifest — to reach your installation.
 
 ## Solution
 
