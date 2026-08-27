@@ -2,6 +2,11 @@
 
 <!-- tessl-plugin: deployment -->
 
+## Status
+
+**Untested.** The commands are derived from the chart and the composite
+rather than from following these steps on a plane.
+
 ## Problem
 
 You need Argo CD to apply a change you have merged — to a chart, an
@@ -20,28 +25,40 @@ XRD, an installation's manifest.
 export CODE=qw01
 ```
 
-### What an Application may hold
+### 1. Check what the parent holds
 
-A parent holds Applications, and resources of kinds that always exist.
-Anything of a kind one of its children installs belongs in a child of
-its own, or the fix for it cannot reach the cluster.
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get application management-plane \
+  -o json | jq -r '[.status.resources[].kind] | unique | .[]'
+```
 
-### What an Application sets
+`Application`, and kinds no child of it installs:
 
-- `ServerSideApply=true` on a chart with large CRDs.
-- `argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true`
-  on a resource whose CRD an earlier wave installs.
-- Retry budgets that outlast an operator install, image pull included.
-- `prune: false` where pruning would delete something a missing file
-  should not delete.
+```
+Application
+ConfigMap
+DeploymentRuntimeConfig
+Role
+RoleBinding
+ServiceAccount
+```
 
-### Applying a change
+### 2. Check what each Application sets
 
-Merge it. Argo reads the revision an Application names, never a working
-tree, so a change is not testable until it is merged — unless the
-revision is a field the manifest can set.
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get applications -o json | jq -r '
+  .items[] | [ .metadata.name,
+               (.spec.syncPolicy.syncOptions // ["-"] | join(",")),
+               (.spec.syncPolicy.retry.limit // "-"),
+               (.spec.syncPolicy.automated.prune) ] | @tsv'
+```
 
-### Checking it landed
+`prune` false on `installation` and true elsewhere, a retry limit on
+every one of them, and `ServerSideApply=true` on `external-secrets`.
+
+### 3. Check a merged change landed
+
+Merge it first. Then:
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get applications
@@ -51,12 +68,12 @@ Every `SYNC STATUS` is `Synced`. `HEALTH STATUS` reads `Progressing` on
 an instance's Applications while its workloads converge, and that is
 not a finding.
 
-Then the revision one of them applied, against the commit you merged:
-
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get application <app> \
   -o jsonpath='{.status.operationState.syncResult.revision}{"\n"}'
 ```
+
+The commit you merged.
 
 ## Failures
 
