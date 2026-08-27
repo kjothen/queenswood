@@ -46,6 +46,12 @@ the chart are the corrected scripts from `argoproj/argo-cd#29382`,
 transcribed rather than adapted so the diff against upstream stays
 readable.
 
+They are `resource_customizations/_.crossplane.io/_/health.lua` and its
+upbound twin upstream. A `_` path segment is how that tree spells the
+wildcard a directory name cannot carry, so `_.crossplane.io/_` is the
+`*.crossplane.io/*` entry here — the same wildcard in a third
+encoding, since a ConfigMap key cannot express it at all.
+
 They are temporary. When that fix reaches a release this plane runs,
 delete both entries and point `HAS_NO_CONDITIONS` in
 `scripts/crossplane-statusless-kinds.py` at the upstream lists.

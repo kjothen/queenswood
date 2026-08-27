@@ -89,7 +89,11 @@ return hs
 
   The two below are the corrected scripts from argoproj/argo-cd#29382,
   transcribed rather than adapted so that the diff against upstream
-  stays readable. They are temporary: when that lands in a release this
+  stays readable. Upstream they are
+  resource_customizations/_.crossplane.io/_/health.lua and its upbound
+  twin: a `_` path segment is how that tree spells the wildcard a
+  directory name cannot carry, so `_.crossplane.io/_` is the
+  `*.crossplane.io/*` below. They are temporary: when that lands in a release this
   plane runs, delete both entries and point HAS_NO_CONDITIONS in
   scripts/crossplane-statusless-kinds.py at the upstream lists.
 
