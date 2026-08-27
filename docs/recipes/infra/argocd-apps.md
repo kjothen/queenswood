@@ -118,11 +118,26 @@ with no retry, no backoff and no timeout. Removing `.operation` does
 nothing to one already in flight: the field disappears and
 `operationState.phase` stays `Running` at its original `startedAt`.
 Terminating is what reaches it, and is what `argocd app terminate-op`
-does:
+does — but only while `.operation` is still there to drive the
+processing:
 
 ```
 kubectl -n argocd patch app <app> --type merge \
   -p '{"status":{"operationState":{"phase":"Terminating"}}}'
+```
+
+**A `PHASE` of `Terminating` that never ends.** Operation processing is
+driven by `.operation`, so removing it strands whatever `operationState`
+was left behind: the controller goes on reconciling the Application —
+`setop_ms=0` on every pass — and never looks at that phase again.
+Nothing is running, and the row is a record of something that stopped
+being processed rather than something in progress. Remove the stale
+state, which a plain patch reaches because the Application CRD declares
+no status subresource:
+
+```
+kubectl -n argocd patch app <app> --type json \
+  -p '[{"op":"remove","path":"/status/operationState"}]'
 ```
 
 **An Application that stays failed after the drift was corrected.**
@@ -219,6 +234,10 @@ value and keeps it by reading the live object back with Helm's
 - Remove `.operation` to cancel a queued sync, with a JSON patch, and
   terminate one already in flight by setting
   `status.operationState.phase` to `Terminating`.
+- Terminate before removing `.operation`, never after. Operation
+  processing is driven by that field, so removing it first leaves
+  nothing to act on the phase and the state sits `Terminating` for
+  good.
 - Strip `argocd.argoproj.io/tracking-id` from a resource handed from
   one Application to another.
 - Set `prune: false` where pruning would delete something a missing
