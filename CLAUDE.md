@@ -195,8 +195,8 @@ topic.
   as cloud identifiers, late-initialisation, reading the CRD rather
   than the Terraform docs. See
   [crossplane-providers.md](docs/recipes/infra/crossplane-providers.md).
-- **Argo CD Applications** — what a parent may hold, what each
-  Application sets, waves against missing kinds, server-side apply for
+- **Argo CD Applications** — what a parent may hold, the sync policy
+  each one carries, waves against missing kinds, server-side apply for
   large CRDs, retry budgets, and reading a sync that is not applying.
   See [argocd-apps.md](docs/recipes/infra/argocd-apps.md).
 - **Checking a plane grades what it serves** — the entries a plane

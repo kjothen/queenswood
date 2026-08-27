@@ -45,7 +45,7 @@ RoleBinding
 ServiceAccount
 ```
 
-### 2. Check what each Application sets
+### 2. Check each Application's sync policy
 
 ```bash
 kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
