@@ -354,3 +354,5 @@ Install a provider for every kind the composite composes, on every
 - [crossplane-providers](crossplane-providers.md) — what Terraform-backed
   providers add to this.
 - [argocd](argocd.md) — delivering compositions.
+- [argocd-health](argocd-health.md) — why an Application over a
+  composite that failed to compose reads `Healthy`.

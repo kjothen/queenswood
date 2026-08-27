@@ -89,6 +89,23 @@ Paste it into the prompt instead, and then overwrite the clipboard.
 A clipboard that syncs between devices is the exposure that remains,
 and it is the one you can close in a second.
 
+**Not a chart Argo renders.** Argo renders with `helm template`, where
+`lookup` returns nothing — so a chart that mints a value and preserves
+it by looking up the live object mints a fresh one on every render, and
+the sync applies it. The generate branch is the only branch that ever
+runs. The damage is quiet where the value has a counterpart registered
+somewhere else: that system keeps verifying against the half it was
+given, the pods sign with the half rendered last, and the two meet only
+at a failed authentication. Nothing reports a drifted Secret, because
+from Argo's side it is exactly what git says. Generate such a value in
+the cluster, from a Job that reads what is stored before it makes
+anything and registers the counterpart in the same act, and let the
+chart declare the Secret with no `data` at all — server-side apply then
+leaves the contents to whichever manager wrote them. Rendering key
+material costs something even where nothing drifts: the private half
+exists in the repo-server, in whatever caches the render, and in the
+Application's live manifest view.
+
 ### Rotatable decides how much care
 
 The question that settles how a credential is handled is whether losing
@@ -244,6 +261,9 @@ does, needs a restart after that.
 - Grant the writer on the project the entry is in. A capability bound
   on one project writes nothing in another, and the denial surfaces as
   a container that appears not to exist.
+- Generate a value the cluster can make in the cluster, from a Job, and
+  let the chart declare its Secret without `data`. A chart Argo renders
+  cannot preserve one.
 
 **MUST NOT:**
 

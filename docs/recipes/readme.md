@@ -14,10 +14,10 @@ file distils it.
   foundation, Crossplane and Argo, credentials and sign-in, the chart,
   and the recovery runbooks.
 
-Every recipe keeps the same shape — `Problem`, `Solution`, `Rules`, an
-optional `Discussion`, `References` — and carries a
-`<!-- tessl-plugin: <name> -->` label naming the rule file that distils
-its `## Rules`.
+Every recipe keeps the same shape — `Problem`, `Solution`, an optional
+`Failures`, `Rules`, an optional `Discussion`, `References` — and
+carries a `<!-- tessl-plugin: <name> -->` label naming the rule file
+that distils its `## Rules`.
 
 [CLAUDE.md](../../CLAUDE.md) routes by topic, and is where to start
 from what you are trying to do rather than from where it lives.

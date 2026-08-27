@@ -11,36 +11,47 @@ Argo CD's compiled-in health scripts enumerate these by hand, in a
 `(A or B) and C` was meant, which makes a nil status answer Healthy
 before the list is consulted -- so a kind missing from the list is
 invisible until that precedence is corrected, and then permanently
-Progressing. The diff below is what this plane serves and those lists
-do not name.
+Progressing.
+
+The plane does not run those scripts. It carries corrected copies, in
+infra/helm/management-plane/templates/argocd-cm.yaml, and the lists
+below are theirs -- so the diff is what this plane serves and the
+copies do not name. When the upstream fix reaches a release this plane
+runs, the copies go and these lists become Argo's again.
 """
 
 import json
 import sys
 
-# What Argo CD ships, read from resource_customizations at v3.5.1.
-# Update alongside the pinned Argo version.
-ARGO_HAS_NO_STATUS = {
-    "_.crossplane.io": [
+# What the chart's copies list, keyed by the group pattern they grade.
+# Update alongside argocd-cm.yaml.
+HAS_NO_CONDITIONS = {
+    "*.crossplane.io/*": [
         "Composition",
         "CompositionRevision",
         "DeploymentRuntimeConfig",
-        "ClusterProviderConfig",
+        "EnvironmentConfig",
+        "ImageConfig",
         "ProviderConfig",
         "ProviderConfigUsage",
         "ControllerConfig",
-    ],
-    "_.upbound.io": [
+        "StoreConfig",
         "ClusterProviderConfig",
+        "ClusterProviderConfigUsage",
+    ],
+    "*.upbound.io/*": [
         "ProviderConfig",
         "ProviderConfigUsage",
+        "StoreConfig",
+        "ClusterProviderConfig",
+        "ClusterProviderConfigUsage",
     ],
 }
 
 
 def script_for(group):
-    """Which compiled-in script grades a group."""
-    return "_.upbound.io" if group.endswith("upbound.io") else "_.crossplane.io"
+    """Which of the chart's two copies grades a group."""
+    return "*.upbound.io/*" if group.endswith("upbound.io") else "*.crossplane.io/*"
 
 
 def statusless(crd):
@@ -85,10 +96,10 @@ def main():
         print(f"  {group:<32} {kind}")
 
     incomplete = False
-    for script, listed in sorted(ARGO_HAS_NO_STATUS.items()):
+    for script, listed in sorted(HAS_NO_CONDITIONS.items()):
         print()
         missing = sorted(found.get(script, set()) - set(listed))
-        print(f"missing from Argo's {script} list:")
+        print(f"missing from the {script} list:")
         if missing:
             incomplete = True
             for kind in missing:
@@ -101,15 +112,15 @@ def main():
         # is what stops an unused one reading as Progressing.
         spurious = sorted(set(listed) - found.get(script, set()))
         if spurious:
-            print("listed by Argo, not status-less here (harmless):")
+            print("listed, not status-less here (harmless):")
             for kind in spurious:
                 print(f"  {kind}")
 
     if incomplete:
         print()
-        print("A kind above goes Progressing for good under a precedence fix.")
-        print("State its health by exact <group>_<kind> key in argocd-cm, or")
-        print("add it to the list upstream.")
+        print("A kind above reports Healthy while it provisions, and goes")
+        print("Progressing for good once the precedence is corrected. Add it")
+        print("to has_no_conditions in argocd-cm.yaml, and upstream.")
     return 0
 
 
