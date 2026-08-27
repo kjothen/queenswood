@@ -53,7 +53,7 @@ kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
 
 Nothing.
 
-### 2. Check the `has_no_conditions` lists cover the plane
+### 2. Check every status-less Crossplane kind is handled
 
 ```bash
 just gcp-plane-crossplane-statusless-kinds
