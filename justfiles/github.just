@@ -74,4 +74,12 @@ gh-merge:
     # --squash because the org ruleset requires linear history; --admin to
     # bypass the review rule, which a solo author cannot satisfy.
     gh pr merge "$num" --squash --admin
-    echo "Merged #$num into main."
+    # The squash commit's sha, seven characters, so it reads against the
+    # REV column in docs/recipes/infra/argocd-apps.md without trimming it
+    # by eye. Emptiness is handled below rather than by set -e.
+    sha=$(gh pr view "$num" --json mergeCommit --jq '.mergeCommit.oid' 2>/dev/null) || true
+    if [[ -n "$sha" && "$sha" != "null" ]]; then
+      echo "Merged #$num into main as ${sha:0:7}."
+    else
+      echo "Merged #$num into main."
+    fi
