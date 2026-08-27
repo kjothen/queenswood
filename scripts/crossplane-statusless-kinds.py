@@ -23,7 +23,7 @@ runs, the copies go and these lists become Argo's again.
 import json
 import sys
 
-# What the chart's copies list, keyed by the group pattern they grade.
+# What the chart's copies list, keyed by the group pattern they check.
 # Update alongside argocd-cm.yaml.
 HAS_NO_CONDITIONS = {
     "*.crossplane.io/*": [
@@ -50,7 +50,7 @@ HAS_NO_CONDITIONS = {
 
 
 def script_for(group):
-    """Which of the chart's two copies grades a group."""
+    """Which of the chart's two copies checks a group."""
     return "*.upbound.io/*" if group.endswith("upbound.io") else "*.crossplane.io/*"
 
 
