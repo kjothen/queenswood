@@ -12,7 +12,8 @@ installation's manifest — to reach your installation.
 ### Prerequisites
 
 - A management plane running in the installation's folder.
-- `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
+- Google group memberships, by capability:
+  - `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
 
 ```bash
 # the installation code, e.g. qw01
