@@ -4,10 +4,11 @@
 
 ## Status
 
-**Verified**, 2026-08-27, for steps 1 and 2 on this installation's
-plane: step 1 gave the six kinds below, and every row of step 2 met all
-three checks. Step 3 has not been run against a change merged for the
-purpose.
+**Verified**, 2026-08-27, on this installation's plane, for the two
+checks under Failures: the parent Application held the six kinds
+listed, and every row of the sync-policy table met all three of its
+checks. The step itself has not been run against a change merged for
+the purpose.
 
 ## Problem
 
@@ -27,47 +28,7 @@ XRD, an installation's manifest.
 export CODE=qw01
 ```
 
-### 1. Check what the parent Application holds
-
-```bash
-kubectl --context "$CODE-mgmt" -n argocd get application management-plane \
-  -o json | jq -r '[.status.resources[].kind] | unique | .[]'
-```
-
-Exactly these six, and nothing else:
-
-```
-Application
-ConfigMap
-DeploymentRuntimeConfig
-Role
-RoleBinding
-ServiceAccount
-```
-
-### 2. Check each Application's sync policy
-
-```bash
-kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
-  | jq -r '["NAME","SSA","RETRY","PRUNE"],
-      (.items[] | [
-        .metadata.name,
-        (.spec.syncPolicy.syncOptions // []
-          | any(. == "ServerSideApply=true")),
-        (.spec.syncPolicy.retry.limit // "-"),
-        .spec.syncPolicy.automated.prune
-      ]) | @tsv' | column -t -s $'\t'
-```
-
-- `RETRY` at least 5 on every row. `-` is an Application that does not
-  retry at all.
-- `PRUNE` false on `installation`, and on any unit that has not turned
-  it on.
-- `SSA` — server-side apply, `ServerSideApply=true` in `syncOptions` —
-  true on `external-secrets`, and on any Application installing a chart
-  whose CRDs exceed 256KB.
-
-### 3. Check a merged change landed
+### Check a merged change landed
 
 Merge it first. Then:
 
@@ -103,10 +64,29 @@ kubectl --context "$CODE-mgmt" -n argocd get applications
 
 **A child that never applies, holding the kind the parent needed.** The
 parent Application fails building a sync task for a kind the API server
-does not serve, and stops before applying the child that would install it. The
-fix cannot reach the cluster on its own: breaking the cycle takes a
+does not serve, and stops before applying the child that would install
+it. What it holds:
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get application management-plane \
+  -o json | jq -r '[.status.resources[].kind] | unique | .[]'
+```
+
+Exactly these six, and nothing else:
+
+```
+Application
+ConfigMap
+DeploymentRuntimeConfig
+Role
+RoleBinding
+ServiceAccount
+```
+
+Anything else is a resource to move into a child of its own. The fix
+cannot reach the cluster on its own: breaking the cycle takes a
 hand-applied patch, and hand-applying takes cluster write access an
-operator should not hold. Move the resource into a child of its own.
+operator should not hold.
 
 **A workload crash-looping because its own kinds do not exist.** Not a
 failed CRD — a CRD over 256KB, whose whole body client-side apply
@@ -149,7 +129,29 @@ kubectl -n argocd patch app <app> --type merge \
 `selfHeal` corrects drift and does not retry a failed sync. One that
 has exhausted its retry budget stops until the revision changes or
 somebody syncs it, so a fix merged after the budget ran out needs a
-nudge — and a nudge is cluster write access.
+nudge — and a nudge is cluster write access. What each Application's
+sync policy carries:
+
+```bash
+kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
+  | jq -r '["NAME","SSA","RETRY","PRUNE"],
+      (.items[] | [
+        .metadata.name,
+        (.spec.syncPolicy.syncOptions // []
+          | any(. == "ServerSideApply=true")),
+        (.spec.syncPolicy.retry.limit // "-"),
+        .spec.syncPolicy.automated.prune
+      ]) | @tsv' | column -t -s $'\t'
+```
+
+- `RETRY` at least 5 on every row. `-` is an Application that does not
+  retry at all.
+- `PRUNE` false on `installation`, and on any unit that has not turned
+  it on.
+- `SSA` — server-side apply, `ServerSideApply=true` in `syncOptions` —
+  true on `external-secrets`, and on any Application installing a chart
+  whose CRDs exceed 256KB.
+
 
 **Every resource `OutOfSync`, and the message naming one of them.** A
 sync is one operation over every resource, so a single object the API
