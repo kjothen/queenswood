@@ -139,32 +139,27 @@ and its condition reads as `A or (B and C)` where `(A or B) and C` was
 meant — so the nil check answers first, and every status-less kind
 grades Healthy whether or not the list names it. That makes the list
 look complete while it is not, and hides the omission until the bug is
-fixed. Correcting the precedence without completing the list turns a
-silent success into a permanent `Progressing`.
+fixed: correcting the precedence without completing the list turns a
+silent success into a permanent `Progressing`. Which is why
+`argoproj/argo-cd#29382` fixes both halves at once.
 
-**Why the chart carries its own copies.** `argoproj/argo-cd#29382`
-fixes both halves — the precedence, and the kinds the lists were
-missing — and until it reaches a release this plane runs, a plane using
-what Argo compiles in grades every provisioning resource Healthy. So
-the chart carries corrected copies of the two scripts as
-`*.crossplane.io/*` and `*.upbound.io/*`, transcribed from that PR
-rather than adapted, so the diff against upstream stays readable while
-somebody checks whether it has landed.
+**The copies, and what deletes them.** Until that reaches a release
+this plane runs, the chart carries corrected copies of the two scripts,
+as `*.crossplane.io/*` and `*.upbound.io/*`, transcribed from the PR
+rather than adapted so the diff against upstream stays readable while
+somebody checks whether it has landed. Upstream they are
+`resource_customizations/_.crossplane.io/_/health.lua` and its upbound
+twin: a `_` path segment is how that tree spells the wildcard a
+directory name cannot carry, so `_.crossplane.io/_` is the
+`*.crossplane.io/*` entry here. A ConfigMap key cannot express that
+wildcard at all, which is why all four entries sit in one
+`resource.customizations` block rather than in four dotted keys.
 
 They are meant to be deleted. When a release carrying the fix is the
 one this plane runs, remove both entries from
 `infra/helm/management-plane/templates/argocd-cm.yaml` and point
 `HAS_NO_CONDITIONS` in `scripts/crossplane-statusless-kinds.py` at the
-upstream lists, so step 2 goes back to diffing against Argo's.
-
-**Which upstream file each copy is.** They are
-`resource_customizations/_.crossplane.io/_/health.lua` and its upbound
-twin. A `_` path segment is how that tree spells the wildcard a
-directory name cannot carry, so `_.crossplane.io/_` is the
-`*.crossplane.io/*` entry here — the same wildcard in a third encoding,
-since a ConfigMap key cannot express it at all. That is also why all
-four entries sit in one `resource.customizations` block rather than in
-four dotted keys.
+upstream lists, so step 2 diffs against Argo's again.
 
 **What step 2 does not read.** Managed resources. upjet gives every one
 of them a status, so none can be status-less, and their CRDs are large
