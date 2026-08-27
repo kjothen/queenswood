@@ -99,7 +99,7 @@ retrying.** An operation pins the revision it started with and each
 retry replays that revision's manifests, so a fix merged mid-loop is
 never applied however many attempts remain — an hour of it, with a
 budget backing off to ten minutes. The status reads as though the fix
-landed: `status.sync.revisions` shows the revision Argo *would* sync
+landed: `status.sync.revisions` shows the revision Argo _would_ sync
 and updates the moment the merge is polled, where
 `.operation.sync.revisions` shows the one being retried. Compare the
 two, then merge the fix and remove `.operation`, which takes a JSON
@@ -151,7 +151,6 @@ kubectl --context "$CODE-mgmt" -n argocd get applications -o json \
 - `SSA` — server-side apply, `ServerSideApply=true` in `syncOptions` —
   true on `external-secrets`, and on any Application installing a chart
   whose CRDs exceed 256KB.
-
 
 **Every resource `OutOfSync`, and the message naming one of them.** A
 sync is one operation over every resource, so a single object the API
@@ -243,6 +242,29 @@ sync a budget that outlasts an install, and read a failing one from
 `.operation` rather than from `status`, because Argo reports what it
 would do next far more legibly than what it is doing now.
 
+**What an Application does.** Argo reconciles files in git onto a
+cluster. An Application names where they are — a repository, a
+revision, a path — and where they go, then renders what it finds,
+applies it, and compares the result against what is live. Nothing else
+about a change reaches it: a merge is a new revision at a path it
+already reads.
+
+**Applications holding Applications.** The files at that path may
+themselves be Applications, which is how one root reaches everything
+without naming any of it — the root names a path, and what sits there
+decides what exists. Order across them comes from sync waves, each
+waiting on the health of the one before it, which is why what `Healthy`
+means is a subject of its own: see
+[argocd-health](argocd-health.md).
+
+**The plane's own tree.** `management-plane` is the parent Application,
+planted by the boot chart and holding nothing but Applications: providers in
+wave 1, the plane's own configuration in 2, the XRDs in 3, and
+`installation` — the composite describing this installation, read from the
+private repository — in 4, beside `external-secrets`. An instance's
+Applications appear next to them rather than nested under them, named for
+the instance.
+
 **Why a parent cannot hold a kind its child installs.** A sync is
 planned before it is applied: Argo builds a task per resource, and a
 kind the API server does not serve has no task to build. The plan
@@ -255,7 +277,7 @@ be correct and the cluster still unable to reach it.
 attached, and retries belong to the operation rather than to the
 Application. So the revision is fixed at the moment the first attempt
 started, and every subsequent attempt applies those manifests — a merge
-during the loop changes what Argo *would* sync without changing what it
+during the loop changes what Argo _would_ sync without changing what it
 is syncing. That is why the two revision fields disagree, and why the
 one everybody reads first is the one that does not matter.
 
@@ -268,14 +290,6 @@ controller goes on holding it after the field is gone. Terminating sets
 a phase the controller reads. A plain patch reaches `status` because
 the Application CRD declares no status subresource; check that before
 relying on it.
-
-**The plane's own tree.** `management-plane` is the parent Application,
-planted by the boot chart and holding nothing but Applications: providers in
-wave 1, the plane's own configuration in 2, the XRDs in 3, and
-`installation` — the composite describing this installation, read from the
-private repository — in 4, beside `external-secrets`. An instance's
-Applications appear next to them rather than nested under them, named for
-the instance.
 
 **Waves and the kinds they cannot conjure.** A wave orders applies. It
 does not make a kind exist, and an operator install is asynchronous:
