@@ -110,7 +110,9 @@ status matters.
 
 - Run step 1 after an Argo upgrade and step 2 after a Crossplane one.
   An upgrade is what moves either answer.
-- Add a group to `compositeGroups` with the XRD that introduces it.
+- Add an XRD's API group to `compositeGroups` in the same change as the
+  XRD, where the group is not there already. One entry covers every
+  kind in a group.
 - Give an environment's Applications a parent of their own before
   registering a check for `argoproj.io/Application`.
 - Read `Synced` before `Ready`, in a pass of its own, when writing a
