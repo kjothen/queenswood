@@ -284,7 +284,7 @@ nothing standing that can fix it except a fresh boot plane.
 **When to rebuild instead.** A rebuild through a boot plane installs
 from the composition and leaves no divergence. Worth it for a major, or
 where the core and the packages need to move together — see
-[crossplane-app-deployment](crossplane-app-deployment.md).
+[crossplane-bootstrap](crossplane-bootstrap.md).
 
 **What this does not cover.** The provider and function packages
 themselves, which are ordinary merges in
@@ -301,5 +301,5 @@ needs any of this.
   what it installs
 - [crossplane-providers](crossplane-providers.md) — the packages, and
   what late-initialisation owns
-- [crossplane-app-deployment](crossplane-app-deployment.md) — building a
+- [crossplane-bootstrap](crossplane-bootstrap.md) — building a
   plane, and the rebuild path

@@ -110,6 +110,45 @@ crossplane-slots ctx=MGMT_CTX:
           ]) | @tsv' <<< "$JSON" \
       | column -t -s $'\t'
 
+# Managed resources whose cloud identifier is not their k8s name.
+crossplane-external-names ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # The external name defaults to metadata.name. Where it does not
+    # match, something set it -- a cloud id whose characters the
+    # Kubernetes name cannot hold, or an id the cloud assigned.
+    JSON=$(kubectl --context {{ ctx }} get managed -A -o json)
+    jq -r '["KIND","NAME","EXTERNAL-NAME"],
+        (.items[]
+         | {k: .kind, n: .metadata.name,
+            x: (.metadata.annotations["crossplane.io/external-name"] // "")}
+         | select(.x != "" and .x != .n)
+         | [.k, .n, .x]) | @tsv' <<< "$JSON" \
+      | column -t -s $'\t'
+
+# One managed kind's schema, from the installed CRD.
+crossplane-explain kind path ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # Both API groups are usually installed, and `kubectl explain` on a
+    # bare kind picks one. Resolve to the namespaced `.m.` group first,
+    # so the schema read is the schema composed against.
+    ALL=$(kubectl --context {{ ctx }} api-resources --categories=managed \
+      --no-headers 2>/dev/null \
+      | awk -v k="{{ kind }}" 'tolower($NF) == tolower(k) { print $1 "." $(NF-2) }')
+    RES=$(print -r -- "$ALL" | { grep '\.m\.' || true; } | head -1)
+    if [[ -z $RES ]]; then
+      if [[ -z $ALL ]]; then
+        echo "no managed kind named {{ kind }} on this plane"
+      else
+        echo "no namespaced (.m.) kind named {{ kind }}. installed:"
+        print -r -- "$ALL" | sed 's/^/  /'
+      fi
+      exit 1
+    fi
+    echo "# ${RES%%/*}"
+    kubectl --context {{ ctx }} explain "${RES%%/*}.{{ path }}"
+
 # Every composite and managed resource not both synced and ready.
 crossplane-unready ctx=MGMT_CTX:
     #!/usr/bin/env zsh

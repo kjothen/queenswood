@@ -110,7 +110,7 @@ Where the field identifies the cloud resource, no edit reaches it under
 any owner: the provider refuses the replacement and says so in
 `LastAsyncOperation`, so the resource has to be deleted and rebuilt.
 Withhold `Delete` first — see
-[crossplane-changes](crossplane-changes.md).
+[crossplane-live](crossplane-live.md).
 
 ## Failures
 
@@ -255,8 +255,8 @@ costs, since a dropped composed resource is a deleted one.
 
 - [crossplane-design](crossplane-design.md) — how much one kind covers,
   what the caller supplies, and what may be deleted.
-- [crossplane-changes](crossplane-changes.md) — moving a resource
-  between kinds, and withdrawing one.
+- [crossplane-live](crossplane-live.md) — whether
+  a change applies, is refused, or destroys.
 - [crossplane-providers](crossplane-providers.md) — what
   Terraform-backed providers add to this.
 - [argocd-health](argocd-health.md) — why an Application over a

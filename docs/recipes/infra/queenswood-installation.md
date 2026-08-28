@@ -15,7 +15,7 @@ organisation is in it or named by it — and changing what exists
 afterwards is a merge.
 
 Building the plane that reads that file is
-[crossplane-app-deployment](crossplane-app-deployment.md). This recipe
+[crossplane-bootstrap](crossplane-bootstrap.md). This recipe
 starts once you have one.
 
 ### An installation, in full
@@ -96,7 +96,7 @@ composed name derives from `spec.code`, which the XRD constrains to four
 lowercase characters because it is baked into GCP resource names across
 the whole organisation. `metadata.name` only has to be unique in one
 namespace on one cluster. Nothing enforces that they agree, and the
-recipes assume they do — `gcp-plane-apply` waits on
+recipes assume they do — `gcp-boot-mgmt-apply` waits on
 `xmanagementplane/<code>` — so a manifest where they differ
 reconciles correctly and is then invisible to the tooling that built it.
 
@@ -429,7 +429,7 @@ one piece the composite deliberately cannot fill.
 
 ## References
 
-- [crossplane-app-deployment](crossplane-app-deployment.md) — building
+- [crossplane-bootstrap](crossplane-bootstrap.md) — building
   the plane that reads the manifest.
 - [argocd-github](argocd-github.md) — the App that reaches a private
   repository, and how it is rotated.
@@ -443,7 +443,8 @@ one piece the composite deliberately cannot fill.
   capabilities and who holds them.
 - `infra/platform/crossplane-xrds/xmanagementplane-xrd.yml` — the
   fields above, as a schema.
-- `justfiles/gcp.just` — `gcp-plane-manifest` mints a first manifest,
-  `gcp-plane-apply` applies a committed one, `gcp-github-app-secret`
-  stores the App's three values, and `gcp-secret-version` puts any
-  other one into the entry its composite made.
+- `justfiles/gcp-boot.just` — `gcp-boot-mgmt-manifest` renders a first
+  manifest and `gcp-boot-mgmt-apply` applies a committed one.
+- `justfiles/gcp.just` — `gcp-github-app-secret` stores the App's three
+  values, and `gcp-secret-version` puts any other one into the entry
+  its composite made.

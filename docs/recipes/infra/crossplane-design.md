@@ -16,7 +16,7 @@ You need to use Crossplane to manage a set of cloud resources.
 
 ## Solution
 
-Eight decisions, in the order you answer them.
+Nine decisions, in the order you answer them.
 
 ### 1. How much one kind covers
 
@@ -111,7 +111,39 @@ Read the slot names already in use before choosing one:
 just crossplane-slots
 ```
 
-### 6. What may be deleted
+### 6. What cannot change after create
+
+Some of what a resource holds is its identity, and changing one of
+those fields is a delete and a create rather than an update. Terraform
+marks them ForceNew and performs the replacement itself; upjet refuses,
+because destroying a managed resource is governed by its
+`managementPolicies` rather than by a field edit. So the change is
+declined and the resource stays as it was.
+
+Nothing in the CRD says which fields these are. A `Certificate`'s
+`managed.domains` describes itself as "the domains for which a managed
+SSL certificate will be generated", and gives no hint that a second
+domain is refused rather than added — so the name it was meant to cover
+goes on resolving to a certificate that does not. The flag lives in the
+Terraform provider's source, and neither `kubectl explain` nor
+`terraform providers schema` carries it.
+
+Which is why this is a decision rather than a lookup:
+
+- **Fix identity in `base`.** A field the caller may set, that cannot
+  then change, is a promise the kind cannot keep — they edit the
+  manifest, nothing happens, and the composite goes on reading
+  `Synced`.
+- **Where a caller must vary one, compose a second resource.** Two
+  `Certificate`s sharing one `DNSAuthorization`, rather than one
+  certificate whose domains are a list somebody appends to.
+- **Write down what you find**, in
+  [crossplane-providers](crossplane-providers.md), because nothing
+  rediscovers it: identity covers more than a name — a node pool's
+  `serviceAccount`, an IAM binding's `member`, a list-shaped field
+  that reads as extensible.
+
+### 7. What may be deleted
 
 > [!WARNING]
 > Withholding `Delete` is the prudent answer. Crossplane goes on creating
@@ -144,7 +176,7 @@ What Crossplane may do to each composed resource today:
 just crossplane-policies
 ```
 
-### 7. What may be observed
+### 8. What may be observed
 
 `Observe` alone is the other end of the same field: Crossplane reads
 the resource and never acts on it — no create, no update, no delete.
@@ -159,7 +191,7 @@ they are observed and changed by hand instead — see
 [argocd-upgrades](argocd-upgrades.md) and
 [crossplane-upgrades](crossplane-upgrades.md).
 
-### 8. When it is ready
+### 9. When it is ready
 
 A managed resource reports `Ready` from its own conditions, which may
 not reflect the cloud: a GCP folder deleted through the console sits in
@@ -180,6 +212,15 @@ throughout.
 source field is absent is skipped silently. That is what makes an
 optional field work, and what turns an unapplied XRD into an empty
 value nothing complains about.
+
+**A manifest edit that changed nothing, on a resource still reading
+`Synced`.** A field that is the resource's identity: upjet declines the
+replacement rather than performing it, and says so in the managed
+resource's `LastAsyncOperation` while the composite above it goes on
+reporting `Synced`, because a composite's `Synced` is whether the
+composition rendered rather than whether every resource took its
+change. Changing it at all is
+[crossplane-live](crossplane-live.md)'s.
 
 **A kind named after what reads it.** One that registers a cluster with
 Argo, called `XArgoCluster`, parses as a cluster belonging to Argo —
@@ -244,6 +285,9 @@ are different paths.
 - Put constants in `base`.
 - Use `function-go-templating` where the number of composed resources
   varies with the caller.
+- Fix a field that cannot change after create in `base`, never in a
+  caller-supplied patch, and compose a second resource where a caller
+  must vary one. Nothing in the CRD says which fields those are.
 - Carry `Delete` in `managementPolicies` only where a rebuild returns
   what was there — `just crossplane-policies` is what Crossplane may do
   to each composed resource today. Withholding it is the prudent
@@ -314,8 +358,8 @@ once the manifests do.
 
 - [crossplane-debug](crossplane-debug.md) — what in an installation
   is not ready, or not what you declared.
-- [crossplane-changes](crossplane-changes.md) — moving a resource
-  between kinds, and withdrawing one.
+- [crossplane-live](crossplane-live.md) — whether
+  a change applies, is refused, or destroys.
 - [crossplane-providers](crossplane-providers.md) — what
   Terraform-backed providers add to this.
 - [ADR-0025](../../adr/0025-building-blocks-and-what-cannot-be-one.md) —

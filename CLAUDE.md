@@ -179,7 +179,7 @@ topic.
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See
-  [crossplane-app-deployment](docs/recipes/infra/crossplane-app-deployment.md).
+  [crossplane-bootstrap](docs/recipes/infra/crossplane-bootstrap.md).
 - **Upgrading or reconfiguring Argo CD** — the steps for a plane whose
   own Argo is `Observe`, the `extraObjects` a values file must carry,
   and why a merged change does not reach it. See
@@ -195,10 +195,10 @@ topic.
 - **Debugging an installation** — where a failure reports, which field
   manager owns what, and why a status field disappears. See
   [crossplane-debug.md](docs/recipes/infra/crossplane-debug.md).
-- **Moving or withdrawing a kind** — why the parent's deletion policy is
-  the one that governs, the two merges a move takes, and what a
-  withdrawal removes. See
-  [crossplane-changes.md](docs/recipes/infra/crossplane-changes.md).
+- **Changing a live resource** — whether a change applies, is refused
+  or destroys, why the parent's deletion policy governs a move, and
+  what a withdrawal removes. See
+  [crossplane-live](docs/recipes/infra/crossplane-live.md).
 - **Crossplane providers** — upjet's refusal to replace, external names
   as cloud identifiers, late-initialisation, reading the CRD rather
   than the Terraform docs. See

@@ -314,7 +314,7 @@ managed resource being reconciled rather than merely being read.
 from the composition and leaves no divergence, which is worth it when
 several changes have accumulated, or when nobody is sure what the plane
 is running any more. See
-[crossplane-app-deployment](crossplane-app-deployment.md).
+[crossplane-bootstrap](crossplane-bootstrap.md).
 
 **What this does not cover.** Argo applies `infra/helm/management-plane`
 from git on every sync, so anything in that chart — the
@@ -325,7 +325,7 @@ of this. Only the release Argo itself runs from is `Observe`.
 ## References
 
 - [argocd-apps](argocd-apps.md) — how Argo applies what it does own
-- [crossplane-app-deployment](crossplane-app-deployment.md) — building a
+- [crossplane-bootstrap](crossplane-bootstrap.md) — building a
   plane, and the rebuild path
 - [queenswood-installation](queenswood-installation.md) — what a plane
   cannot change about itself

@@ -261,7 +261,7 @@ it.
 
 Two recipes cover it, in order:
 
-- [Building the ability to deploy](docs/recipes/infra/crossplane-app-deployment.md)
+- [Bootstrapping a management plane](docs/recipes/infra/crossplane-bootstrap.md)
   — the management plane comes first, because a control plane running
   another toolchain cannot apply the manifest at all.
 - [Installing Queenswood](docs/recipes/infra/queenswood-installation.md) —

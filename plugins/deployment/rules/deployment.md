@@ -45,7 +45,7 @@ project ids carry random suffixes and everything else is discovered from
 the folder down. Inside it, a management project running Crossplane and
 Argo, never torn down, and one disposable project per instance. There
 may be as many folders as the installer wants; each is independent and
-identically shaped, with its own bootstrap identity and management
+identically shaped, with its own seed identity and management
 project because those rights are folder-scoped.
 
 Protect a foundation in GCP rather than in a manifest. Projects, DNS
@@ -67,19 +67,26 @@ See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle
 ## Build the plane before a merge can install anything
 
 Build the plane before expecting a merge to install anything: a control
-plane running another toolchain cannot apply this kind. Grant the
-bootstrap identity its rights on the folder or the parent, never a key,
-and never grant a person `serviceAccountTokenCreator` on the platform
-identity or create a key for any of the four. Commit the manifest
-before applying it and before any plane takes over reading it from git,
-and pivot the composite off a throwaway plane before discarding that
-plane. Never assume you can create a folder — ids are required, and one
-may be handed to you instead — and never delete a project as a side
-effect of an edit. Deploying with `instances: []` and adding instances
-later is valid, asking a platform team for the folder and the identity
-shortens the path without changing it, and another XRD and composition
-loaded onto the plane deploys something else the same way.
-See [crossplane-app-deployment](../../../docs/recipes/infra/crossplane-app-deployment.md).
+plane running another toolchain cannot apply this kind. Grant the seed
+identity its rights on the folder or the parent, never a key, and never
+grant a person `serviceAccountTokenCreator` on the platform identity or
+create a key for any of the four. Commit the manifest before applying it
+and before any plane takes over reading it from git, and pivot the
+composite off a throwaway plane before discarding that plane. Never
+assume you can create a folder — ids are required, and one may be handed
+to you instead — and never delete a project as a side effect of an edit.
+Standing the installation up with no instance at all is valid, since an
+instance is its own composite applied afterwards, asking a platform team
+for the folder and the identity shortens the path without changing it,
+and another XRD and composition loaded onto the plane deploys something
+else the same way.
+Commands: `just gcp-boot-cluster-up`, `just gcp-boot-preflight`, `just
+gcp-boot-seed`, `just gcp-boot-seed-grant-org-roles`, `just
+gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
+`just gcp-boot-mgmt-manifest`, `just gcp-boot-mgmt-apply`, `just
+gcp-org-setup`, `just gcp-policy-status`, `just gcp-boot-cluster-down`,
+`just gcp-boot-seed-close`, `just gcp-boot-seed-open`.
+See [crossplane-bootstrap](../../../docs/recipes/infra/crossplane-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
 
@@ -189,7 +196,15 @@ Commands: `just crossplane-unready`, `just crossplane-conditions`,
 `just crossplane-owners`.
 See [crossplane-debug](../../../docs/recipes/infra/crossplane-debug.md).
 
-## A move is a delete and a create, governed by the parent's policy
+## A change to a live resource applies, is refused, or destroys
+
+Read `LastAsyncOperation` on the managed resource before treating a
+change as applied, since a refusal reports there while the composite
+above goes on reading `Synced`. Never expect a merged value to reach a
+field that identifies its resource: upjet refuses the replacement
+rather than performing it, so the value moves only by destroying and
+rebuilding the cloud resource — granting `Delete` for the duration
+where the policy withholds it, since nothing else moves it.
 
 Withhold `Delete` before moving a resource to another composite, in a
 change of its own that reaches the plane first — the transfer deletes
@@ -208,33 +223,38 @@ and delete the Composition alongside, because nothing links them but a
 before treating a deletion from the repository as a removal from the
 plane, and merge a change before expecting it there — Argo reads the
 revision an Application names, never a working tree.
-Commands: `just crossplane-slots`.
-See [crossplane-changes](../../../docs/recipes/infra/crossplane-changes.md).
+Commands: `just crossplane-slots`, `just crossplane-owners`,
+`just crossplane-conditions`.
+See [crossplane-live](../../../docs/recipes/infra/crossplane-live.md).
 
 ## Provider resources are Terraform underneath
 
-Read the CRD before writing a composed resource, not the provider's
-documentation. Delete the managed resource to change anything that
-identifies it: a ForceNew change is refused rather than replaced, and
-the refusal is in `LastAsyncOperation`, so never diagnose from `Synced`
-alone. A list-shaped field may still be identity — a `Certificate`'s
-`managed.domains` replaces the certificate rather than extending it.
-Pivot a provider-assigned value up to the composite and compose from it
-rather than committing a literal read out by hand. Use the `.m.` API
-group. Set the external name explicitly where it must differ from the
-Kubernetes name or where something else spells it, and feed a generated
-id back as an adopt value where the external name is empty after
-create, or the resource never completes. Compose a field before the
-provider late-initialises it where the value is a choice somebody
-should make or a parameter a later create will need, reading
-`metadata.managedFields` to tell the composition's fields from the
-provider's, and never re-add a patch for a field late-initialisation
-now owns. Create a service account a provider shares, or that a binding
-names, outside the package manager and point the pod at it with
-`deploymentTemplate`; never pin a name in `serviceAccountTemplate`,
-since the package manager takes controller ownership and the next
-claimant — another provider, or this provider's next revision — fails
-its runtime hook.
+Read the schema from the installed CRD with `just crossplane-explain`
+before writing a composed resource, never from the provider's
+documentation, and use the `.m.` API group. Check what the provider
+late-initialises with `just crossplane-owners` before deciding which
+fields to compose, and compose one whose value is a choice somebody
+should make or a parameter a later create will need — never re-adding a
+patch for a field late-initialisation now owns. Set the external name
+explicitly where it must differ from the Kubernetes name or where
+something else spells it, `just crossplane-external-names` being where
+the two already differ, and feed a generated id back as an adopt value
+where the external name is empty after create, or the resource never
+completes. Pivot a provider-assigned value up to the composite and
+compose from it rather than committing a literal read out by hand.
+
+Never expect a ForceNew change to replace a resource: it is refused,
+the refusal is in `LastAsyncOperation`, and diagnosing from `Synced`
+alone misreads it. Never treat a list-shaped field as extensible
+without checking — a `Certificate`'s `managed.domains` is identity, so
+a second domain is refused rather than appended. Create a service account a
+provider shares, or that a binding names, outside the package manager
+and point the pod at it with `deploymentTemplate`; never pin a name in
+`serviceAccountTemplate`, since the package manager takes controller
+ownership and the next claimant — another provider, or this provider's
+next revision — fails its runtime hook.
+Commands: `just crossplane-explain`, `just crossplane-owners`,
+`just crossplane-external-names`.
 See [crossplane-providers](../../../docs/recipes/infra/crossplane-providers.md).
 
 ## Humans hold groups, and a break-glass group stays empty

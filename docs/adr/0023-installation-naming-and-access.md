@@ -14,7 +14,7 @@ things are called inside it or who may touch them.
 The first installation was built by answering each question as it
 arrived. A permission was missing, so it was granted; a name was needed,
 so one was invented. The result works and cannot be explained: nothing
-says why the bootstrap identity holds the roles it holds, why one group
+says why the seed identity holds the roles it holds, why one group
 is empty and another is not, or what a project should be called.
 
 Two failures show the cost. Rights were withheld from the automation
@@ -152,7 +152,7 @@ express, not for one that is merely tidier.
 ### Inside the zone, automation owns everything
 
 The folder is the boundary. Everything inside it is created and changed
-by automation — the bootstrap identity until the management plane
+by automation — the seed identity until the management plane
 exists, the platform identity afterwards. No human holds a write role
 inside the folder, because there is nothing a human should be writing
 that the manifest should not.

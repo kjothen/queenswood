@@ -123,9 +123,14 @@ echo
 # ambiently, where how to read their output stays in the recipe.
 
 extract_commands() {
-  # `|| true`: a Rules block naming no command is the common case, and
-  # grep's exit 1 would otherwise end the script under `set -e`.
-  { grep -oE 'just [a-z0-9][a-z0-9-]*' || true; } | awk '!seen[$0]++'
+  # Flattened first: a name wrapped across two lines is still one
+  # command, and grep is line-based. `|| true` because a Rules block
+  # naming no command is the common case, and grep's exit 1 would
+  # otherwise end the script under `set -e`.
+  tr '\n' ' ' \
+    | { grep -oE 'just +[a-z0-9][a-z0-9-]*' || true; } \
+    | sed 's/  */ /g' \
+    | awk '!seen[$0]++'
 }
 
 for f in "$WORKDIR"/*.section; do
