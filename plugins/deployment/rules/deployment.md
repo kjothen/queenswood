@@ -102,9 +102,13 @@ the first project is created, and never fix a default VPC in a
 composition — it cannot be undone there. Commit the manifest before
 applying it and push it before any plane takes over reading it from
 git, and pivot the composite off a throwaway plane before discarding
-that plane. Close the seed identity once the bootstrap is done and
-reopen it for the next one: its organisation grants otherwise stand for
-ever, and the plane needs none of them. Never assume you can create a
+that plane. Never render a manifest over one that already exists: the
+management project id is minted per call, so the second render replaces
+the recorded id with one no project answers to, and the redirect
+truncates before the renderer runs. Close the seed identity once the
+bootstrap is done and reopen it for the next one: its organisation
+grants otherwise stand for ever, and the plane needs none of them.
+Never assume you can create a
 folder — ids are required, and one may be handed to you instead — and
 never delete a project as a side effect of an edit. Standing the
 installation up with no instance at all is valid, since an instance is
