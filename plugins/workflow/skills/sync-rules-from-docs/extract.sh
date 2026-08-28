@@ -64,10 +64,17 @@ extract_adr() {
   local raw
   raw=$(awk '
     /^## Decision[[:space:]]*$/ { in_decision = 1; next }
-    in_decision && /^#{2,3} / { exit }
+    in_decision && /^## / { exit }
     in_decision { print }
   ' "$doc")
   [ -z "$raw" ] && return
+  # A Decision made of `###` subsections has no single lead paragraph:
+  # print it whole, subheadings included, and leave the judgment of
+  # which subsections are normative to the reader.
+  if printf '%s' "$raw" | grep -q '^### '; then
+    printf '%s\n' "$raw"
+    return
+  fi
   # Line-by-line state machine, not paragraph mode: a numbered/bulleted
   # list item can have a blank-line-separated continuation paragraph
   # (loose-list markdown) without the list actually ending there — e.g.

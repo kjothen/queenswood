@@ -43,10 +43,18 @@ A GCP folder is what an installation is: an IAM boundary, the one place
 an org-policy exemption is expressed, and the only stable handle, since
 project ids carry random suffixes and everything else is discovered from
 the folder down. Inside it, a management project running Crossplane and
-Argo, never torn down, and one disposable project per instance. There
-may be as many folders as the installer wants; each is independent and
-identically shaped, with its own seed identity and management
-project because those rights are folder-scoped.
+Argo, never torn down, and one durable project per instance holding
+that instance's own data — what an instance stops is its compute, not
+its project. There may be as many folders as the installer wants; each
+is independent and identically shaped, with its own seed identity and
+management project because those rights are folder-scoped. One
+management plane serves every environment: isolation comes from a
+provider identity per environment, Argo `AppProject`s and manual sync
+for prod, not from a plane each. A seed project exists only where you
+are your own platform team, keeps its random-suffixed id and is
+retained rather than deleted; creating a folder is checked on the
+parent, so the seed identity holds `folderCreator` and `folderIamAdmin`
+there — the pair, never `folderAdmin`, so it cannot delete one.
 
 Protect a foundation in GCP rather than in a manifest. Projects, DNS
 zones and backup buckets carry `managementPolicies` without `Delete` and
@@ -55,30 +63,54 @@ that nobody holds `resourcemanager.folders.delete`. The lien matters
 more than the policy — a policy is a convention a later edit undoes, and
 the hazard is not a deleted control plane, which leaves managed
 resources with no finalizers running, but a live one watching its
-resources vanish through a prune and doing what it was told. Only the
-disposable tier — clusters, databases, addresses, certificates — is
-fully managed with `Delete`.
+resources vanish through a prune and doing what it was told. Only what
+rebuilds from its own declaration — clusters, addresses, certificates —
+is fully managed with `Delete`; a database holds state and belongs with
+the protected tier.
 
 Express off as a desired state rather than an absence of one:
 Crossplane reconciles toward what is declared and has no notion of
-stopped.
+stopped. An instance carries `state: up | draining | down`, and `down`
+is node pools at zero and CloudSQL `activationPolicy: NEVER`, with data
+untouched. Order a teardown with `Usage` gates whose `by` is the export
+Job itself, `replayDeletion: true`, emitted on `draining`: a `Usage`
+blocks while its `by` exists, so the Job loops until the export succeeds
+and only then exits — never `ttlSecondsAfterFinished` on a Job that can
+fail, since TTL collects `Failed` too and a failed export would release
+the deletion of what it failed to preserve. Disable CloudSQL's automated
+backups outside prod and take the export yourself, alongside FDB's
+restore version so restore points pair by construction; prod keeps
+automated backups and point-in-time recovery. Prod shares nothing;
+non-prod may share Keycloak first, a database second, FoundationDB last
+and probably never. Hold outside GCP only what git and Secret Manager
+in the management project cannot: the directory acts — the domain, the
+billing account, the groups — are done in a browser.
 See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
 
 ## Build the plane before a merge can install anything
 
 Build the plane before expecting a merge to install anything: a control
-plane running another toolchain cannot apply this kind. Grant the seed
-identity its rights on the folder or the parent, never a key, and never
-grant a person `serviceAccountTokenCreator` on the platform identity or
-create a key for any of the four. Commit the manifest before applying it
-and before any plane takes over reading it from git, and pivot the
-composite off a throwaway plane before discarding that plane. Never
-assume you can create a folder — ids are required, and one may be handed
-to you instead — and never delete a project as a side effect of an edit.
-Standing the installation up with no instance at all is valid, since an
-instance is its own composite applied afterwards, asking a platform team
-for the folder and the identity shortens the path without changing it,
-and another XRD and composition loaded onto the plane deploys something
+plane running another toolchain cannot apply this kind. Read what you
+can reach before choosing between creating a folder and adopting one.
+Grant the seed identity its rights on the folder or the parent, never a
+key; impersonate it rather than holding a credential, and revoke the
+impersonation once the throwaway plane is gone, since it outlives the
+plane, the terminal and the reboot otherwise. Never grant a person
+`serviceAccountTokenCreator` on the platform identity or create a key
+for any of the four. Ask for `compute.skipDefaultNetworkCreation` before
+the first project is created, and never fix a default VPC in a
+composition — it cannot be undone there. Commit the manifest before
+applying it and push it before any plane takes over reading it from
+git, and pivot the composite off a throwaway plane before discarding
+that plane. Close the seed identity once the bootstrap is done and
+reopen it for the next one: its organisation grants otherwise stand for
+ever, and the plane needs none of them. Never assume you can create a
+folder — ids are required, and one may be handed to you instead — and
+never delete a project as a side effect of an edit. Standing the
+installation up with no instance at all is valid, since an instance is
+its own composite applied afterwards, asking a platform team for the
+folder and the identity shortens the path without changing it, and
+another XRD and composition loaded onto the plane deploys something
 else the same way.
 Commands: `just gcp-boot-cluster-up`, `just gcp-boot-preflight`, `just
 gcp-boot-seed`, `just gcp-boot-seed-grant-org-roles`, `just
@@ -110,6 +142,26 @@ See [queenswood-installation](../../../docs/recipes/infra/queenswood-installatio
 
 ## A composite builds what an instance is, Argo installs what runs there
 
+The plane is the only thing that reconciles anything, the durable home,
+and where the API lives; it manages the instances and does not compose
+them. Make each instance one XR of its own kind — `XQueenswoodInstance`
+in `queenswood.repldriven.com`, beside `XManagementPlane` in
+`platform.repldriven.com` — never a field or a list on the plane's XR:
+a composite is a unit of replacement and so a blast radius, `state` is
+a per-instance property a plane does not have, a list item's name
+renumbers when one before it is removed and rebuilds the live
+environment it named, and the plane's kind stays generic. Give the
+instance its own project with the protected tier's policies, so `down`
+stops it rather than deletes it, and keep the instance's operational
+state — database, disks, buckets — in that project; retire a project
+deliberately, by lifting its lien, never by reconciling it away. Find
+the folder by naming the composed `Folder` as `fldr-<code>` from the
+instance's own `spec.code`, never by referring to the plane's composite,
+so neither composite knows about the other. Keep one manifest per
+composite, flat in the installation's directory — its Application does
+not recurse, and `prune: false` there means adding a file never removes
+anything.
+
 The composite builds the project, network, cluster, identities, database
 and names an instance answers on. It does not install the workloads:
 those arrive through Argo, reading the chart from one repository and the
@@ -135,6 +187,21 @@ the manifests from the repo, and workloads on GKE are themselves
 Crossplane `Release` resources of `provider-helm`.
 See [ADR-0016](../../../docs/adr/0016-crossplane-over-terraform.md).
 
+## The catalogue holds only what has an API
+
+A kind needs a provider that can create the thing, and some of what an
+installation depends on has no API at all: the organisation, domain
+verification, the registrar's delegation, an OAuth client with a chosen
+redirect URI. These are not kinds nobody has written yet — they cannot
+be in the catalogue, and somebody will eventually go looking for the
+abstraction that cannot exist. The manual half lives in the
+`cloud-account`, `cloud-dns` and `google-sign-in` recipes and is as
+much a part of building an installation as anything composed. What is
+excluded is only the thing itself: the OAuth client cannot be composed,
+but the Secret Manager entry holding its secret is an ordinary managed
+resource and belongs in the catalogue like any other.
+See [ADR-0025](../../../docs/adr/0025-building-blocks-and-what-cannot-be-one.md).
+
 ## A composed resource is identified by its composition name
 
 Give the application one kind, and decompose inside it into kinds that
@@ -143,7 +210,10 @@ resources with different deletion criteria into one kind, since
 deleting a kind deletes what it composed — a public zone does not
 belong with a public endpoint, nor a network with a cluster. Fix the
 invariants in `base`, constants included, and leave the caller only
-what does not change what the kind guarantees. Read the slot names
+what does not change what the kind guarantees; fix a field that cannot
+change after create in `base` too, never in a caller-supplied patch,
+and compose a second resource where a caller must vary one — nothing in
+the CRD says which fields those are. Read the slot names
 already in use before naming a composed resource, and change a
 resource's `- name:` to rebuild it under a new `metadata.name` —
 deleting the object alone rebuilds the old one. Set
@@ -198,7 +268,10 @@ See [crossplane-debug](../../../docs/recipes/infra/crossplane-debug.md).
 
 ## A change to a live resource applies, is refused, or destroys
 
-Read `LastAsyncOperation` on the managed resource before treating a
+Determine what kind of change it is before making it: ownership decides
+what happens to a field, and identity is visible nowhere, so it is
+settled when the kind is designed rather than looked up here. Read
+`LastAsyncOperation` on the managed resource before treating a
 change as applied, since a refusal reports there while the composite
 above goes on reading `Synced`. Never expect a merged value to reach a
 field that identifies its resource: upjet refuses the replacement
@@ -539,6 +612,54 @@ posted. A name may take a qualifier where it would otherwise collide,
 most often a region, and a folder or project handed to us already named
 keeps the name its supplier chose.
 See [cloud-naming](../../../docs/recipes/infra/cloud-naming.md).
+
+## An installation has a code, and humans are read-only or break-glass
+
+Give each installation a four-character code, chosen when it is created
+and carried in its manifest, and derive every name from it with the
+environment letter — `b` bootstrap, `c` common, `d` dev, `n` nonprod,
+`p` prod — so nothing needs a lookup and a second installation cannot
+collide with the first; the code is not descriptive, because a project
+id's budget is real. A name does not repeat what its container already
+says, nor carry a prefix the platform supplies: a cluster is
+`<code>-<env>-<label>` with no kind prefix, since GKE prefixes `gke-`
+itself, and a node pool is `np-<code>-<env>-<label>-primary` — never
+`default`, which reads as GKE's own. Name a managed resource for what
+it manages, so `kubectl get managed` and the console read the same, and
+where GCP would allow a shorter name than the namespace does, the one
+both accept wins in both — `crossplane.io/external-name` is for a name
+Kubernetes cannot express, never for one that is merely tidier. The
+seed project alone carries no code, since it belongs to no
+installation; its identities are named per installation. Group names
+hold only in an organisation we own, since a directory is never inside
+a folder.
+
+Inside the folder, automation owns everything: no human holds a write
+role there, and what restrains automation is its own declaration —
+`managementPolicies`, `deletionProtection`, liens — reviewable in a pull
+request. Humans are read-only or break-glass, with no third category:
+standing membership grants sight, and changing anything means joining a
+normally empty group, doing the work and leaving. Assuming an
+automation identity is a write capability and belongs in the second
+category. Per installation there are four capabilities, named area then
+relation — `platformViewer`, populated; `platformAdmin`, `clusterAdmin`
+and `secretsAdmin`, empty — bound with predefined granular roles, never
+Owner, Editor or Viewer, including `platformViewer`, which is assembled
+from predefined viewer roles. An installation's capabilities are not an
+instance's: `platformViewer` inherits into every project deliberately,
+but Kubernetes and secret administration on one instance is granted on
+that instance's own project, with the environment in the group name,
+and expires with it — an instance's `secretsAdmin` is viewer plus
+`secretVersionAdder`, so writing a secret and reading one back stay
+separate rights. Capabilities are logical names; what each resolves to
+is an IAM member string in the manifest's `access` mapping — a group, a
+user, a `principalSet://` — and a capability the organisation declines
+to provide is absent and binds nothing. Creating the principals is the
+organisation's act and binding them inside the folder is ours. Above
+the folder, consume and do not manage: the organisation, the billing
+account, the parent and the identity holding rights in it are taken as
+given.
+See [ADR-0023](../../../docs/adr/0023-installation-naming-and-access.md).
 
 ## Name the shape, never the instance
 
