@@ -1005,10 +1005,10 @@ gcp-instance-manifest env label project="" domain="":
     UNIT_FILE="$ROOT/{{ label }}.unit.yml"
     UNIT_DIR="$ROOT/units/{{ label }}"
 
-    # Refuse rather than overwrite. The project id below is minted per
-    # call and consumed permanently once applied, so a second render
-    # over a committed unit replaces the recorded id with one no
-    # project answers to -- and the redirect would truncate first.
+    # Refuse rather than overwrite. Re-rendering an unapplied unit is
+    # free -- nothing exists and the id means nothing -- but once it has
+    # been applied the file is the only record of a project id GCP has
+    # consumed, and the name is what says which case this is.
     if [[ -e "$UNIT_FILE" || -d "$UNIT_DIR" ]]; then
       echo "$INSTANCE already has a unit:" >&2
       if [[ -e "$UNIT_FILE" ]]; then echo "  $UNIT_FILE" >&2; fi

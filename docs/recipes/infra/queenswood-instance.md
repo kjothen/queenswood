@@ -75,9 +75,10 @@ The environment letter and the label are the arguments; everything else
 is read from the installation's own manifest and from the plane.
 
 > [!WARNING]
-> Only where that unit does not exist yet. The project id is minted per
-> call, so a second render would name a project nothing built — which is
-> why the recipe refuses rather than overwrites.
+> Re-render as often as you like until the unit is applied: nothing
+> exists yet and the id means nothing. Afterwards the file is the only
+> record of a project id GCP has consumed, so the recipe refuses where
+> the unit is already there rather than minting a second.
 
 ### 2. Read what it wrote
 
@@ -224,8 +225,9 @@ because pods with no requests read as uncommitted to the scheduler.
   record for the same name, and each reconciles it to its own address.
 - Reuse or rename a project id. Neither is possible, and the second
   rebuilds the resource.
-- Render a unit over one that already exists. The project id is minted
-  per call, so the second render names a project nothing built.
+- Render a unit over one that has been applied. The project id is
+  minted per call, and after an apply the file is the only record of
+  the one GCP consumed.
 - Add a second version to the FDB backup key. A later key strands every
   backup written under the first.
 

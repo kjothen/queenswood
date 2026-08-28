@@ -148,8 +148,9 @@ See [queenswood-installation](../../../docs/recipes/infra/queenswood-installatio
 
 Render an instance's unit with `just gcp-instance-manifest`, which
 mints the project id once and writes it into every file carrying it,
-and never render one over a unit that already exists — the id is minted
-per call, so the second render names a project nothing built. Where a
+and never render one over a unit that has been applied — the id is
+minted per call, and after an apply the file is the only record of the
+one GCP consumed, though re-rendering an unapplied unit is free. Where a
 file is written by hand instead, the ids have to agree: a wrong one in
 the external-secrets annotation is a service account nothing is bound
 to rather than an error. Put the unit declaration at the top of the
