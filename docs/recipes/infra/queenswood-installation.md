@@ -15,7 +15,7 @@ organisation is in it or named by it — and changing what exists
 afterwards is a merge.
 
 Building the plane that reads that file is
-[crossplane-bootstrap](crossplane-bootstrap.md). This recipe
+[queenswood-bootstrap](queenswood-bootstrap.md). This recipe
 starts once you have one.
 
 ### An installation, in full
@@ -429,7 +429,7 @@ one piece the composite deliberately cannot fill.
 
 ## References
 
-- [crossplane-bootstrap](crossplane-bootstrap.md) — building
+- [queenswood-bootstrap](queenswood-bootstrap.md) — building
   the plane that reads the manifest.
 - [argocd-github](argocd-github.md) — the App that reaches a private
   repository, and how it is rotated.

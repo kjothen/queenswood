@@ -4,7 +4,7 @@
 # All new GCP work lands here, and anything still needed from
 # cloud.just moves here rather than being called across -- cloud.just is
 # the previous generation and shrinks as its recipes are replaced by
-# managed resources. See docs/recipes/infra/crossplane-bootstrap.md.
+# managed resources. See docs/recipes/infra/queenswood-bootstrap.md.
 # =========================================================================
 
 # Throwaway control plane used to create the folder and the management
@@ -805,7 +805,7 @@ gcp-github-app-secret pem app_id installation_id:
     set -e
     # A person's act, once per App, from the secretsAdmin capability --
     # GitHub has no API that creates an App, so nothing here can be
-    # declared. See docs/recipes/infra/crossplane-bootstrap.md for the console
+    # declared. See docs/recipes/infra/queenswood-bootstrap.md for the console
     # steps that produce these three values.
     #
     # The container is composed by the installation; this adds a

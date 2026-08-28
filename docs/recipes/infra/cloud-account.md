@@ -174,7 +174,7 @@ just gcp-boot-preflight
 ```
 
 An organisation and a billing account is enough to continue with
-[crossplane-bootstrap](crossplane-bootstrap.md). Run as the
+[queenswood-bootstrap](queenswood-bootstrap.md). Run as the
 operating user, the roles line reads "not readable by this account" —
 Browser carries no `organizations.getIamPolicy`, and group-derived roles
 never appear there anyway.
@@ -208,5 +208,5 @@ never appear there anyway.
 
 ## References
 
-- [crossplane-bootstrap](crossplane-bootstrap.md) — what to do
+- [queenswood-bootstrap](queenswood-bootstrap.md) — what to do
   once the organisation exists.

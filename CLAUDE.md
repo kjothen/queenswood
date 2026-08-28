@@ -179,7 +179,11 @@ topic.
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See
-  [crossplane-bootstrap](docs/recipes/infra/crossplane-bootstrap.md).
+  [queenswood-bootstrap](docs/recipes/infra/queenswood-bootstrap.md).
+- **Adding an instance to an installation** — the unit's two places,
+  why the secrets are written while the composite builds, and why
+  `down` is not a starting state. See
+  [queenswood-instance.md](docs/recipes/infra/queenswood-instance.md).
 - **Upgrading or reconfiguring Argo CD** — the steps for a plane whose
   own Argo is `Observe`, the `extraObjects` a values file must carry,
   and why a merged change does not reach it. See

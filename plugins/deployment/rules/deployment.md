@@ -122,7 +122,7 @@ gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
 `just gcp-boot-mgmt-manifest`, `just gcp-boot-mgmt-apply`, `just
 gcp-org-setup`, `just gcp-policy-status`, `just gcp-boot-cluster-down`,
 `just gcp-boot-seed-close`, `just gcp-boot-seed-open`.
-See [crossplane-bootstrap](../../../docs/recipes/infra/crossplane-bootstrap.md).
+See [queenswood-bootstrap](../../../docs/recipes/infra/queenswood-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
 
@@ -143,6 +143,39 @@ at upstream, a fork, or a mirror that vendors the layout, with
 capabilities may be added later; and one manifest per folder allows
 more than one installation.
 See [queenswood-installation](../../../docs/recipes/infra/queenswood-installation.md).
+
+## An instance is a unit, and its secrets are written while it builds
+
+Invent an instance's project id first, with a fresh six-hex suffix —
+nothing mints it and it is consumed permanently — and write the same id
+into the instance manifest, the config Application's values and the
+`iam.gke.io/gcp-service-account` annotation the external-secrets
+Application carries. Put the unit declaration at the top of the
+installation's directory, never inside the unit's folder, since the
+installation's Application is not recursive and a declaration filed
+inside is never applied at all. Give the instance its own `access`
+mapping and let it reconcile before writing any secret version: the
+installation's `secretsAdmin` binds on the management project, writes
+nothing here, and the denial is reported as a container that does not
+exist. State `ingress.domain` distinct from every other instance's,
+naming the installation's zone in `zone.name` and `zone.project`, and
+never share a domain between two instances — both compose a record for
+the one name and each reconciles it to its own address. Create the
+OAuth client in the console, in the instance's own project, one per
+environment. Write the Keycloak bootstrap admin before the bank first
+starts and name it in the unit's values as
+`keycloak.bootstrapAdmin.secretName`, or the entry is inert; write the
+other two versions the same way, letting each strip the trailing
+newline, and never add a second version to the FDB backup key. Never
+create an instance with `state: down` — Cloud SQL refuses to create an
+already-stopped database, so an instance is built up and stopped
+afterwards. `network` may be left unstated while the VPCs are isolated,
+an instance may be taken down once it is up, and one stood up with no
+`ingress` answers on no name at all.
+Commands: `just gcp-keycloak-admin-secret`, `just gcp-secret-version`,
+`just gcp-fdb-backup-key`, `just crossplane-unready`, `just
+argo-apps-status`, `just gcp-instance-cluster-ctx`.
+See [queenswood-instance](../../../docs/recipes/infra/queenswood-instance.md).
 
 ## A composite builds what an instance is, Argo installs what runs there
 

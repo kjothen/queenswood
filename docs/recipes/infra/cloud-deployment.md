@@ -9,7 +9,7 @@ laptop. Kept because `justfiles/cloud.just` still runs an instance this
 way and nothing has replaced that yet.
 
 The current model is an installation reconciled by its own management
-plane — see [crossplane-bootstrap](crossplane-bootstrap.md),
+plane — see [queenswood-bootstrap](queenswood-bootstrap.md),
 [cloud-naming](cloud-naming.md) and [the
 plan](../../plan/cloud-just-migration.md). This document carries no plugin
 label, so nothing here becomes a rule; read it for what the old path
