@@ -158,7 +158,8 @@ different kind, named for what it is and adopted deliberately — and
 never set `compositionUpdatePolicy: Manual` on an XR, since pinning
 divides an estate into the XRs that took an edit and the ones that did
 not, which is the problem versioning would have caused.
-Commands: `just crossplane-slots`.
+Commands: `just crossplane-kinds`, `just crossplane-slots`,
+`just crossplane-policies`.
 See [crossplane-design](../../../docs/recipes/infra/crossplane-design.md).
 
 ## Debug from what is not ready, not from what was named
@@ -471,9 +472,10 @@ See [argocd-github](../../../docs/recipes/infra/argocd-github.md).
 Merge the change before upgrading the plane, and never expect a merged
 change to reach a running plane on its own — a plane may be left on an
 older chart than git describes, deliberately, and nothing detects it.
-Change the version in both the boot chart and the composition, since
-`check-versions` fails on one without the other, and never set
-`management.bootstrap: true` to make the composition authoritative.
+Change the version in both the boot chart and the composition and run
+`just check-versions`, which fails on one without the other, and never
+set `management.bootstrap: true` to make the composition
+authoritative.
 Build the values file from the composed `Release`, never by hand,
 spelling the kind `release.helm.m.crossplane.io` — the short name
 resolves to provider-helm's cluster-scoped `Release` and reports the
@@ -490,6 +492,7 @@ upgrade; check every provider and function is healthy after a
 Crossplane one, and never judge a composite while the core is
 restarting. Join `cluster-admin` for the upgrade itself and leave
 again — everything else here is a viewer's.
+Commands: `just check-versions`.
 See [argocd-upgrades](../../../docs/recipes/infra/argocd-upgrades.md) and
 [crossplane-upgrades](../../../docs/recipes/infra/crossplane-upgrades.md).
 

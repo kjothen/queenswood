@@ -205,8 +205,8 @@ helm --kube-context "$CODE-mgmt" rollback argocd <revision> -n argocd
 **MUST:**
 
 - Merge the change before upgrading the plane.
-- Change the version in both the boot chart and the composition.
-  `check-versions` fails on one without the other.
+- Change the version in both the boot chart and the composition, and
+  run `just check-versions`. It fails on one without the other.
 - Build the values file from the composed `Release`, never by hand.
 - Spell the kind as `release.helm.m.crossplane.io`. The short name
   resolves to provider-helm's cluster-scoped `Release` and reports

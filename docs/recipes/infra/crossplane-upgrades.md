@@ -124,10 +124,8 @@ jq -r "$JQ" "$VALUES" | sort > "$WORK/desired.txt" \
   && diff "$WORK/running.txt" "$WORK/desired.txt"
 ```
 
-Lines marked `>` are your change. Lines marked `<` are values the
-running release has and the composed object does not: drift from an
-earlier hand-upgrade, which applying this file would remove. Stop there,
-merge that drift into the composition, and start again.
+Lines marked `>` are your change. Lines marked `<` are drift, and are
+in Failures.
 
 ### 5. Upgrade
 
@@ -158,34 +156,54 @@ helm --kube-context "$CODE-mgmt" history crossplane -n crossplane-system
 kubectl --context "$CODE-mgmt" -n crossplane-system get xmanagementplane
 ```
 
-The packages are the ones to watch: the core owns their Deployments, so
-an upgrade rolls them, and a package that declines the new core version
-reports `Unhealthy` rather than failing loudly.
+Every provider and function reads `HEALTHY` `True`, every pod
+`Running`, the newest history revision `deployed` at the version you
+pinned, and the composite `SYNCED` and `READY`.
 
-### If it goes wrong
+## Failures
+
+**Lines marked `<` in step 4's diff.** Values the running release has
+and the composed object does not: drift from an earlier hand-upgrade,
+which applying this file would remove. Stop there, merge that drift
+into the composition, and start again — the upgrade would otherwise
+succeed and take the drift with it.
+
+**Crossplane's own pods back on the chart's default resources.** An
+upgrade run without `-f`. Helm replaces a release's values with what it
+is given rather than merging, so omitting the file resets every value
+the composition set, and nothing errors: the release is healthy at the
+defaults. Step 4's diff is what catches it before the fact, and the
+values file from step 3 is what restores it.
+
+**A package `Unhealthy` after an upgrade that reported success.** The
+core owns the packages' Deployments, so an upgrade rolls them, and a
+package that declines the new core version says so in its own condition
+rather than failing the upgrade. That is what step 6 checks the
+packages for, and it is why the core version is checked against what
+the packages declare before merging.
+
+**Every composite reporting `ReconcileError` at once.** The core being
+down, not the composites. Judge them after the pods are back, not
+during.
+
+**A newest revision that is not `deployed`, or not the version you
+pinned.** Roll back, and to a release revision rather than a chart
+version — the `REVISION` column is a small integer counting this
+release's upgrades:
 
 ```bash
 helm --kube-context "$CODE-mgmt" history crossplane -n crossplane-system
-```
-
-Then roll back to a release revision — the `REVISION` column above, a
-small integer. Not a chart version:
-
-```bash
 helm --kube-context "$CODE-mgmt" rollback crossplane <revision> \
   -n crossplane-system
 ```
-
-A composite reporting `ReconcileError` while the core is down is the
-core being down. Judge it after the pods are back, not during.
 
 ## Rules
 
 **MUST:**
 
 - Merge the change before upgrading the plane.
-- Change the version in both the boot chart and the composition.
-  `check-versions` fails on one without the other.
+- Change the version in both the boot chart and the composition, and
+  run `just check-versions`. It fails on one without the other.
 - Build the values file from the composed `Release`, never by hand.
 - Pin `--version` to the same object's `chart.version`.
 - Render both chart versions before merging a version change, and read

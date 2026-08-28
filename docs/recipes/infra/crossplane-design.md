@@ -231,6 +231,7 @@ are different paths.
 
 - Give the application one kind, and decompose inside it into kinds
   that group managed resources created and destroyed as one.
+  `just crossplane-kinds` is what each composes today.
 - Fix the invariants in `base`, and leave the caller only what does not
   change what the kind guarantees.
 - Read the slot names already in use — `just crossplane-slots` — before
@@ -244,8 +245,11 @@ are different paths.
 - Use `function-go-templating` where the number of composed resources
   varies with the caller.
 - Carry `Delete` in `managementPolicies` only where a rebuild returns
-  what was there. Withholding it is the prudent default.
-- End every Composition with `function-auto-ready`.
+  what was there — `just crossplane-policies` is what Crossplane may do
+  to each composed resource today. Withholding it is the prudent
+  default.
+- End every Composition with `function-auto-ready`. The `AUTO-READY`
+  column of `just crossplane-kinds` should read `yes` throughout.
 - Add a `readinessCheck` against the field carrying the real state,
   where a managed resource's own conditions do not reflect the cloud.
 - Make every Composition edit safe for an XR that already exists: add
