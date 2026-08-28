@@ -1,0 +1,39 @@
+# The installation manifest, rendered by `just gcp-boot-mgmt-manifest`
+# and committed to the private manifests repository. Placeholders are
+# substituted literally from the environment; an optional block arrives
+# already rendered, or empty.
+#
+# This is the smallest document that builds a plane. The recovery
+# project and the instances join it afterwards, composed by the plane
+# rather than by the boot cluster.
+apiVersion: platform.repldriven.com/v1alpha1
+kind: XManagementPlane
+metadata:
+  name: ${CODE}
+  namespace: crossplane-system
+spec:
+  code: "${CODE}"
+  region: "${REGION}"
+  regionCode: "${REGION_CODE}"
+  zone: "${ZONE}"
+  ${BILLING_LINE}
+  # Capability -> principal. Whole IAM member strings, because the
+  # principal need not be a group. A capability left out binds nothing.
+  access:
+    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${DOMAIN}"]
+    platformAdmin: ["group:${PLATFORM_ADMIN_GROUP}@${DOMAIN}"]
+    clusterAdmin: ["group:${CLUSTER_ADMIN_GROUP}@${DOMAIN}"]
+    secretsAdmin: ["group:${SECRETS_ADMIN_GROUP}@${DOMAIN}"]
+${RECOVERY_BLOCK}
+  management:
+    projectId: "${MGMT}"
+    ${MGMT_ADOPT}
+    source:
+      repoURL: "${SOURCE_REPO}"
+      targetRevision: "${SOURCE_REVISION}"
+      pathPrefix: "${SOURCE_PATH_PREFIX}"
+    manifestRepoURL: "${MANIFEST_REPO_URL}"
+  createFolder:
+    parent: "${PARENT}"
+    displayName: "${NAME}"
+    ${ADOPT}

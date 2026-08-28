@@ -31,7 +31,7 @@ Two things are worth knowing before reading a report:
 
 - **It authenticates through application-default credentials**, not
   through `gcloud`'s own login. Where ADC impersonates the bootstrap
-  identity — which `gcp-adc-boot` arranges — the scan runs as that
+  identity — which `gcp-boot-seed-impersonate` arranges — the scan runs as that
   identity rather than as you, and stops working the moment you leave
   the group that permits the impersonation.
 - **Discovery is the Asset API.** Without `cloudasset.viewer` the scan
@@ -47,7 +47,7 @@ fails for anything they do not cover.
 **CIS 1.6 — service accounts with administrative privileges**, for the
 platform and bootstrap identities. Both hold admin by design: the
 platform identity reconciles the installation and administering every
-cluster in the folder is its purpose, and the bootstrap identity creates
+cluster in the folder is its purpose, and the seed identity creates
 the management project. Neither is held by a person, neither has a key,
 and who may impersonate them is group-bound and break-glass. A third
 service account acquiring admin still fails.

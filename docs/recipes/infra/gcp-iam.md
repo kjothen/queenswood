@@ -14,7 +14,7 @@ discarding whatever built the project.
 
 ### Rights held by accident
 
-Whoever creates a project becomes its owner. A bootstrap identity
+Whoever creates a project becomes its owner. A seed identity
 therefore holds every permission on what it built, none of it declared
 — so a composition works under it and fails under the identity that
 inherits it.
@@ -68,7 +68,7 @@ Reading them is scoped the same way, and nothing else holds it: no
 capability in [ADR-0023](../../adr/0023-installation-naming-and-access.md)
 carries `orgpolicy.policyViewer`, not even the viewer that reads
 everything else, so a person cannot list the constraints binding their
-own installation. `just gcp-policy-status` asks the bootstrap identity
+own installation. `just gcp-policy-status` asks the seed identity
 instead, and is worth running before assuming a constraint is on: the
 management plane's composition says a default network is prevented by
 one, and it was not.
@@ -122,7 +122,7 @@ question.
 
 The v1 `gcloud resource-manager org-policies` commands read both. The
 v2 `gcloud org-policies` commands need the Organization Policy API
-enabled on a quota project, which an impersonated bootstrap identity
+enabled on a quota project, which an impersonated seed identity
 does not have.
 
 ### An API is checked against the caller's project too
@@ -189,7 +189,7 @@ permission and is meant for a project.
 
 ## References
 
-- [crossplane-app-deployment](crossplane-app-deployment.md) — the
+- [crossplane-bootstrap](crossplane-bootstrap.md) — the
   identities an installation has, and why each is separate.
 - [crossplane-providers](crossplane-providers.md) — how a provider
   authenticates as one.

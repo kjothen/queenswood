@@ -73,14 +73,14 @@ project, because that is what reconciles the instances inside it. How
 many instances there are and whether they are grouped into sub-folders is
 the installer's concern, expressed as fields rather than settled here.
 
-### The bootstrap identity, and when a project holds it
+### The seed identity, and when a project holds it
 
 Something outside the installation must create the management project.
 Where an organisation provisions folders, that identity already exists in
 its own automation project and is handed over with the folder, and a CI
 runner assumes it through Workload Identity Federation.
 
-Only where you are your own platform team does a **bootstrap project**
+Only where you are your own platform team does a **seed project**
 exist: a service account has to live somewhere, and on a new
 organisation no project does. It keeps a random-suffixed id and is
 retained rather than deleted — an empty project costs nothing, and a
@@ -90,7 +90,7 @@ what forces the management plane to hold its own service account rather
 than borrowing this one.
 
 The runbook for both paths is
-[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md).
+[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md).
 
 Its rights are folder-scoped once the folder exists, but creating the
 folder is not: `resourcemanager.folders.create` is checked on the
@@ -158,7 +158,7 @@ projects themselves:
 - The folder is protected differently, because liens are a project
   mechanism and do not apply to folders. What protects it is that
   `resourcemanager.folders.delete` is held by nobody: Organization
-  Administrator does not carry it, and the bootstrap identity is given
+  Administrator does not carry it, and the seed identity is given
   `folderCreator` and `folderIamAdmin` precisely so that it cannot.
   Deleting one means joining `grp-gcp-folder-admin@` deliberately. GCP also
   refuses to delete a folder that still holds projects.
@@ -344,7 +344,7 @@ IAM bindings, custom roles, the backup bucket and its lifecycle, the
 HMAC key and the org-policy exemption all become managed resources.
 What survives is the directory work that has no API — claiming the
 domain, the billing account, the access groups — and the two commands
-that create the bootstrap identity. The recipes added for FDB and
+that create the seed identity. The recipes added for FDB and
 Keycloak backup are the last generation of that style rather than the
 start of one.
 
@@ -353,7 +353,7 @@ can be scaled down to save cost, but a management plane at zero does
 not reconcile — which is the problem moving off kind was meant to
 solve. Acceptable for dev and test, self-defeating for prod.
 
-**Migration is incremental.** The folder, the bootstrap identity and the
+**Migration is incremental.** The folder, the seed identity and the
 management project can be created while the kind plane still runs, and
 instances moved one at a time. Nothing here requires a flag day.
 

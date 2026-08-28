@@ -5,39 +5,36 @@ the Crossplane-managed cloud infrastructure underneath it.
 
 ## Deploy each service as project + base + shared Dockerfile
 
-A deployable service is a project (pure config, `deps.edn`) plus a
-base (owns `main.clj`) plus an image built from the shared
-`infra/docker/service/Dockerfile` with a `PROJECT_NAME` build-arg —
-never a bespoke Dockerfile. Every service Deployment waits on the
-bootstrap Job via a `wait-for-bootstrap` initContainer before
-starting; neither the migrator nor the bootstrap Job may be skipped
-in any deployment flow. A cross-pod startup dependency is expressed
-via the deployment's `waitFor` list, which adds a `wait-for-<dep>`
-initContainer polling the target's `/actuator/health/liveness`.
-Deploy flows share the same Helm release name (`queenswood`) so resource
-names don't diverge between them. Never bake an environment name into
-a resource name — discriminate via `values.yaml` overrides and env
-vars. A project MAY carry a service-specific `application.yml`; a
-service MAY listen on more than one port, with `port` the primary
-(probes and the Service's `http` port target it) and further
-listeners in `extraPorts`; a service MAY set `replicas > 1` if it's
-HTTP-fronted or a processor that doesn't own a changelog cursor.
-Never delete a `Keycloak` resource while its database survives: the
-operator owns the admin Secret and regenerates the password on the way
-back, while the database keeps the old admin user, so Keycloak serves
-the realm and nothing can administer it — the realm import fails to
-obtain a token, bootstrap waits on the import, and every service waits
-on bootstrap. Resetting the schema fixes that only where FoundationDB is
-rebuilt in the same act: the realm returns from the committed JSON with
-fresh user ids, and FDB records referencing the old ones are orphaned
-silently. Where FDB survives, restore the realm from its export and
-reset the credential in place instead.
-`exclusive-dispatchers-service` stays at 1 — it owns every changelog
-cursor and every cron trigger, and each admits exactly one
-dispatcher; scale the relay tier by sharding stores across
-deployments. Raising replicas elsewhere buys standbys
-rather than throughput until `message-bus/send` carries a partition
-key and topics have more than one partition.
+A deployable service is a project under `projects/*-service/` — pure
+config, `deps.edn` plus `resources/` — and a base that owns `main.clj`,
+imaged from `infra/docker/service/Dockerfile` with a `PROJECT_NAME`
+build-arg and from nothing else, since the arch-aware `libfdb_c.so`
+install and the shared base layer are what have to stay consistent
+across services. Every service Deployment waits on the bootstrap Job
+through a `wait-for-bootstrap` initContainer, and neither the migrator
+nor the bootstrap Job may be skipped in any flow: the policies, the
+product templates, the topics and the FDB metadata are preconditions to
+any service's startup. A cross-pod dependency goes in the deployment's
+`waitFor` list, which adds a `wait-for-<dep>` initContainer polling the
+target's `/actuator/health/liveness`. Deploy flows share the one Helm
+release name, `queenswood`, so resource names do not diverge, and a
+resource name never carries an environment — discriminate through
+`values.yaml` overrides and env vars. A project may carry its own
+`application.yml` in `resources/`; a service may listen on more than
+one port, `port` being the primary the probes and the Service's `http`
+port target and the rest in `extraPorts` as `{name, port}`; and a
+service may set `replicas > 1`, except `exclusive-dispatchers-service`,
+which owns every changelog cursor and every cron trigger and stays at
+1 — scale the relay tier by sharding stores across deployments, and
+expect extra replicas elsewhere to buy standbys rather than throughput
+until `message-bus/send` carries a partition key and topics have more
+than one partition. Never delete a `Keycloak` resource while its
+database survives: the operator regenerates the admin password while
+the database keeps the old admin user, and nothing can administer the
+realm it is still serving. Never reset Keycloak's schema while
+FoundationDB survives: the realm rebuilds from the committed JSON with
+fresh user ids, and the records referencing the old ones are orphaned
+silently.
 See [deployment](../../../docs/recipes/infra/deployment.md).
 
 ## A folder is an installation, and its foundations are not deleted
@@ -48,7 +45,7 @@ project ids carry random suffixes and everything else is discovered from
 the folder down. Inside it, a management project running Crossplane and
 Argo, never torn down, and one disposable project per instance. There
 may be as many folders as the installer wants; each is independent and
-identically shaped, with its own bootstrap identity and management
+identically shaped, with its own seed identity and management
 project because those rights are folder-scoped.
 
 Protect a foundation in GCP rather than in a manifest. Projects, DNS
@@ -69,21 +66,27 @@ See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle
 
 ## Build the plane before a merge can install anything
 
-A control plane running another toolchain cannot apply an
-`XManagementPlane` at all — the manifest names a kind its API
-server has never heard of — so the plane comes before any merge that
-would install something. Grant the bootstrap identity its rights on the
-folder or the parent, never a key. Commit the manifest before applying
-it, and before any plane takes over reading it from git, and pivot the
-composite off a throwaway plane before discarding that plane. Never
+Build the plane before expecting a merge to install anything: a control
+plane running another toolchain cannot apply this kind. Grant the seed
+identity its rights on the folder or the parent, never a key, and never
 grant a person `serviceAccountTokenCreator` on the platform identity or
-create a key for any of the four identities, never assume you may create
-a folder — ids are required and one may be handed to you instead — and
-never delete a project as a side effect of an edit. Deploying with
-`instances: []` is valid, asking a platform team for the folder and the
-identity shortens this path without changing it, and another XRD and
-composition loaded onto the plane deploys something else the same way.
-See [crossplane-app-deployment](../../../docs/recipes/infra/crossplane-app-deployment.md).
+create a key for any of the four. Commit the manifest before applying it
+and before any plane takes over reading it from git, and pivot the
+composite off a throwaway plane before discarding that plane. Never
+assume you can create a folder — ids are required, and one may be handed
+to you instead — and never delete a project as a side effect of an edit.
+Standing the installation up with no instance at all is valid, since an
+instance is its own composite applied afterwards, asking a platform team
+for the folder and the identity shortens the path without changing it,
+and another XRD and composition loaded onto the plane deploys something
+else the same way.
+Commands: `just gcp-boot-cluster-up`, `just gcp-boot-preflight`, `just
+gcp-boot-seed`, `just gcp-boot-seed-grant-org-roles`, `just
+gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
+`just gcp-boot-mgmt-manifest`, `just gcp-boot-mgmt-apply`, `just
+gcp-org-setup`, `just gcp-policy-status`, `just gcp-boot-cluster-down`,
+`just gcp-boot-seed-close`, `just gcp-boot-seed-open`.
+See [crossplane-bootstrap](../../../docs/recipes/infra/crossplane-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
 
@@ -98,10 +101,11 @@ Never commit anything secret beside the manifest, never name a principal
 in `access` that does not exist — IAM rejects the binding, not the
 manifest — never create a key for an identity the installation
 composes, and never leave a new XRD field required when the manifest
-that sets it lives in another repository. `management.source` may name
-upstream, a fork, or a mirror that vendors the layout, pinned to a tag;
-an empty `access` mapping installs and capabilities may be added later;
-and one manifest per folder allows more than one installation.
+that sets it lives in another repository. `management.source` may point
+at upstream, a fork, or a mirror that vendors the layout, with
+`targetRevision` pinned to a tag; an empty `access` mapping installs and
+capabilities may be added later; and one manifest per folder allows
+more than one installation.
 See [queenswood-installation](../../../docs/recipes/infra/queenswood-installation.md).
 
 ## A composite builds what an instance is, Argo installs what runs there
@@ -122,11 +126,10 @@ See [ADR-0024](../../../docs/adr/0024-instances-are-their-own-composites.md).
 
 ## Cloud infrastructure is Crossplane, not Terraform
 
-Cloud infrastructure is declared via Crossplane, not Terraform. A
-small local kind cluster (`boot-mgmt`, the boot management plane)
-runs
-Crossplane plus the GCP upjet providers and `provider-helm`; every
-cloud resource is a Crossplane Managed Resource or a Composite of
+Cloud infrastructure is declared via Crossplane, not Terraform. A small
+local kind cluster (`boot-mgmt`, the boot management plane) runs
+Crossplane plus the GCP family of upjet providers and `provider-helm`;
+every cloud resource is a Crossplane Managed Resource or a Composite of
 them (XRDs + Compositions). Argo CD on the same kind cluster applies
 the manifests from the repo, and workloads on GKE are themselves
 Crossplane `Release` resources of `provider-helm`.
@@ -134,345 +137,498 @@ See [ADR-0016](../../../docs/adr/0016-crossplane-over-terraform.md).
 
 ## A composed resource is identified by its composition name
 
-Change a resource's `- name:` to rebuild it under a new
-`metadata.name`: Crossplane matches on the composition resource name
-and recreates from the composite's record, so renaming the object alone
-rebuilds the old one. Set `policy.fromFieldPath: Required` where a
-missing source is a mistake rather than a meaning — a patch whose
-source is absent is skipped silently, while a Required patch whose
-source is absent drops the whole composed resource, which is how a
-block becomes optional without a second composition and why such a
-field cannot carry an XRD default — and put constants in `base`,
-because a `Format` transform with no verb for its input corrupts the
-value. Server-side apply gives every field a manager, and a manager
-that stops declaring a field it solely owns removes it — so the
-composition owns everything it patches, deleting a patch deletes the
-field rather than leaving it, a field the composition never set stays
-free for the provider to late-initialise or for a hand patch to hold,
-and two managers declaring one field make it stable. Check
-`metadata.managedFields` before assuming either way.
-Count the live instances of a kind before removing its XRD, reading the
-cluster rather than assuming from the fact that nothing in the
-repository creates one: the XRD owns its CRD, so the kind and every
-composite of it go together, and a Composition outlives the XRD it names
-because nothing links them but a `compositeTypeRef`. Where the
-Application carrying the XRD prunes, deleting the file is the removal;
-where it does not, the plane goes on serving the kind and the edit reads
-as a change that did nothing.
-Give a kind composed from more than one place an XRD of its own, fixing
-the invariants and parameterising the rest: a Composition is read by
-every composite of its kind on the next reconcile, so tightening a
-policy centrally is one edit rather than a version each caller must
-adopt — and extract it at the second call site, since what varies is
-guesswork from one example while the invariants are the same either
-way. Nothing opts out, so an XRD version is not a compatibility knob: no
-composite pins one, so keep a kind versionless and leave it at
-`v1alpha1` — where a change is large enough to want a version it is a
-different kind, named for what it is and adopted deliberately, since a
-second version of one kind promises an upgrade path that does not
-exist. Every Composition edit is taken by every live composite on its
-next reconcile — so add fields rather than
-repurpose them, default what a manifest does not yet set, and never make
-a field required in the change that introduces it.
-Withhold `Delete` from `managementPolicies` for anything whose loss
-is unrecoverable: deleting the managed resource then orphans the cloud
-resource rather than destroying it, and deleting a composite destroys
-whatever its resources permit. Enable an API before composing a kind
-that needs it — Cloud Storage is on by default in a new project and
-Secret Manager is not, so an entry composed into a fresh one fails
-observe with a 403 naming the API, on the managed resource, while the
-composite goes on reporting `Ready`. Install a provider for every kind
-the composite composes, on every plane that composes it, and never
-compose a cluster-scoped kind from a namespaced composite. Neither failure
-belongs to the resource it names: one pipeline step failing — an
-unparseable template, a kind with no CRD — stops every composed
-resource and reports on the composite. Read `Synced`, `Ready` and
-`LastAsyncOperation` before concluding anything.
-See [crossplane](../../../docs/recipes/infra/crossplane.md).
+Give the application one kind, and decompose inside it into kinds that
+group managed resources created and destroyed as one; never compose
+resources with different deletion criteria into one kind, since
+deleting a kind deletes what it composed — a public zone does not
+belong with a public endpoint, nor a network with a cluster. Fix the
+invariants in `base`, constants included, and leave the caller only
+what does not change what the kind guarantees. Read the slot names
+already in use before naming a composed resource, and change a
+resource's `- name:` to rebuild it under a new `metadata.name` —
+deleting the object alone rebuilds the old one. Set
+`policy.fromFieldPath: Required` where a missing source is a mistake
+rather than a meaning, and on every patch reading a field the XRD
+defaults; never expect a Composition to withhold a field. Use
+`function-go-templating` where the number of composed resources varies
+with the caller, and never compose a cluster-scoped kind from a
+namespaced XR. Carry `Delete` in `managementPolicies` only where a
+rebuild returns what was there — withholding it is the prudent
+default. End every Composition with `function-auto-ready`, and add a
+`readinessCheck` against the field carrying the real state where a
+managed resource's own conditions do not reflect the cloud. Make every
+Composition edit safe for an XR that already exists: add fields rather
+than repurpose them, default what a manifest does not yet set, and
+never make a field required in the change that introduces it. Never
+add a version to an XRD — where a change is that large it is a
+different kind, named for what it is and adopted deliberately — and
+never set `compositionUpdatePolicy: Manual` on an XR, since pinning
+divides an estate into the XRs that took an edit and the ones that did
+not, which is the problem versioning would have caused.
+Commands: `just crossplane-kinds`, `just crossplane-slots`,
+`just crossplane-policies`.
+See [crossplane-design](../../../docs/recipes/infra/crossplane-design.md).
+
+## Debug from what is not ready, not from what was named
+
+Start from what is not ready rather than from the resource somebody
+named. Read the composite's own conditions before any composed
+resource's: one pipeline step failing — a template that will not parse,
+a kind with no CRD — stops every composed resource and reports on the
+composite, so never treat a failure as belonging to the resource it
+names. Read `Synced`, `Ready` and `LastAsyncOperation` before
+concluding anything, since they report different failures, and never
+read `Ready` on a composite as evidence about every resource under it.
+Enable an API before composing a kind that needs it — Cloud Storage is
+on by default in a new project and Secret Manager is not — and install
+a provider for every kind the composite composes, on every plane that
+composes it. Check which field manager owns a field before assuming a
+hand patch will hold or that a field will survive its patch being
+removed: never patch a field the composition sets and expect it to
+hold, and never delete a patch for a field you want kept, since the
+composition owns what it patches and the field goes with the patch.
+Change a composition-owned field in the Composition and merge it —
+nothing pins a revision, so every live composite takes the edit on its
+next reconcile, and a `kubectl patch` of such a field reverts. A
+rendered diff is proof of what a composition produces, never of what
+applying it does to what already exists.
+Commands: `just crossplane-unready`, `just crossplane-conditions`,
+`just crossplane-owners`.
+See [crossplane-debug](../../../docs/recipes/infra/crossplane-debug.md).
+
+## A change to a live resource applies, is refused, or destroys
+
+Read `LastAsyncOperation` on the managed resource before treating a
+change as applied, since a refusal reports there while the composite
+above goes on reading `Synced`. Never expect a merged value to reach a
+field that identifies its resource: upjet refuses the replacement
+rather than performing it, so the value moves only by destroying and
+rebuilding the cloud resource — granting `Delete` for the duration
+where the policy withholds it, since nothing else moves it.
+
+Withhold `Delete` before moving a resource to another composite, in a
+change of its own that reaches the plane first — the transfer deletes
+the parent's copy, so the parent's policy is the one that governs — and
+never combine the policy change and the move into one merge, since the
+plane applies what it reads and reads them in order. Read the live slot
+names before naming a composed resource in the new kind: reusing one a
+live managed resource carries makes two composites claim it, and every
+apply then fails. Never rename a composite's slot without applying the
+same two-step to the resources inside it, and never delete a composite
+to tidy up — it deletes what it composes, subject to each resource's
+`managementPolicies`. Count the live instances of a kind before
+removing its XRD, since the CRD and every composite of it go with it,
+and delete the Composition alongside, because nothing links them but a
+`compositeTypeRef`. Read whether the Application carrying a file prunes
+before treating a deletion from the repository as a removal from the
+plane, and merge a change before expecting it there — Argo reads the
+revision an Application names, never a working tree.
+Commands: `just crossplane-slots`, `just crossplane-owners`,
+`just crossplane-conditions`.
+See [crossplane-live](../../../docs/recipes/infra/crossplane-live.md).
 
 ## Provider resources are Terraform underneath
 
-Read the CRD with `kubectl explain` before writing a composed resource,
-not the provider's documentation — shapes differ between versions and
-from what Terraform documents. Delete the managed resource to change
-anything that identifies it: a ForceNew change is refused rather than
-performed, and the refusal appears in `LastAsyncOperation`, so
-diagnosing from `Synced` alone misreads it. A list-shaped field may
-still be identity — a managed `Certificate`'s `managed.domains` replaces
-the certificate rather than extending it, so a second name is a second
-`Certificate` sharing the one `DNSAuthorization`. Pivot a
-provider-assigned value up to the composite and compose from it rather
-than committing a literal read out by hand, since a `DNSAuthorization`
-issues the record it wants answered only once it exists.
-Use the `.m.` API group.
-Set the external name explicitly where it must differ from the
-Kubernetes name or where something else spells the same string, and
-feed a generated id back as an adopt value where the external name is
-empty after create, or the resource never completes. Do not re-add a
-patch for a field late-initialisation now owns.
+Read the schema from the installed CRD with `just crossplane-explain`
+before writing a composed resource, never from the provider's
+documentation, and use the `.m.` API group. Check what the provider
+late-initialises with `just crossplane-owners` before deciding which
+fields to compose, and compose one whose value is a choice somebody
+should make or a parameter a later create will need — never re-adding a
+patch for a field late-initialisation now owns. Set the external name
+explicitly where it must differ from the Kubernetes name or where
+something else spells it, `just crossplane-external-names` being where
+the two already differ, and feed a generated id back as an adopt value
+where the external name is empty after create, or the resource never
+completes. Pivot a provider-assigned value up to the composite and
+compose from it rather than committing a literal read out by hand.
+
+Never expect a ForceNew change to replace a resource: it is refused,
+the refusal is in `LastAsyncOperation`, and diagnosing from `Synced`
+alone misreads it. Never treat a list-shaped field as extensible
+without checking — a `Certificate`'s `managed.domains` is identity, so
+a second domain is refused rather than appended. Create a service account a
+provider shares, or that a binding names, outside the package manager
+and point the pod at it with `deploymentTemplate`; never pin a name in
+`serviceAccountTemplate`, since the package manager takes controller
+ownership and the next claimant — another provider, or this provider's
+next revision — fails its runtime hook.
+Commands: `just crossplane-explain`, `just crossplane-owners`,
+`just crossplane-external-names`.
 See [crossplane-providers](../../../docs/recipes/infra/crossplane-providers.md).
+
+## Humans hold groups, and a break-glass group stays empty
+
+Set recovery email and phone on the super admin, and 2-step
+verification: it has no mailbox and no one above it, and a second super
+admin, unused, means one lost device is not the end of the
+organisation. Bind groups where humans hold access and principals
+directly where automation does, and give the groups no owner or
+manager — both are members. Keep one direct human administrator on the
+billing account, which may be an existing one reused rather than
+created. Revoke the super admin's local credentials, and its direct
+organisation binding, once the group carries the role. Never leave
+anybody standing in a break-glass group — `grp-gcp-org-admin@`,
+`grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
+`grp-gcp-<code>-platform-admin@`, `grp-gcp-<code>-cluster-admin@`,
+`grp-gcp-<code>-secrets-admin@` — and never use
+`gcloud identity groups describe` to test whether a group exists.
+See [cloud-account](../../../docs/recipes/infra/cloud-account.md).
 
 ## An automation identity is granted, never inherited
 
-Give every node pool its own service account holding
+Give every node pool its own service account with
 `roles/container.defaultNodeServiceAccount`, and never rely on the
 default compute service account being powerless — that is an org policy
-enforced somewhere else. Grant both halves of Workload Identity, the
-GCP binding and the `iam.gke.io/gcp-service-account` annotation, and
-pin the Kubernetes service account name so the binding matches
-something. Grant `iam.serviceAccounts.actAs` on any account something
-must attach to a resource, and bucket-metadata read alongside object
-access where the client is S3-compatible — `storage.objectAdmin` carries
-no `storage.buckets.get`, and a HEAD-bucket is the first thing such a
-client sends, so it fails 403 against a name that plainly has write
-access. Audit an inheriting identity against every
-resource it must manage before the identity that created them is
-discarded: whoever creates a project owns it, so a bootstrap identity
-holds rights nothing declared. Prefer a project custom role over a
-predefined role granting writes you do not want, naming it with
-underscores because a custom role id takes no hyphens, and do not
-assume a role can be granted at the scope its feature acts on.
-`gcloud auth login` does not refresh ADC.
+enforced elsewhere. Grant both halves of Workload Identity and pin the
+Kubernetes service account name. Grant `iam.serviceAccounts.actAs` on
+any service account something must attach to a resource, and
+bucket-metadata read alongside object access where the client is
+S3-compatible: `storage.objectAdmin` has no `storage.buckets.get`, and a
+HEAD-bucket is the first thing such a client sends. Audit an inheriting
+identity against every resource it must manage before the identity that
+created them is discarded. Prefer a project custom role over a
+predefined role that grants writes you do not want, naming it with
+underscores because a custom role id takes no hyphens, and never assume
+a role can be granted at the scope its feature acts on. Never assume
+`gcloud auth login` refreshed ADC, or that ADC impersonation makes
+`gcloud` act as that identity.
 See [gcp-iam](../../../docs/recipes/infra/gcp-iam.md).
 
 ## A credential is a declared container and a written version
 
-A composite composes the Secret Manager entry and never a value, a
-person adds the version once from `secretsAdmin`, and external-secrets
-reads it on the destination cluster — authenticated by Workload
-Identity, through a `ClusterSecretStore` with no auth block, because the
-controller's pod already carries the annotated service account. That is
-what keeps the value out of git and out of Argo, and what makes a
-rebuilt cluster re-read rather than re-upload. Grant the writer on the
-project the entry is in: a capability bound on one project reaches
-nothing in another, so an entry composed into a second project is a
-container nobody may write a version to. Write what the consumer reads,
-byte for byte — an `ExternalSecret` base64s the payload on its way into
-a Secret, so an entry read as bytes holds those bytes and not the text
-of them, which `just gcp-fdb-backup-key` settles for the one that
-matters. Never add a second version to an entry that is not rotatable: a
-later key strands every backup written under the first, and rotation is
-a new generation under a new entry. Overwrite the clipboard after
-pasting a value. Name the entry `sec-<code>-c-<what>` on a plane and
-`sec-<code>-<env>-<label>-<what>` on an instance. The FoundationDB
-backup key is the one whose name and home disagree: named for the
-instance whose backups it opens, composed into the installation's
-recovery project because a key in the project whose data it protects is
-not a second copy of anything, one per instance so a single key does not
-open every instance's backups, and granted on that entry alone rather
-than project-wide. Pin the release name and the service account name
-that binding spells literally rather than letting Argo derive either
-from an Application's name, and withhold `Delete` where the value cannot
-be regenerated. Put a version in with `just gcp-secret-version`, which
-refuses to create a container the composite has not made and strips the
-trailing newline from anything typed or piped: Secret Manager stores the
-bytes it is given, and a consumer reading the value whole sends that
-newline as part of the credential, failing as a rejected secret rather
-than as a newline. Never commit a credential, private repository or not,
-and never keep a second durable copy of one that can be regenerated —
-`rm` is not deletion on a copy-on-write filesystem, and a local store is
-a second authority on one machine with no audit trail. Give each
-`ExternalSecret` a Secret of its own rather than merging into one
-another chart renders: `creationPolicy: Merge` declines to create a
-missing target and says so while still reporting `Ready`, and the
-Application carrying it syncs a wave ahead of the chart that renders
-that Secret, so a first install always misses and nothing looks again
-until the refresh interval. A container with no version fails wherever
-the value was used rather than as a credential nobody wrote, and a
-version added after the `ExternalSecret` synced waits out the refresh
-interval, so delete the controller's pod and restart whatever reads the
-value at startup. See
-[external-secrets](../../../docs/recipes/infra/external-secrets.md).
+Compose the container and write the version separately: a composite
+declares an entry with no version, and a person adds one. Read it on
+the destination cluster, through an operator authenticated by Workload
+Identity, so neither git nor Argo ever holds the value; give the
+`ClusterSecretStore` no auth block, since the controller's pod carries
+the identity, and pin the release name and the service account name the
+Workload Identity binding spells rather than letting either be derived.
+Grant the writer on the project the entry is in — a capability bound on
+one project writes nothing in another, and the denial surfaces as a
+container that appears not to exist — and never create a missing
+container by hand, since its absence means the composite has not
+reconciled and one made here is one nothing declares. Write what the
+consumer reads, byte for byte: an `ExternalSecret` base64s the payload
+on its way into a Secret, so an entry a workload reads as bytes holds
+those bytes and not the text of them, and a version goes in stripped of
+the trailing newline anything typed or piped carries. Withhold `Delete`
+from the entry's `managementPolicies` where the value cannot be
+regenerated, and never add a second version to an entry that is not
+rotatable — a later key strands every backup written under the first,
+so rotate by starting a new generation under a new entry. Generate a
+value the cluster can make in the cluster, from a Job, and let the
+chart declare its Secret without `data`, since a chart Argo renders
+cannot preserve one. Never commit a credential, private repository or
+not, and never keep a second durable copy of one that can be
+regenerated — not in a local store, and not in a file deleted
+afterwards. Overwrite the clipboard after pasting a value, and delete
+the controller's pod rather than waiting out the refresh interval,
+restarting whatever reads the value at startup. A value that is not
+something to type — a key, a certificate — may be passed as a file, and
+several fields that identify each other may be held in one entry as
+JSON.
+Commands: `just gcp-fdb-backup-key`, `just gcp-secret-version`.
+See [external-secrets](../../../docs/recipes/infra/external-secrets.md).
 
 ## Google sign-in is two console acts and an Admin API call
 
-Create the OAuth client by hand, as a Web application: no API makes one
-with a chosen redirect URI, so no automation holds the right and none
-can — grant `roles/oauthconfig.editor` through `platformAdmin` rather
-than `platformViewer`, since creating a client mints a credential and a
-capability called viewer should not. Match that URI to
-`https://keycloak.<domain>/realms/<realm>/broker/<alias>/endpoint`
-exactly, alias included — a wrong one is accepted at setup and returns
-`redirect_uri_mismatch` once the user has already left for Google. Create
-one client per environment and never share one, since revoking a
-development client must not touch what customers sign in through, and a
-client in Testing mode is a different risk object from a published one.
 Configure the consent screen first, since the client cannot be created
-without one, and read its verification warning against the scopes
-actually requested: Keycloak asks for `openid profile email` unless the
-realm sets `defaultScope`, and verification binds only sensitive and
-restricted scopes — so external, which is what a product whose users
-bring their own identity needs, joins no queue. Publish out of testing
-mode once the test-user list stops being the point, or refresh tokens go
-on expiring after seven days and read as an application fault. Name the
-app for the environment as well as the product, since each instance has
-its own consent screen, and give the user support address a group rather
-than a person — it is shown to users, while the contact addresses are
-Google notifying you, and neither wants a personal account.
+without one, then create the OAuth client by hand in the console, as a
+Web application: no API creates one with a chosen redirect URI. Grant
+`roles/oauthconfig.editor` through `platformAdmin` rather than
+`platformViewer`, because creating a client mints a credential. Match
+the redirect URI to
+`https://keycloak.<domain>/realms/<realm>/broker/<alias>/endpoint`
+exactly, alias included. Create one client per environment and never
+share one across environments. Choose external where users bring their
+own identity, and read the verification warning against the scopes
+actually requested rather than as written — `openid profile email`
+needs none. Publish out of testing mode once the test-user list stops
+being the point, or refresh tokens keep expiring after seven days and
+it reads as an application fault. Name the app for the environment as
+well as the product, since each instance has its own consent screen,
+and use a group for the user support address — never a personal
+account for either address.
 
-The realm keeps the placeholder pair it was imported with, whatever the
-chart later says, so both values reach the running realm afterwards and
-by different routes. The client id goes in over the Admin API, from the
-realm-import Job, driven by the installation's `keycloak.googleClientId`
-and carried in that Job's name — or a changed id leaves the same
-completed Job and nothing applies it. The secret is never sent there at
-all: the identity provider holds a vault expression, restored from the
-committed definition rather than written back from what was read, since
-the Admin API returns a configured secret masked and asterisks would
-leave a realm looking entirely correct. Write the secret by hand into
-`sec-<code>-<env>-<label>-google-oauth` and let an `ExternalSecret`
-materialise it into the mount as `<realm>_<key>`, since Keycloak reads
-that mount at startup — so install the operator and the store in earlier
-sync waves than the bank, and restart Keycloak where a secret is stored
-after the pod. Never read `401 invalid_client` on a rebuilt environment
-as evidence the rebuild failed — it is the likelier cause and the wrong
-conclusion.
+A realm that exists keeps the placeholder it was imported with,
+whatever the chart's committed definition says, so never expect a chart
+change or a re-import to reach it. Put the id in through the
+installation's `keycloak.googleClientId`: it reaches the realm over the
+Admin API, and the Job that makes that call has to carry the id in its
+name, or a changed id leaves the same completed Job and nothing applies
+it. Leave a vault expression stored as the secret, never the secret
+itself, restored from the committed definition rather than from what
+the Admin API returned, since a configured secret comes back masked.
+Write the secret into `sec-<code>-<env>-<label>-google-oauth` by hand,
+with no trailing newline, name the vault key `<realm>_<key>` so the
+realm's expression resolves, and restart Keycloak where a secret is
+stored after the pod started. Never read `401 invalid_client` on a
+rebuilt environment as evidence the rebuild failed — it is the likelier
+cause and the wrong conclusion.
 See [google-sign-in](../../../docs/recipes/infra/google-sign-in.md).
 
 ## A public zone needs proven ownership, and the registrar is touched once
 
-Verify the domain before a public zone is created — Cloud DNS refuses a
-zone whose name the calling identity has not verified, and says so as
-`verifyManagedZoneDnsNameOwnership`. Verify as the operator account in
-its own right, as a Domain property rather than a URL prefix, and add the
-composition's identity as an Owner, since Full and Restricted grant
-report access and confer no ownership. Verification belongs to an
-identity rather than to a domain, so an existing
-`google-site-verification` record is no evidence your account owns
-anything, an absent Search Console property is no evidence the domain is
-unverified, and an unattributed token is not yours to tidy away. Where
-Google auto-verified through the DNS provider, add the TXT method
-explicitly, or the delegation change ends the relationship the
-verification rested on. Never leave the installation's identities
-delegated from a personal account, and never regenerate a token to move
-one: the same string is copied, and answers from both authorities across
-the switch.
+Verify the domain before a public zone is created, as the operator
+account in its own right, adding it as a Domain property rather than a
+URL prefix and adding the composition's identity as an Owner — Full and
+Restricted confer no ownership. Never read an existing
+`google-site-verification` record as evidence your account owns the
+domain, or an absent Search Console property as evidence it is
+unverified, and never tidy away an unattributed token or regenerate one
+to move it: the same string is copied, and answers from both
+authorities across the switch. Where the domain was auto-verified
+through its provider, add the DNS TXT method explicitly, and never
+leave the installation's identities delegated from a personal account.
 
-Inventory every record type at the registrar before moving a domain, and
-the underscore-prefixed names with it, since `_dmarc` carries policy an
-apex sweep does not show. Verification tokens, SPF and DMARC carry into
-the new zone before the delegation moves; a placeholder site's records
-and the registrar's one-click DNS endpoint do not. Check the new zone by
-querying its assigned nameservers directly rather than a public
-resolver, which still answers from the old authority, and check the
-delegation itself against the registry's authority section, since a
-referral carries the NS records there and a `+short` query reads as
-empty.
-
-Check for a DS record before delegating and, where one exists, unsign at
-the registrar first: moving a signed domain while its DS names the old
-keys makes every validating resolver read the new authority as forged,
-taking the verification TXT down with it. Watch the parent registry
-rather than the zone, expect the outage to start at the unsigning rather
-than at the delegation, and take several spaced probes across more than
-one resolver before calling recovery complete, since anycast nodes cache
-independently and one clean answer proves nothing. Unsign first for a
-domain not yet serving anything so the wait overlaps everything else,
-last for one serving traffic to keep the window tight.
-
-Replace all of the registrar's nameservers rather than some, leave its
-old records in place as the way back, and do not re-enable DNSSEC there
-afterwards. Never delete and recreate a zone to change it: the
-nameservers change with it, the registrar does not follow, and each
+Inventory every record type at the registrar before moving a domain,
+the underscore-prefixed names included, and carry the verification
+tokens, SPF and DMARC into the new zone before the delegation moves.
+Check for a DS record before delegating; where one exists, unsign at
+the registrar and wait out the DS TTL first, watching the parent
+registry rather than the zone, and take several spaced probes across
+more than one resolver before calling DNSSEC recovery complete. Unsign
+first for a domain not yet serving anything, so the wait overlaps
+everything else, and last for one serving traffic, to keep the window
+tight. Check the new zone by querying its assigned nameservers directly
+and the delegation against the registry's authority section, and
+confirm the verification TXT resolves from the new authority
+afterwards. Never change the delegation before the new zone answers or
+while a DS record still names the old nameservers' keys, never replace
+only some of the registrar's nameservers, never delete the old records
+there — they are the way back — and never re-enable DNSSEC at the
+registrar afterwards. Never delete and recreate a zone to change it:
+the nameservers change with it, the registrar does not follow, and each
 fresh zone draws from a finite per-domain pool. Move the apex once
-rather than delegating a subdomain per environment, and set a CAA record
-naming the issuing CA.
+rather than delegating a subdomain per environment, and set a CAA
+record naming the issuing CA.
 See [cloud-dns](../../../docs/recipes/infra/cloud-dns.md).
 
 ## A parent Application holds only kinds that already exist
 
 Keep concrete resources out of a parent Application: anything whose
-kind a child installs belongs in a child of its own, or the parent
-fails building a task for an unknown kind and never applies the child
-that would install it. Sync waves do not resolve a missing kind, and
-`SkipDryRunOnMissingResource` skips the dry run rather than making an
-apply succeed. Set `ServerSideApply=true` for charts with large CRDs,
-whose client-side apply exceeds the annotation limit. Set retry budgets
-that outlast an operator install, since an Application that exhausts
-its retries waits for a revision change or a manual sync — a merged fix
-does not reach it. A running retry loop is worse: an operation pins the
-revision it started with and replays that revision's manifests, so read
-`.operation.sync.revisions` rather than `status.sync.revisions`, which
-shows only what would be synced next, and remove `.operation` to cancel
-a loop replaying a fault already fixed. One object the API server
-rejects fails the whole sync and leaves every well-formed resource
-beside it `OutOfSync`, and server-side apply refuses an undeclared field
-rather than dropping it — so a template that renders is not a template
-that applies. Set `prune: false` where pruning would delete
-something a missing file should not delete. Merge a change before
-expecting Argo to apply it: it reads the revision an Application names,
-never a working tree. Never rely on `lookup` to preserve a generated
-value — Argo renders with `helm template`, where it returns nothing, so
-the generate branch always wins and every sync applies a fresh value
-over whatever the last one left. Generate such a value in the cluster
-instead, from the same Job that registers it wherever its counterpart
-lives, and let the chart declare the Secret without `data` so
-server-side apply leaves the contents to whoever wrote them.
-See [argocd](../../../docs/recipes/infra/argocd.md).
+kind a child installs belongs in a child of its own. Sync waves do not
+resolve a missing kind, and `SkipDryRunOnMissingResource` skips the dry
+run and nothing else. Set `ServerSideApply=true` for charts with large
+CRDs, `prune: false` where pruning would delete something a missing
+file should not delete, and retry budgets that outlast an operator
+install — a merged fix does not reach an Application whose retries are
+already exhausted. When a sync is failing, read
+`.operation.sync.revisions` rather than `status.sync.revisions`: the
+first is what is being retried, the second only what would be synced
+next. Read `retryCount` before calling a stuck sync a retry loop, since
+unset means the operation is not failing at all. Merge the fix before
+cancelling anything, or the fresh sync hangs the same way; then remove
+`.operation` to cancel a queued sync, with a JSON patch, and terminate
+one already in flight by setting `status.operationState.phase` to
+`Terminating` — terminate before removing `.operation`, never after,
+since operation processing is driven by that field and removing it
+first leaves the state sitting `Terminating` for good. Strip
+`argocd.argoproj.io/tracking-id` from a resource handed from one
+Application to another. Merge a change before expecting Argo to apply
+it, and confirm it landed: Argo reads the revision an Application
+names, never a working tree. Never rely on Helm's `lookup` to keep a
+value a chart generated once — Argo renders with `helm template`, where
+it returns nothing, so the branch that mints a fresh one wins on every
+sync.
+Commands: `just argo-apps-sync-policy`, `just argo-apps-operation`,
+`just argo-apps-status`.
+See [argocd-apps](../../../docs/recipes/infra/argocd-apps.md).
+
+## A group with no health check reads Healthy
+
+Re-read the checks after an Argo upgrade and re-check the status-less
+kinds after a Crossplane one — an upgrade is what moves either answer.
+Add an XRD's API group to `compositeGroups` in
+`infra/helm/management-plane/values.yaml` in the same change as the
+XRD, where the group is not there already; one entry covers every kind
+in a group. Never read `Healthy` on a group with no check as evidence
+of anything, and never expect a managed resource's health to reach the
+Application above it. Give an environment's Applications a parent of
+their own before registering a check for `argoproj.io/Application`.
+When writing a check, read `Synced` before `Ready`, in a pass of its
+own, and patch the script that checks a status-less kind rather than
+one kind — there are several, in both groups. Delete the
+`*.crossplane.io/*` and `*.upbound.io/*` entries from
+`infra/helm/management-plane/templates/argocd-cm.yaml`, and point
+`LISTED_CROSSPLANE` and `LISTED_UPBOUND` in `justfiles/argo.just` at
+Argo's own lists, once a release carrying `argoproj/argo-cd#29382` is
+the one the plane runs; keeping them is defensible only for a kind
+upstream still does not list.
+Commands: `just argo-health-checks`, `just argo-health-kinds`.
+See [argocd-health](../../../docs/recipes/infra/argocd-health.md).
 
 ## Argo reads a private repository as a GitHub App
 
-Use a GitHub App, never a deploy key or a personal access token: it
-belongs to the organisation rather than to a person, is revoked by
-uninstalling it, and needs no SSH egress. Grant it Contents read-only
-and install it only on the repositories Argo reads. Keep the private key
-in a secret store and let an operator place the Secret, and add a new
-key before deleting the one it replaces, since an App may hold two at
-once. Never commit the `.pem` or pass it on a command line, and never
-give the App webhook access or any write permission. One App may serve
-several repositories in the same organisation where the same reader
-should reach all of them.
+Use a GitHub App, never a deploy key or a personal access token. Grant
+it Contents read-only, give it no webhook access and no write
+permission, and install it only on the repositories Argo reads —
+creating it grants nothing. One App may serve several repositories in
+the same organisation where the same reader should reach all of them,
+and a public source repository needs no credential at all. Merge
+`manifestRepoURL` before writing the credential, since nothing composes
+a container to write to without it, and never set the Application's
+`repoURL` or the Secret's `url` by hand: both derive from that one
+field, which is what keeps them equal. Store the App ID, the
+Installation ID and the private key together in
+`sec-<code>-c-github-app`, spelling the kind
+`secret.secretmanager.gcp.m.upbound.io` — the short name resolves to
+Kubernetes' own Secret and reports the object as not found — joining
+`secretsAdmin` for the write and leaving again. Let the chart's
+`ExternalSecret` place the Secret and keep the key in the secret store;
+delete the `.pem` once the entry holds it, never commit it or pass it
+on a command line, and add a new key before deleting the one it
+replaces. Read a repository reported unreachable as an entry with no
+version before reading it as a wrong credential, and read the
+`ExternalSecret`'s status rather than the Secret to check the
+credential arrived — it carries the same answer and needs no right to
+the value.
+Commands: `just gcp-github-app-secret`.
 See [argocd-github](../../../docs/recipes/infra/argocd-github.md).
+
+## Argo and Crossplane on a plane are upgraded by hand
+
+Merge the change before upgrading the plane, and never expect a merged
+change to reach a running plane on its own — a plane may be left on an
+older chart than git describes, deliberately, and nothing detects it.
+Change the version in both the boot chart and the composition and run
+`just check-versions`, which fails on one without the other, and never
+set `management.bootstrap: true` to make the composition
+authoritative.
+Build the values file from the composed `Release`, never by hand,
+spelling the kind `release.helm.m.crossplane.io` — the short name
+resolves to provider-helm's cluster-scoped `Release` and reports the
+object as not found — and pin `--version` to the same object's
+`chart.version`. Never omit `-f`, on any change: Helm replaces a
+release's values with what it is given, so an upgrade without the file
+resets them to the chart's defaults, and never upgrade Argo with a
+values file that omits `extraObjects`. `--reuse-values` is for a
+release with values and no drift to preserve. Render both chart
+versions against the running values before merging a version change,
+and read the release notes for the versions it crosses. Confirm
+`management-plane` still exists before anything else on an Argo
+upgrade; check every provider and function is healthy after a
+Crossplane one, and never judge a composite while the core is
+restarting. Join `cluster-admin` for the upgrade itself and leave
+again — everything else here is a viewer's.
+Commands: `just check-versions`.
+See [argocd-upgrades](../../../docs/recipes/infra/argocd-upgrades.md) and
+[crossplane-upgrades](../../../docs/recipes/infra/crossplane-upgrades.md).
+
+## Every name derives from the code
+
+Derive every composed name from `spec.code`, never from the composite's
+own name, and carry the environment letter on anything scoped to one,
+including the kinds the inventory does not list. Never bake an
+environment name, a domain or a customer name into a resource name —
+the code and the environment letter are the only identifiers a name
+carries — and never invent a prefix where the inventory already has
+one; add a kind to the inventory when you name one that is not there.
+End a name with six hex characters where it cannot be reused after the
+resource is deleted, checking what the kind actually does rather than
+assuming and recording the answer. Never rename a project id, a folder
+or a bucket in place: none supports it, the id is consumed and the
+resource is rebuilt. Never put a realised suffix anywhere public — a
+pull request's title or body, an issue, a comment, a review — and write
+`xxxxxx` instead: `scripts/hooks/check-cloud-ids.sh` covers the tree
+and the commit message from a hook and everything written outside git
+from a workflow, and can hold a merge on a pull request, but on a
+comment it is detection only, since the text is public the moment it is
+posted. A name may take a qualifier where it would otherwise collide,
+most often a region, and a folder or project handed to us already named
+keeps the name its supplier chose.
+See [cloud-naming](../../../docs/recipes/infra/cloud-naming.md).
 
 ## Name the shape, never the instance
 
 Write how a thing is named and mask what identifies the one in front of
-you: `xxxxxx` for a project id's suffix, `<folder-id>`, `<org-id>`,
-`<project-number>`. A shape is what a reader needs; a realised one is
-what somebody pretexting a support call wants, and none of these is a
-credential — which is exactly why they get written down without anyone
-feeling they have done anything.
-
-Mask while writing, with the real value still on screen, rather than
-after a check fails. That applies to text you did not write and are
-only quoting: a pasted error message names the project it came from,
-and an example illustrating the rule with a real identifier is still a
-real identifier — which is how the last one got out, in a pull request
-fixing the guard.
-
-Everywhere it can be read counts: the tree, a commit message, a pull
-request's title and body, an issue, a comment, a review. Real ids
-belong in the private manifests repository, because that is what it is
-for, and a description of a change to it does not.
-
-Mask every number and every hex run rather than remembering which
-shapes are dangerous — a description explains what changed and why, and
-almost never needs a literal to do it, so `<version>` and `<sha>` say
-what the sentence is about where the literal only says which afternoon.
-Two exceptions, because they name nobody: a public resolver or
-nameserver, without which a delegation cannot be documented, and
-loopback. That is stricter than
-`scripts/hooks/check-cloud-ids.sh` on purpose — a check must tolerate a
-version and a sha or it cries wolf, and being told which shapes are safe
-is what produces a description with an id in it. Never rely on it to
-catch one: it is the detection half and the one definition of what an
-identifier is, it reports afterwards, and it points forward, since what
-reached merged history stays there. Where a real value genuinely
-belongs, `cloud-id-ok` on the line makes it deliberate rather than
-missed.
+you: every number and every hex run — a name's suffix, an id, an
+address, a version, a sha — as `xxxxxx`, `<folder-id>`, `<org-id>`,
+`<project-number>`, `<version>`, `<sha>`. Mask while writing, with the
+real value still in front of you, and mask a pasted error message and a
+worked example the same way: both are text somebody else produced, and
+both carry ids verbatim. Never use a real identifier as an example of a
+masked one. Never rely on the check to catch one — it is deliberately
+more permissive than this, so that it does not cry wolf, and it reports
+afterwards. A public resolver or nameserver, and loopback, may be
+named: they identify nobody, and a delegation cannot be documented
+without them. Where a real value genuinely belongs, mark the line
+`cloud-id-ok`, which makes it deliberate rather than missed.
 See [cloud-identifiers](../../../docs/recipes/infra/cloud-identifiers.md).
+
+## A restore is proven by a key count, and a destructive state is self-limiting
+
+Establish that data is actually lost or wrong before restoring:
+scale-to-zero preserves the volumes, so `down` and `up` is not a
+recovery scenario and needs no restore point. Name a generation with
+every version and record the generation with it — a version alone
+cannot say which container to read — and open a new generation after
+recovering: `fdb.restore.backupName` is the source,
+`fdb.backup.backupName` the destination, and after a recovery they
+differ, so point the destination at a new generation before a rebuilt
+cluster starts writing. Quiesce writes before taking a restore point
+for a planned cluster rebuild, take it with `sop-fdb-version-at` rather
+than modelling one, and delete promptly afterwards, so the point is
+still current when the volumes go. Never use restore-to-latest where
+the moment is known, and never set a `version` with no `backupName` —
+the render refuses it, and the refusal is the feature. Read RPO off the
+restorable window rather than off `snapshotPeriodSeconds`. Recover
+Keycloak alongside FoundationDB, preserving user ids. Prove a restore
+with `fdbrestore status` and a key count — never with the Job's exit
+status, which against a populated destination succeeds by doing
+nothing, never with the `FoundationDBRestore` resource, and never with
+a bucket listing, which a wrong encryption key produces exactly like a
+right one. Restore onto systems segregated from the source anywhere
+other than a test environment: the damaged data is the only record of
+what happened, and restoring over it commits before anything is
+verified. Test the recovery procedure on a schedule and record what it
+proved — a backup is not verified until it has been restored. Down and
+rebuild are different kinds of state and must not share a word: never
+give whatever empties a destination a name sharing a word with `down`,
+or let it stay true across reconciles, never treat a cluster rebuild as
+reversible, and never use it for an instance or installation rebuild,
+since both take the database or the backups with them. Never let a
+lifecycle rule delete inside FDB's prefixes — `fdbbackup expire` is the
+only thing that may delete. A ForceNew field does not apply itself: the
+composite reports `Synced` while nothing happens, so read
+`LastAsyncOperation`. `fdb.restore` may stay set indefinitely after a
+recovery, being a target rather than a mode, and a test environment may
+restore in place.
+See [fdb-recovery](../../../docs/recipes/infra/fdb-recovery.md),
+[cluster-rebuild](../../../docs/recipes/infra/cluster-rebuild.md) and
+[ADR-0026](../../../docs/adr/0026-recovering-data-and-the-states-that-do-it.md).
+
+## A muted finding is a decision, recorded
+
+Mute by resource, so the check still fails for anything the reasoning
+does not cover, and record the reasoning in the recipe as well as in
+the file's `Description`. Say what is deferred and why: a finding
+nobody has explained is a finding nobody has decided. Never mute a
+finding because fixing it is inconvenient — cost is a reason to defer
+in the open, not to hide — and never treat a falling finding count as
+the objective, since enabling an API in every project to satisfy a
+per-project check that describes an organisation-wide capability
+changes the report and nothing else. Never assume a scan ran as you: it
+authenticates through ADC, which may be impersonating something else
+entirely.
+See [security-scanning](../../../docs/recipes/infra/security-scanning.md).
 
 ## A recipe fails loudly or not at all
 
 Under `set -e`, `cmd && break`, `[[ test ]] && cmd` and a bare
 `VAR=$(cmd)` whose command may fail each end the recipe rather than the
-line — and before its first `echo`, so the symptom is an instant exit
-with no output. Consume the failure you expect instead: `if cmd; then
-break; fi`, or `|| true` where emptiness is handled explicitly. Capture
-a command's output into a variable before piping it, since a pipeline
-takes the last command's status and a denial otherwise reads as an
-empty result. Use whatever the caller supplied and discover only what
-they did not, because discovery fails where an argument would have
-worked. Declare an overridable variable with `env_var_or_default`, and
-name a recipe for what it acts on.
+line, so never write them there, and never read an instant exit with no
+output as anything other than `set -e` aborting before the recipe's
+first `echo`. Consume a failure you expect instead — `if cmd; then
+break; fi`, or `|| true` where emptiness is handled explicitly — and
+capture a command's output into a variable before piping it, so a
+denial is not read as an empty result. Use whatever the caller supplied
+and discover only what they did not: never add a lookup for a value the
+caller already named, since discovery fails where an argument would
+have worked. Declare an overridable variable with
+`env_var_or_default`, and put a recipe in the justfile for the domain
+it acts on, prefixed with that domain's name — the prefix is what
+groups it in `just --list`, and the file is where somebody looks for
+one they half-remember.
 See [justfile-recipes](../../../docs/recipes/practices/justfile-recipes.md).

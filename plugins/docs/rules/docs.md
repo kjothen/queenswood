@@ -31,6 +31,37 @@ Never move a label to satisfy a script: if discovery cannot find a
 labelled doc, the script is what is wrong.
 See [writing-docs](../../../docs/recipes/practices/writing-docs.md).
 
+## A recipe is seven sections, each answering one question
+
+Structure a recipe as Problem, Solution, Failures, Rules, Discussion —
+what, how, what it looks like when it did not work, normative, why —
+with Failures and Discussion appearing only where there is one to give.
+Open the Problem with **You**, saying what you want in a sentence or
+two. Open a procedure's `## Status` with **Verified**, **Untested** or
+**Superseded**; a recipe describing a convention has none.
+
+Open a step-based Solution with `### Prerequisites`, which carries what
+is known before step 1, and export a value a step produces at that
+step. Keep a step to its instruction, its command and what the output
+should say: never explain a step inside the step, since mechanism and
+rationale are the Discussion's, which opens with a short unbolded
+summary of what was done. Use no GitHub alert type other than
+`[!WARNING]`.
+
+Key a Failures entry on what the reader observes, never on its cause,
+and give no entry to a failure whose message already names it.
+
+Name a `just` recipe in the Rules bullet whose action it performs. The
+Rules block is the only part of a recipe distilled into agent context,
+so a command named only in a step reaches nobody — which is also why a
+step needing more than a line or two of shell becomes a recipe rather
+than an inline block, since an inline block cannot be named in a bullet
+and so never travels. Wrap what reads. A step that writes usually stays
+inline, where the reader sees it before running it, and never goes
+behind a recipe for brevity alone: only where the recipe is itself what
+makes the write safe.
+See [writing-docs](../../../docs/recipes/practices/writing-docs.md).
+
 ## Tone, maturity claims, and the PRD register
 
 Don't describe `mono`, Queenswood, or their components as

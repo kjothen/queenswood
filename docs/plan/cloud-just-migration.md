@@ -445,7 +445,7 @@ cluster match git, Crossplane makes GCP match the cluster.
 
 **Something undeclared has to place the first Crossplane**, because
 Crossplane cannot install itself onto a cluster that has none. That
-irreducible step is `gcp-plane-up`: a kind cluster, Crossplane by Helm,
+irreducible step is `gcp-boot-cluster-up`: a kind cluster, Crossplane by Helm,
 providers by manifest. It is the floor, and the design's aim is to keep
 it at a scratch cluster on a laptop rather than at anything inside the
 installation.
@@ -496,7 +496,7 @@ argument for the durable plane over raising throwaway ones repeatedly.
 So every recipe answers one question: does this exist only because no
 privileged plane exists yet?
 
-- **Scaffolding**, if it does — `gcp-preflight`, the `gcp-boot-*`
+- **Scaffolding**, if it does — `gcp-boot-preflight`, the `gcp-boot-*`
   recipes, `gcp-groups-bind`, the `gcp-adc-*` recipes and the
   `gcp-plane-*` recipes. Most of the file.
 - **Durable**, if it does not — `gcp-mgmt-cluster-ctx`,
@@ -505,8 +505,8 @@ privileged plane exists yet?
 
 Judge the scaffolding as scaffolding: it runs once and is discarded, so
 its bar is reaching parity reliably rather than being a surface worth
-polishing. The diagnostics among it — `gcp-adc-status`,
-`gcp-plane-status`, `gcp-boot-status` — inspect the ladder rather than
+polishing. The diagnostics among it — `gcp-boot-seed-impersonate-status`,
+`gcp-boot-mgmt-status`, `gcp-boot-seed-status` — inspect the ladder rather than
 the installation, which is why they sit oddly beside the recipes that
 operate one.
 
@@ -541,7 +541,7 @@ what says who satisfies it.
   container, and what goes inside may never be in git.
 
 They divide by how often each is paid, which is what the two paths in
-[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md) are
+[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md) are
 really distinguishing:
 
 - **Once per organisation** — the organisation, the billing account, the
@@ -577,13 +577,13 @@ recipes make it look.
 
 Each leaves the composite Ready and every managed resource green.
 
-- **A manifest that was never pushed.** `gcp-plane-apply` checks that
+- **A manifest that was never pushed.** `gcp-boot-mgmt-apply` checks that
   the file is on disk, which is all a boot plane needs, but after the
   pivot the manifest is read from GitHub — so a local-only file passes
   every check in the ladder and then reconciles from nothing. Producing
   it should know the destination applying it already knows:
-  `gcp-plane-apply` resolves `INSTALLATIONS_REPO`, while
-  `gcp-plane-manifest` prints to stdout for somebody to redirect there.
+  `gcp-boot-mgmt-apply` resolves `INSTALLATIONS_REPO`, while
+  `gcp-boot-mgmt-manifest` prints to stdout for somebody to redirect there.
 - **A secret with no version.** The composite composes the container and
   a person adds the version, so in between Argo holds no credential for
   the repository it reconciles from. That secret is the link between the
@@ -592,13 +592,13 @@ Each leaves the composite Ready and every managed resource green.
 - **An org policy nothing enforces.** Neither
   `compute.skipDefaultNetworkCreation` nor
   `iam.disableServiceAccountKeyCreation` is composed, and
-  `gcp-boot-org-roles` grants `orgpolicy.policyAdmin` to an identity
+  `gcp-boot-seed-grant-org-roles` grants `orgpolicy.policyAdmin` to an identity
   that never spends it — but only one of the two is exposed by that. GCP
   enforces the key ban at the organisation by default, which is why
   `_gcp-allow-sa-keys` reads the effective policy and does nothing where
   it is already off, so the ban holds wherever a folder is handed over
   and
-  [crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md)
+  [crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md)
   is imprecise about where it comes from rather than wrong about it
   holding. The default network has no such default: `cloud.just` set it
   at the organisation, and a folder elsewhere gets a default VPC in
@@ -733,7 +733,7 @@ lost.
 
 ### 1. Widen the boot plane
 
-`gcp-plane-up` installed a narrowed set of packages, chosen when the
+`gcp-boot-cluster-up` installed a narrowed set of packages, chosen when the
 composition stopped at a folder. It now takes `provider-helm` as well,
 which is what lets the boot plane install onto the management cluster
 in step 3, and applies a `ProviderConfig` for it.
@@ -796,7 +796,7 @@ Identity. **This is where the work now starts.**
 `gcp-platform-billing-role`. It could not come from the composition — a
 billing account sits above the folder, and `sa-qw01-boot` holds
 `billing.user` rather than `billing.admin`, so it cannot delegate what
-it was given. That made it the same seam as `gcp-boot-org-roles`: a
+it was given. That made it the same seam as `gcp-boot-seed-grant-org-roles`: a
 recipe run once by a billing administrator, which is a person and
 deliberately so.
 
@@ -865,7 +865,7 @@ and Argo CD. **Both are written.** What Argo reconciles from is not
 part of them — putting Argo on the cluster and pointing it at a
 repository are separate, and only the first is a `Release`.
 
-This is what keeps the installer at four commands. `gcp-plane-apply`
+This is what keeps the installer at four commands. `gcp-boot-mgmt-apply`
 applies the composite, so anything the composite composes arrives in
 that one step — where a recipe running `helm upgrade` against the new
 cluster would be a fifth, and an imperative one in the middle of the
@@ -1005,7 +1005,7 @@ safe value is what a manifest without the field produces. Both cases
 are spelled in the patch, so setting it to `false` says what leaving it
 out says.
 
-`gcp-plane-apply` passes it, and nothing else does. That is what makes
+`gcp-boot-mgmt-apply` passes it, and nothing else does. That is what makes
 "the boot plane may install the management plane, and the management
 plane may not reinstall itself" a property of who is applying rather
 than a rule someone has to remember.
@@ -1048,7 +1048,7 @@ GCP provider configuration has, reached the same way.
 **The credential itself is two human acts**, and they are the last two
 in the chain. The GitHub App is created by a person in a UI, because
 GitHub has no API that creates one — see
-[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md) —
+[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md) —
 and `gcp-github-app-secret` writes its three values into Secret Manager
 as one JSON entry, run by a person holding `secretsAdmin`. The
 identifiers travel with the key rather than through a second channel, so
@@ -1206,9 +1206,9 @@ checking for at step 5 rather than after step 6.
 ### 4. The manifest in git — done
 
 The private `installations` repository holds
-`qw01/installation.yml`, rendered by `gcp-plane-manifest` and carrying
+`qw01/installation.yml`, rendered by `gcp-boot-mgmt-manifest` and carrying
 its own `createFolder.folderId` and `management.adopt`. **This step is
-now complete**: `gcp-plane-apply` applies that file rather than
+now complete**: `gcp-boot-mgmt-apply` applies that file rather than
 assembling a composite from five arguments, so the boot plane and Argo
 consume the same document and cannot disagree about what the
 installation is.
@@ -1219,7 +1219,7 @@ processor: `billingAccountId`, because creating a project is the one
 moment it is needed, and `management.bootstrap`, because installing the
 management plane is something only the boot plane may do. Both are true
 of an act of creation rather than of an installation, which is why
-neither belongs in the record. `gcp-plane-manifest` cannot emit either
+neither belongs in the record. `gcp-boot-mgmt-manifest` cannot emit either
 of them at all — a manifest that carried `bootstrap` would hand the
 management plane the right to reinstall itself.
 
@@ -1232,7 +1232,7 @@ Branch protection requiring review is the control that repository has,
 deliberately, since it carries nothing executable — a direct push to its
 main changes infrastructure with nothing in the way.
 
-Note that the three values `gcp-plane-apply` prints are not the whole
+Note that the three values `gcp-boot-mgmt-apply` prints are not the whole
 set that has to be frozen. The rest — the code, the domain the group
 addresses are built from, the billing account — are *discovered* at
 apply time, from a constant in the justfile, from the organisation
@@ -1265,7 +1265,7 @@ the cluster, and points outward. The only thing able to act on GCP is
 the management cluster.
 
 That is stronger than the rule
-[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md)
+[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md)
 states today. "A merge is the privileged action, so merged state applies
 and a `pull_request` trigger gets no cloud identity" exists because the
 alternative was push-based CI holding one. Pull-based and data-only
@@ -1282,7 +1282,7 @@ requiring review is the control that belongs there, a merge being what
 reaches production.
 
 This is a seam the design already has rather than a new one.
-[crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md)
+[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md)
 says the manifest lives "in whichever repository the applier reconciles
 from", allowing that it is not this one, and
 [ADR-0023](../adr/0023-installation-naming-and-access.md) assumes
@@ -1354,18 +1354,18 @@ Three facts make this cleaner than it first looks:
   a folder is only a hierarchy and IAM node — which is why projects are
   portable. There is nothing to inherit.
 - **`billing.user` is bound on the billing account, not the folder**,
-  which `gcp-boot-identity` already does. Linking a project needs
+  which `gcp-boot-seed` already does. Linking a project needs
   `resourcemanager.projects.createBillingAssignment` on the project and
   `billing.resourceAssociations.create` on the account.
 - **The identity can list what it is bound to.** Where an organisation
   hands over a folder and an identity, that list has exactly one entry.
   Discovery through the identity is therefore *more* reliable than the
-  current `gcp-plane-apply` behaviour, which takes the first open
+  current `gcp-boot-mgmt-apply` behaviour, which takes the first open
   account visible to the operator, who may see several.
 
 Discovery is confirmed rather than assumed: `gcloud billing accounts
 list`, run as the boot identity, returns exactly one open account. Run
-as the operator it may return several, which is why `gcp-plane-apply`
+as the operator it may return several, which is why `gcp-boot-mgmt-apply`
 taking the first one is fragile today and stops being so here.
 
 The design is one shape, not a choice between mechanisms:
@@ -1448,7 +1448,7 @@ The live installation has crossed over: the XRD makes the field
 optional, the XR carries no `billingAccountId`, the provider owns
 `forProvider.billingAccount` alone, and GCP still bills the project.
 The composition keeps its patch, which now fires only when a manifest
-supplies the field — which `gcp-plane-apply` does at creation and the
+supplies the field — which `gcp-boot-mgmt-apply` does at creation and the
 committed manifest never does.
 
 Two things that run did **not** establish, both worth knowing before
@@ -1462,7 +1462,7 @@ relinquishing cannot remove the field, so no window opened.
 
 Where the window actually is: the composition owns `billingAccount`
 only when a composite supplies `billingAccountId`, and the only thing
-that supplies it is `gcp-plane-apply`, at creation. So the window is
+that supplies it is `gcp-boot-mgmt-apply`, at creation. So the window is
 the *first reconcile from the committed manifest* after a new
 installation is created — the moment the composition stops declaring
 what it declared at creation. That is a fresh-installation concern, on
@@ -1513,7 +1513,7 @@ installations/
     └── installation.yml     the XQueenswoodInstallation
 ```
 
-`just gcp-plane-manifest` prints that file, resolved, on stdout with
+`just gcp-boot-mgmt-manifest` prints that file, resolved, on stdout with
 every message on stderr, so it redirects straight into place. A second
 installation is `qw02/`. `INSTALLATIONS_REPO` in `gcp.just` says where
 the checkout is, defaulting beside this one.
@@ -1724,7 +1724,7 @@ cluster.
 
 ### 6. Discard the boot plane
 
-`just gcp-plane-down`, and `just gcp-adc-revoke`. After this the
+`just gcp-boot-cluster-down`, and `just gcp-boot-seed-impersonate-revoke`. After this the
 management cluster reconciles its own project and folder, which the
 liens are what make safe.
 
@@ -1775,7 +1775,7 @@ own, that grant is not ours to make. Asking for it means asking to be
 able to weaken any constraint anywhere in that organisation, for the
 sake of one HMAC key, and it should be treated as unavailable rather
 than as a request that might succeed. `sa-qw01-boot` does hold the role
-today, from `gcp-boot-org-roles`, so the exemption is reachable for
+today, from `gcp-boot-seed-grant-org-roles`, so the exemption is reachable for
 this installation — from the disposable plane only, which makes it a
 property of our own organisation rather than of the design.
 
@@ -2148,9 +2148,9 @@ needed four manual steps — so that gap closes before this is built.
 ## Recipe by recipe
 
 **Already replaced.** `gcp-org-create`'s org-role half by
-`gcp-boot-org-roles`; `gcp-iam-bootstrap`'s identity by the
+`gcp-boot-seed-grant-org-roles`; `gcp-iam-bootstrap`'s identity by the
 composition's `platform-identity`; `gcp-crossplane-login` by
-`gcp-adc-boot` for the boot path and by Workload Identity for the
+`gcp-boot-seed-impersonate` for the boot path and by Workload Identity for the
 durable one.
 
 **Becomes a managed resource.** `gcp-project-create`;
@@ -2211,7 +2211,7 @@ stays a console step for the same reason, and only its capture changes.
   follows the manifests into `installations`. It is the one piece of
   this documentation that reads better with real values in it.
 - Whether `pass` is retired at the pivot or kept for the boot path.
-  Nothing in the durable design reads it, but `gcp-adc-boot` runs before
+  Nothing in the durable design reads it, but `gcp-boot-seed-impersonate` runs before
   any of it exists.
 - Whether the management cluster stays publicly reachable, which
   [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
@@ -2233,7 +2233,7 @@ stays a console step for the same reason, and only its capture changes.
   installation code, the naming scheme and the four capabilities.
 - [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
-- [crossplane-app-deployment](../recipes/infra/crossplane-app-deployment.md) —
+- [crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md) —
   what a deployment builds, and the two identities that build it.
 - [cloud-naming](../recipes/infra/cloud-naming.md) — the inventory every new
   resource takes its name from.

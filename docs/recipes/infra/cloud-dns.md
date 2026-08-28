@@ -337,6 +337,7 @@ authorises every CA rather than none.
   why the directory work has no API.
 - [cloud-naming](cloud-naming.md) — the `dz-` prefix and the
   environment letter.
-- [crossplane](crossplane.md) — what composes the zone and its records.
+- [crossplane-design](crossplane-design.md) — what composes the zone
+  and its records.
 - [queenswood-installation](queenswood-installation.md) — the manifest
   the domain is named in.

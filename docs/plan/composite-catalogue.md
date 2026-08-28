@@ -23,8 +23,8 @@ cloud: every one of them composes GCP resources and nothing else.
 
 The mechanics — what a transfer does, what it costs, and the three ways
 it went wrong — are in
-[crossplane](../recipes/infra/crossplane.md). This plan is what is left
-to do, not how to do it.
+[crossplane-live](../recipes/infra/crossplane-live.md). This plan is
+what is left to do, not how to do it.
 
 ## Hollowing out the plane
 
@@ -48,6 +48,19 @@ was the proving ground; the instance is now proof.
   is why the instance needed neither.
 
 That is roughly 700 lines, and none of it needs a new kind.
+
+It does need one thing outside the composition, and nothing links the
+two today. `XManagementPlane` currently composes managed resources and
+no other composite, which is why `gcp-boot-cluster-up` applies one XRD
+— its own — onto the boot cluster. Composing `XNetwork` and `XCluster`
+from the plane makes those kinds a prerequisite of bootstrapping, so
+that recipe has to apply their XRDs and Compositions too, and
+`gcp-boot-cluster-up` narrows its providers on the same rule. Without
+it, `gcp-boot-mgmt-apply` fails with `no matches for kind`, which stops
+the whole pipeline rather than one resource — and only on the next
+bootstrap, which is rare enough that it will not be the person who made
+the change. See
+[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md).
 
 What the plane must keep is what only it has: the folder and its
 bindings, the management project, Crossplane and Argo as `Release`s,
@@ -135,9 +148,10 @@ deployment.
   with every other slot. Not free: renaming the slot deletes the
   composite in it, which deletes the pool, which carries `Delete`. It
   wants the two-step from
-  [crossplane](../recipes/infra/crossplane.md) applied one level down —
-  withhold `Delete` from the pool inside `XCluster` first, rename, then
-  restore. Worth doing for the name alone, but not casually.
+  [crossplane-live](../recipes/infra/crossplane-live.md) applied one
+  level down — withhold `Delete` from the pool inside `XCluster` first,
+  rename, then restore. Worth doing for the name alone, but not
+  casually.
 - **Stop enabling `serviceusage` on an instance project.** The same
   argument that removed `cloudresourcemanager`: enabling any API on a
   project is a Service Usage call against a project that has nothing

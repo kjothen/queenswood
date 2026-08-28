@@ -175,7 +175,8 @@ the rotation no longer looks like the cause.
   name resolves to Kubernetes' own Secret and reports the object as not
   found.
 - Store the App ID, the Installation ID and the private key together,
-  in `sec-<code>-c-github-app`.
+  in `sec-<code>-c-github-app`, with `just gcp-github-app-secret`. It
+  reads the key with `--rawfile`, so it never reaches a command line.
 - Let the chart's `ExternalSecret` place the Secret, and keep the key
   in the secret store.
 - Add a new key before deleting the one it replaces.

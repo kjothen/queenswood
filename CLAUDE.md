@@ -159,9 +159,13 @@ topic.
   layout, one management plane on GKE, foundations protected rather
   than deleted, and why "down" is a declared state. See
   [ADR-0022](docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
-- **Building blocks, and what cannot be one** — proposed: when
-  repetition wants a composite rather than a loop, why a pair that must
-  agree earns a kind, and the boundary a catalogue cannot cross. See
+- **Designing a Crossplane kind** — how much one kind covers, what the
+  caller chooses, what each part is called, what may be deleted, when
+  it is ready. See
+  [crossplane-design.md](docs/recipes/infra/crossplane-design.md).
+- **What cannot be a building block** — the things with no API at all,
+  which are a recipe rather than a kind nobody got round to writing.
+  See
   [ADR-0025](docs/adr/0025-building-blocks-and-what-cannot-be-one.md).
 - **Recovering data** — proposed: why `down` no longer empties anything
   and so no restore path exists, why a destructive state must not share
@@ -175,7 +179,7 @@ topic.
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See
-  [crossplane-app-deployment](docs/recipes/infra/crossplane-app-deployment.md).
+  [crossplane-bootstrap](docs/recipes/infra/crossplane-bootstrap.md).
 - **Upgrading or reconfiguring Argo CD** — the steps for a plane whose
   own Argo is `Observe`, the `extraObjects` a values file must carry,
   and why a merged change does not reach it. See
@@ -188,9 +192,13 @@ topic.
   GitHub App that reaches the private one, the manifest's fields, and
   who holds which access capability. See
   [queenswood-installation.md](docs/recipes/infra/queenswood-installation.md).
-- **Crossplane** — what identifies a composed resource, what a patch
-  does when its source is absent, which condition carries which error.
-  See [crossplane.md](docs/recipes/infra/crossplane.md).
+- **Debugging an installation** — where a failure reports, which field
+  manager owns what, and why a status field disappears. See
+  [crossplane-debug.md](docs/recipes/infra/crossplane-debug.md).
+- **Changing a live resource** — whether a change applies, is refused
+  or destroys, why the parent's deletion policy governs a move, and
+  what a withdrawal removes. See
+  [crossplane-live](docs/recipes/infra/crossplane-live.md).
 - **Crossplane providers** — upjet's refusal to replace, external names
   as cloud identifiers, late-initialisation, reading the CRD rather
   than the Terraform docs. See

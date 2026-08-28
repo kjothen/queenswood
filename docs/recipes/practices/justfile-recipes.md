@@ -58,6 +58,14 @@ the per-run override and the environment as the per-shell one.
 Name a recipe for what it acts on, not for what it is made of, so the
 list reads as a set of actions.
 
+The name and the file agree: a recipe lives in the justfile for its
+domain and carries that domain's prefix — `crossplane-` in
+`crossplane.just`, `argo-` in `argo.just`, `gcp-` in `gcp.just`,
+`tessl-` in `tessl.just`. `just --list` is one flat list, so the prefix
+is what groups a domain's recipes in it, and the file is where somebody
+looks for the one they half-remember. A recipe filed by what it uses
+rather than by what it acts on is findable by neither.
+
 ## Rules
 
 **MUST:**
@@ -69,6 +77,8 @@ list reads as a set of actions.
 - Use whatever the caller supplied, and discover only what they did
   not.
 - Declare an overridable variable with `env_var_or_default`.
+- Put a recipe in the justfile for the domain it acts on, prefixed with
+  that domain's name. The prefix is what groups it in `just --list`.
 
 **MUST NOT:**
 
