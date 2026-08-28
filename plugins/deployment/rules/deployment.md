@@ -146,11 +146,13 @@ See [queenswood-installation](../../../docs/recipes/infra/queenswood-installatio
 
 ## An instance is a unit, and its secrets are written while it builds
 
-Invent an instance's project id first, with a fresh six-hex suffix —
-nothing mints it and it is consumed permanently — and write the same id
-into the instance manifest, the config Application's values and the
-`iam.gke.io/gcp-service-account` annotation the external-secrets
-Application carries. Put the unit declaration at the top of the
+Render an instance's unit with `just gcp-instance-manifest`, which
+mints the project id once and writes it into every file carrying it,
+and never render one over a unit that already exists — the id is minted
+per call, so the second render names a project nothing built. Where a
+file is written by hand instead, the ids have to agree: a wrong one in
+the external-secrets annotation is a service account nothing is bound
+to rather than an error. Put the unit declaration at the top of the
 installation's directory, never inside the unit's folder, since the
 installation's Application is not recursive and a declaration filed
 inside is never applied at all. Give the instance its own `access`
@@ -172,8 +174,9 @@ already-stopped database, so an instance is built up and stopped
 afterwards. `network` may be left unstated while the VPCs are isolated,
 an instance may be taken down once it is up, and one stood up with no
 `ingress` answers on no name at all.
-Commands: `just gcp-keycloak-admin-secret`, `just gcp-secret-version`,
-`just gcp-fdb-backup-key`, `just crossplane-unready`, `just
+Commands: `just gcp-instance-manifest`, `just
+gcp-keycloak-admin-secret`, `just gcp-secret-version`, `just
+gcp-fdb-backup-key`, `just crossplane-unready`, `just
 argo-apps-status`, `just gcp-instance-cluster-ctx`.
 See [queenswood-instance](../../../docs/recipes/infra/queenswood-instance.md).
 

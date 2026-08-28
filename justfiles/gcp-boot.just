@@ -766,7 +766,7 @@ gcp-boot-mgmt-manifest parent name="" folder="" mgmt="" billing="" recovery="":
     # region abbreviation, and moving either rebuilds the subnet and
     # the cluster -- so a default that changed underneath a live
     # installation would move it silently.
-    # The document lives in infra/platform/installation.yml.tmpl so it
+    # The document lives in infra/platform/templates/installation.yml.tmpl so it
     # can be read and reviewed as YAML rather than as shell.
     CODE="{{ CODE }}" REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
     ZONE="{{ ZONE }}" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
@@ -780,7 +780,7 @@ gcp-boot-mgmt-manifest parent name="" folder="" mgmt="" billing="" recovery="":
     MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
     PARENT="{{ parent }}" NAME="$NAME" ADOPT="$ADOPT" \
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
-      infra/platform/installation.yml.tmpl
+      infra/platform/templates/installation.yml.tmpl
 
 # Apply the committed manifest to the boot cluster, as its bootstrap.
 gcp-boot-mgmt-apply billing="" yes="":

@@ -989,3 +989,130 @@ gcp-instance-cluster-ctx env label project="":
     echo ">>> fetching credentials needs only container.viewer, which you"
     echo ">>> hold. Calling the API needs container.admin: join"
     echo ">>> grp-gcp-{{ CODE }}-cluster-admin for the task, and leave."
+
+# Render a whole unit -- the declaration and the five manifests it
+# names -- into the installations repository.
+gcp-instance-manifest env label project="" domain="":
+    #!/usr/bin/env zsh
+    set -e
+    # One recipe rather than six redirects, because what makes this safe
+    # is that the project id is minted once and written into three of
+    # the files identically. Rendering them separately is how they come
+    # to disagree, and a wrong id in the external-secrets annotation
+    # yields a service account nothing is bound to rather than an error.
+    INSTANCE="{{ CODE }}-{{ env }}-{{ label }}"
+    ROOT={{ INSTALLATIONS_REPO }}/{{ CODE }}
+    UNIT_FILE="$ROOT/{{ label }}.unit.yml"
+    UNIT_DIR="$ROOT/units/{{ label }}"
+
+    # Refuse rather than overwrite. The project id below is minted per
+    # call and consumed permanently once applied, so a second render
+    # over a committed unit replaces the recorded id with one no
+    # project answers to -- and the redirect would truncate first.
+    if [[ -e "$UNIT_FILE" || -d "$UNIT_DIR" ]]; then
+      echo "$INSTANCE already has a unit:" >&2
+      if [[ -e "$UNIT_FILE" ]]; then echo "  $UNIT_FILE" >&2; fi
+      if [[ -d "$UNIT_DIR" ]]; then echo "  $UNIT_DIR" >&2; fi
+      echo "edit it, or choose another label" >&2
+      exit 1
+    fi
+    if [[ ! -d "$ROOT" ]]; then
+      echo "no installation at $ROOT" >&2
+      echo "the plane's manifest is committed there first:" >&2
+      echo "  just gcp-boot-mgmt-manifest organizations/<org-id>" >&2
+      exit 1
+    fi
+
+    # Minted here, like the management project's and for the same
+    # reason: consumed permanently, and not derivable afterwards.
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      PROJECT="prj-$INSTANCE-$(openssl rand -hex 3)"
+      echo ">>> naming the project $PROJECT" >&2
+    fi
+
+    # The installation's own apex, read from the manifest the plane
+    # reconciles rather than rediscovered: it is what the zone is named
+    # for, and a second answer here would name a zone nothing composed.
+    INSTALLATION="$ROOT/installation.yml"
+    DNS_BLOCK=$(grep -A1 '^  dns:' "$INSTALLATION" || true)
+    APEX=$(printf '%s\n' "$DNS_BLOCK" \
+             | sed -n 's/^ *domain: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p')
+    if [[ -z "$APEX" ]]; then
+      echo "no dns.domain in $INSTALLATION" >&2
+      echo "an instance answers on a subdomain of the installation's" >&2
+      exit 1
+    fi
+
+    DOMAIN="{{ domain }}"
+    if [[ -z "$DOMAIN" ]]; then
+      DOMAIN="{{ label }}.$APEX"
+    fi
+    # The zone is the installation's, in the management project. Named
+    # the way the plane composes it, so both spell one name.
+    ZONE_NAME="dz-{{ CODE }}-c-${APEX//./-}"
+
+    if ! MGMT=$(just _gcp-mgmt-project); then
+      exit 1
+    fi
+    # Empty is a real answer -- an installation keeping nothing has no
+    # recovery project -- but an instance composes a bucket and a backup
+    # key in it, so this one is required.
+    RECOVERY=$(just _gcp-recovery-project || true)
+    if [[ -z "$RECOVERY" ]]; then
+      echo "no recovery project for {{ CODE }}" >&2
+      echo "the plane composes it from recoveryProjectId -- merge that" >&2
+      echo "into the installation's EnvironmentConfig first" >&2
+      exit 1
+    fi
+    # The bucket carries the recovery project's suffix, not its own: a
+    # bucket named for a project that may be rebuilt changes name when
+    # it is, which is a backup nobody can find under the name recorded.
+    RECOVERY_SUFFIX="${RECOVERY##*-}"
+
+    # Pinned once, on the plane, so a unit cannot install a different
+    # operator from the one the plane runs.
+    ES_VERSION=$(sed -n '/^externalSecrets:/,/^[^ ]/s/^ *version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' \
+                   infra/helm/management-plane/values.yaml | head -1)
+    if [[ -z "$ES_VERSION" ]]; then
+      echo "no externalSecrets.version in the management-plane values" >&2
+      exit 1
+    fi
+
+    mkdir -p "$UNIT_DIR"
+    TEMPLATES=infra/platform/templates/unit
+    for T in unit instance external-secrets config queenswood values; do
+      if [[ "$T" == "unit" ]]; then
+        OUT="$UNIT_FILE"
+      else
+        OUT="$UNIT_DIR/$T.yml"
+      fi
+      CODE="{{ CODE }}" ENV="{{ env }}" LABEL="{{ label }}" \
+      INSTANCE="$INSTANCE" PROJECT="$PROJECT" \
+      REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
+      GCP_ZONE="{{ ZONE }}" DOMAIN="$DOMAIN" ZONE_NAME="$ZONE_NAME" \
+      MGMT="$MGMT" RECOVERY="$RECOVERY" \
+      BACKUP_BUCKET="bkt-$INSTANCE-backups-$RECOVERY_SUFFIX" \
+      BACKUP_GENERATION="fdb/continuous/$(date +%Y-%m-%d)" \
+      ORG_DOMAIN="$APEX" \
+      PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
+      PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
+      SECRETS_ADMIN_GROUP="{{ SECRETS_ADMIN_GROUP }}" \
+      SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
+      MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
+      EXTERNAL_SECRETS_VERSION="$ES_VERSION" \
+      python3 -c 'import os,sys,string; sys.stdout.write(string.Template(open(sys.argv[1]).read()).substitute(os.environ))' \
+        "$TEMPLATES/$T.yml.tmpl" > "$OUT"
+      echo ">>> wrote $OUT"
+    done
+
+    echo
+    echo "$INSTANCE"
+    echo "  project   $PROJECT"
+    echo "  domain    $DOMAIN"
+    echo "  zone      $ZONE_NAME in $MGMT"
+    echo "  recovery  $RECOVERY"
+    echo
+    echo "commit these, then merge. The composite builds while you"
+    echo "create the OAuth client and write the three secret versions;"
+    echo "googleClientId in values.yml is empty until you have one."

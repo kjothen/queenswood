@@ -38,91 +38,66 @@ and hostname — built without touching the one already running.
   resources and Applications to it, `machineType` is immutable, and the
   pool being replaced is the one Crossplane runs on.
 - Google group memberships, by capability:
-  - Steps 1 to 4 — write access to the manifests repository, and
+  - Steps 1 to 3 — write access to the manifests repository, and
     `grp-gcp-<code>-platform-viewer@` to read what the plane does with
     it.
-  - Step 5 — `grp-gcp-<code>-platform-admin@`, which the instance's own
+  - Step 4 — `grp-gcp-<code>-platform-admin@`, which the instance's own
     `access` mapping grants `roles/oauthconfig.editor` on the new
     project.
-  - Step 6 — `grp-gcp-<code>-secrets-admin@`, the instance's own rather
+  - Step 5 — `grp-gcp-<code>-secrets-admin@`, the instance's own rather
     than the installation's: the installation's binds on the management
     project and writes nothing here.
-  - Step 8 — `grp-gcp-<code>-cluster-admin@`, for `kubectl` against the
+  - Step 7 — `grp-gcp-<code>-cluster-admin@`, for `kubectl` against the
     new cluster.
 
 Those are break-glass groups and normally empty: join for the act and
 leave again, per
 [ADR-0023](../../adr/0023-installation-naming-and-access.md).
 
-### 1. Choose the names and the project id
-
-The environment letter and the label are what every composed name
-carries. The project id is invented here — nothing mints it, and a
-project id is consumed permanently.
+### 1. Render the unit
 
 ```bash
-# the installation code, the environment letter, and the label
-export CODE=qw01 ENV=n LABEL=dev
+# the installation code, as the justfile sets it, e.g.
+export CODE=qw01
+# the private manifests repository, wherever it is checked out
+export INSTALLATIONS_REPO=../installations
 
-export INSTANCE="$CODE-$ENV-$LABEL"
-export PROJECT="prj-$INSTANCE-$(openssl rand -hex 3)"
-echo "$INSTANCE $PROJECT"
+# the environment letter and the label, as arguments
+just gcp-instance-manifest n dev
 ```
 
-Record both. The project id is written into three files in step 2 and
-step 3, and they have to agree.
+Six files: `<code>/<label>.unit.yml`, and `instance.yml`,
+`external-secrets.yml`, `config.yml`, `queenswood.yml` and `values.yml`
+under `<code>/units/<label>/`. It reports the project id it minted, the
+domain, the zone it will write records into, and the recovery project.
 
-### 2. Write the instance manifest
-
-`<code>/units/<label>/instance.yml`. Four fields are required — `code`,
-`env`, `label` and `projectId` — and everything else defaults. State
-`ingress` as well, or the instance answers on no name at all:
-
-```yaml
-apiVersion: queenswood.repldriven.com/v1alpha1
-kind: XQueenswoodInstance
-metadata:
-  name: qw01-n-dev
-  namespace: crossplane-system
-spec:
-  code: "qw01"
-  env: "n"
-  label: "dev"
-  projectId: "prj-qw01-n-dev-xxxxxx"
-  access:
-    platformViewer: ["group:grp-gcp-qw01-platform-viewer@<domain>"]
-    platformAdmin: ["group:grp-gcp-qw01-platform-admin@<domain>"]
-    secretsAdmin: ["group:grp-gcp-qw01-secrets-admin@<domain>"]
-  ingress:
-    domain: "dev.<domain>"
-    zone:
-      name: "dz-qw01-c-<domain-with-hyphens>"
-      project: "prj-qw01-c-mgmt-xxxxxx"
-```
-
-`ingress` is all or nothing: a `domain` with no `zone.name` fails the
-whole composite rather than composing part of it. The domain must
-differ from every other instance's.
-
-### 3. Write the unit and its Applications
-
-The unit declaration goes at the top of `<code>/`, named
-`<label>.unit.yml`, carrying `spec.source.path: <code>/units/<label>`.
-The four files it points at go in that folder beside `instance.yml`:
-`external-secrets.yml` at sync-wave 1, `config.yml` at 2,
-`queenswood.yml` at 3, and `values.yml`.
-
-Copy them from the instance already there and change the instance name,
-the destination, the values path, and the project id — which appears in
-`config.yml` as `projectId` and in `external-secrets.yml` inside the
-`iam.gke.io/gcp-service-account` annotation.
+The environment letter and the label are the arguments; everything else
+is read from the installation's own manifest and from the plane.
 
 > [!WARNING]
-> The unit declaration goes at the top, never inside the folder. The
-> installation's Application is not recursive, so a declaration filed
-> in the folder is never applied at all.
+> Only where that unit does not exist yet. The project id is minted per
+> call, so a second render would name a project nothing built — which is
+> why the recipe refuses rather than overwrites.
 
-### 4. Merge, and watch the composite build
+### 2. Read what it wrote
+
+The declaration sits at the top of `<code>/` and the rest in the
+folder. That is not cosmetic: the installation's Application is not
+recursive, so a declaration filed inside the folder is never applied at
+all.
+
+Check the domain, which must differ from every other instance's, and
+every field carrying the minted project id — `projectId` in
+`instance.yml` and `config.yml`, the `iam.gke.io/gcp-service-account`
+annotation in `external-secrets.yml`, and the service accounts and
+connection name in `values.yml`. All are rendered from one value and
+have to stay that way.
+
+Change what the defaults got wrong — the machine type, the database
+tier, the network ranges if this installation will ever peer — then
+commit.
+
+### 3. Merge, and watch the composite build
 
 ```bash
 just crossplane-unready
@@ -134,9 +109,9 @@ registers the cluster with Argo. Twenty minutes is normal. Nothing of
 the bank installs until it reports ready: `instance.yml` applies at
 wave 0, so the Applications behind it wait.
 
-Do steps 5 and 6 while it builds.
+Do steps 4 and 5 while it builds.
 
-### 5. Create the OAuth client
+### 4. Create the OAuth client
 
 In the new project, in the console, as
 [google-sign-in](google-sign-in.md) has it: the consent screen first,
@@ -145,12 +120,12 @@ redirect URI. The redirect URI is
 `https://keycloak.<domain>/realms/<realm>/broker/<alias>/endpoint`,
 alias included, and the client is this environment's alone.
 
-### 6. Write the three secret versions
+### 5. Write the three secret versions
 
 ```bash
-just gcp-secret-version "sec-$INSTANCE-google-oauth"
-just gcp-keycloak-admin-secret "$ENV" "$LABEL"
-just gcp-fdb-backup-key "$ENV" "$LABEL"
+just gcp-secret-version "sec-$CODE-n-dev-google-oauth"
+just gcp-keycloak-admin-secret n dev
+just gcp-fdb-backup-key n dev
 ```
 
 The first two entries are in the instance's project and the third is in
@@ -161,19 +136,19 @@ the installation's recovery project. Each reports the version it added.
 > admin only while the master realm is absent, and a version added
 > later reaches the running realm not at all.
 
-### 7. Name what reads them, and merge
+### 6. Name what reads them, and merge
 
-In the unit's `values.yml`: `keycloak.googleClientId` from step 5, and
-`keycloak.bootstrapAdmin.secretName`, without which the entry step 6
+In the unit's `values.yml`: `keycloak.googleClientId` from step 4, and
+`keycloak.bootstrapAdmin.secretName`, without which the entry step 5
 wrote is inert and Keycloak comes up on the operator's own generated
 password. The client id is carried in the import Job's name, so a
 changed id produces a Job that runs.
 
-### 8. Check it serves
+### 7. Check it serves
 
 ```bash
 just argo-apps-status
-just gcp-instance-cluster-ctx "$ENV" "$LABEL"
+just gcp-instance-cluster-ctx n dev
 ```
 
 Every Application for the instance `Synced` and `Healthy`, then sign in
@@ -219,11 +194,11 @@ because pods with no requests read as uncommitted to the scheduler.
 
 **MUST:**
 
-- Invent the project id and record it before anything else, with a
-  fresh six-hex suffix. Nothing mints it, and it is consumed
-  permanently.
-- Write the same project id into `instance.yml`, `config.yml` and the
-  `iam.gke.io/gcp-service-account` annotation in `external-secrets.yml`.
+- Render the unit with `just gcp-instance-manifest`, which mints the
+  project id once and writes it into every file that carries it. Where
+  one is written by hand instead, they have to agree: a wrong id in the
+  external-secrets annotation is a service account nothing is bound to,
+  not an error.
 - Give the instance its own `access` mapping, and let it reconcile
   before writing any secret version.
 - Put the unit declaration at the top of the installation's directory,
@@ -249,6 +224,8 @@ because pods with no requests read as uncommitted to the scheduler.
   record for the same name, and each reconciles it to its own address.
 - Reuse or rename a project id. Neither is possible, and the second
   rebuilds the resource.
+- Render a unit over one that already exists. The project id is minted
+  per call, so the second render names a project nothing built.
 - Add a second version to the FDB backup key. A later key strands every
   backup written under the first.
 
@@ -310,7 +287,7 @@ one.
 - [queenswood-installation](queenswood-installation.md) — the manifest
   the plane reads, and changing it by merge.
 - [google-sign-in](google-sign-in.md) — the console acts and the Admin
-  API call behind step 5.
+  API call behind step 4.
 - [external-secrets](external-secrets.md) — the declared container and
   the written version, and what each entry holds.
 - [argocd-apps](argocd-apps.md) — what a parent Application may hold,

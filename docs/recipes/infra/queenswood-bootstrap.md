@@ -394,7 +394,7 @@ step 6 applies them. The commit records them while they are still only
 proposed, which is what the file is for — a project id is consumed
 permanently and cannot be undeleted into usefulness, so one that was
 minted, applied and then lost is not recoverable from anything the
-cluster holds. The document is `infra/platform/installation.yml.tmpl`
+cluster holds. The document is `infra/platform/templates/installation.yml.tmpl`
 with values substituted, so what it will say is readable before it is
 run.
 
