@@ -105,6 +105,47 @@ with --rawfile so it never reaches a command line:
 ### 5. Store the values
 ```
 
+### The Rules are the only part that travels
+
+A recipe's `## Rules` block is distilled into a Tessl plugin rule,
+which is loaded into every agent's context. Everything else in the
+recipe is read by somebody who has already decided to open it. So a
+`just` recipe named only in a Solution step reaches nobody who did not
+already know to look — name it in the bullet whose action it performs.
+
+```
+;; Bad — the step runs it, and the rule describes the action without it
+- Read the live slot names before naming a composed resource.
+
+;; OK — the name is what has to travel
+- Read the live slot names — `just crossplane-slots` — before naming a
+  composed resource.
+```
+
+Name the recipe and nothing more. Which column to read, what an empty
+result means, and which flag it passes belong in the Solution, behind
+the link the rule already carries.
+
+### A step's command is a named recipe, not an inline script
+
+A step needing more than a line or two of shell becomes a `just`
+recipe. An inline block cannot be named in a Rules bullet, so it never
+travels: an agent has no way to reach for it, and a person retypes it
+from the page every time.
+
+Wrap what reads. A recipe that only reports — what is not ready, which
+policies are live, what an Application last did — is safe to run
+without reading it first, and safe to run twice. A step that writes
+usually stays inline, where the reader sees what it will do before it
+does it — unless the recipe is itself what makes the write safe: `just
+gcp-secret-version` refuses to create a container the composite has not
+made and strips the trailing newline a pasted command would send as
+part of the credential. Brevity alone does not earn it.
+
+Where the recipe lives and what it is called are
+[justfile-recipes](justfile-recipes.md)'s: the justfile for the domain
+it acts on, carrying that domain's prefix.
+
 ### A failure earns its entry by misleading
 
 `## Failures` is an index of the ways this goes wrong that a reader
@@ -464,6 +505,12 @@ without naming the operation.
 - Open a Discussion with a short unbolded summary of what was done.
 - Keep rationale out of the Solution. A reader following steps has
   not asked for it.
+- Name a `just` recipe in the Rules bullet whose action it performs.
+  The Rules block is the only part of a recipe distilled into agent
+  context, so a command named only in a step reaches nobody.
+- Make a step's command a `just` recipe where it needs more than a
+  line or two of shell. An inline block cannot be named in a bullet,
+  so it never travels.
 - Open a procedure's `## Status` with **Verified**, **Untested** or
   **Superseded**. A recipe describing a convention has no Status.
 - Use the canonical reference-list pattern for ADR / recipe /
@@ -478,6 +525,9 @@ without naming the operation.
 - Give a failure an entry where the message already names its cause.
 - Explain a step inside the step. Mechanism and rationale are the
   Discussion's.
+- Wrap a step that writes in a `just` recipe for brevity alone. A
+  write stays inline, where the reader sees it before running it,
+  unless the recipe is what makes the write safe.
 - Use any GitHub alert type other than `[!WARNING]`.
 - Put `)` immediately after a link's closing paren.
 - Wrap link text across lines.
@@ -551,5 +601,7 @@ codebase doesn't perfectly comply.
 - [ADR-0015](../../adr/0015-comments-and-docstrings.md) — Comments and
   docstrings
 - [code-style.md](../code/code-style.md)
+- [justfile-recipes.md](justfile-recipes.md) — where a step's recipe
+  lives, and what it is called
 - [GitHub flavoured markdown](https://github.github.com/gfm/)
 - [Mermaid documentation](https://mermaid.js.org/)

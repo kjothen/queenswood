@@ -207,6 +207,7 @@ and delete the Composition alongside, because nothing links them but a
 before treating a deletion from the repository as a removal from the
 plane, and merge a change before expecting it there — Argo reads the
 revision an Application names, never a working tree.
+Commands: `just crossplane-slots`.
 See [crossplane-changes](../../../docs/recipes/infra/crossplane-changes.md).
 
 ## Provider resources are Terraform underneath
@@ -416,7 +417,7 @@ See [argocd-apps](../../../docs/recipes/infra/argocd-apps.md).
 
 ## A group with no health check reads Healthy
 
-Re-read `argocd-cm` after an Argo upgrade and re-check the status-less
+Re-read the checks after an Argo upgrade and re-check the status-less
 kinds after a Crossplane one — an upgrade is what moves either answer.
 Add an XRD's API group to `compositeGroups` in
 `infra/helm/management-plane/values.yaml` in the same change as the
@@ -434,7 +435,7 @@ one kind — there are several, in both groups. Delete the
 Argo's own lists, once a release carrying `argoproj/argo-cd#29382` is
 the one the plane runs; keeping them is defensible only for a kind
 upstream still does not list.
-Commands: `just argo-health-kinds`.
+Commands: `just argo-health-checks`, `just argo-health-kinds`.
 See [argocd-health](../../../docs/recipes/infra/argocd-health.md).
 
 ## Argo reads a private repository as a GitHub App
@@ -462,6 +463,7 @@ version before reading it as a wrong credential, and read the
 `ExternalSecret`'s status rather than the Secret to check the
 credential arrived — it carries the same answer and needs no right to
 the value.
+Commands: `just gcp-github-app-secret`.
 See [argocd-github](../../../docs/recipes/infra/argocd-github.md).
 
 ## Argo and Crossplane on a plane are upgraded by hand
@@ -601,5 +603,9 @@ capture a command's output into a variable before piping it, so a
 denial is not read as an empty result. Use whatever the caller supplied
 and discover only what they did not: never add a lookup for a value the
 caller already named, since discovery fails where an argument would
-have worked. Declare an overridable variable with `env_var_or_default`.
+have worked. Declare an overridable variable with
+`env_var_or_default`, and put a recipe in the justfile for the domain
+it acts on, prefixed with that domain's name — the prefix is what
+groups it in `just --list`, and the file is where somebody looks for
+one they half-remember.
 See [justfile-recipes](../../../docs/recipes/practices/justfile-recipes.md).

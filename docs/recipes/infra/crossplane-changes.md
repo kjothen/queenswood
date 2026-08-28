@@ -173,11 +173,14 @@ See [crossplane-debug](crossplane-debug.md).
 **MUST:**
 
 - Withhold `Delete` before moving a resource to another composite, in a
-  change of its own that reaches the plane first. The transfer deletes
-  the parent's copy, so the parent's policy is the one that governs.
-- Read the live slot names before naming a composed resource in the new
-  kind. Reusing one a live managed resource carries makes two
-  composites claim it, and every apply then fails.
+  change of its own that reaches the plane first, and check it reached
+  the plane in the `POLICIES` column of `just crossplane-slots`. The
+  transfer deletes the parent's copy, so the parent's policy is the one
+  that governs.
+- Read the live slot names — `just crossplane-slots` — before naming a
+  composed resource in the new kind. Reusing one a live managed
+  resource carries makes two composites claim it, and every apply then
+  fails.
 - Count the live instances of a kind before removing its XRD. The CRD
   and every composite of it go with the XRD.
 - Delete a Composition alongside the XRD it names. Nothing links them

@@ -63,6 +63,26 @@ argo-apps-operation ctx=MGMT_CTX:
         ]) | @tsv' <<< "$JSON" \
       | column -t -s $'\t'
 
+# The health checks Argo has, and any exact-kind keys beside them.
+argo-health-checks ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # The chart renders one entry per group in compositeGroups. An exact
+    # resource.customizations.health.<group>_<kind> key beside them is
+    # owned by something else and beats the wildcard, so it goes on
+    # assessing its kind by whatever an earlier generation wrote.
+    CM=$(kubectl --context {{ ctx }} -n argocd get configmap argocd-cm \
+      -o json)
+    GROUPS=$(jq -r '.data["resource.customizations"] // ""' <<< "$CM" \
+      | { grep -E '^\S.*:$' || true; })
+    KEYS=$(jq -r '.data | keys[]
+        | select(startswith("resource.customizations.health."))' <<< "$CM")
+    echo "GROUPS"
+    if [[ -n $GROUPS ]]; then print -r -- "$GROUPS"; else echo "none"; fi
+    echo
+    echo "EXACT KEYS"
+    if [[ -n $KEYS ]]; then print -r -- "$KEYS"; else echo "none"; fi
+
 # =========================================================================
 # Which Crossplane kinds can never carry a status.
 #

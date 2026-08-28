@@ -4,8 +4,8 @@
 
 ## Status
 
-**Verified**, 2026-08-27, on this installation's plane: step 1 gave the
-five and nothing else, and step 2 reported nothing missing.
+**Verified**, 2026-08-28, on this installation's plane: step 1 gave the
+five groups, no exact keys, and step 2 reported nothing missing.
 
 ## Problem
 
@@ -29,11 +29,10 @@ export CODE=qw01
 ### 1. Check Argo has the health checks
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
-  -o json | jq -r '.data["resource.customizations"]' | grep -E '^\S.*:$'
+just argo-health-checks "$CODE-mgmt"
 ```
 
-Exactly these five, and nothing else:
+`GROUPS` exactly these five, and nothing else:
 
 ```
 platform.repldriven.com/*:
@@ -43,13 +42,7 @@ argoproj.io/Application:
 "*.upbound.io/*":
 ```
 
-```bash
-kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
-  -o json | jq -r '.data | keys[]
-    | select(startswith("resource.customizations.health."))'
-```
-
-Nothing.
+`EXACT KEYS` `none`.
 
 ### 2. Check every status-less Crossplane kind is handled
 
@@ -61,13 +54,13 @@ just argo-health-kinds
 
 ## Failures
 
-**A group in `compositeGroups` with no line in step 1.** The chart
-renders one entry per group in that list, so a missing line is an XRD
+**A group in `compositeGroups` with no line under `GROUPS` in step 1.**
+The chart renders one entry per group in that list, so a missing line is an XRD
 loaded onto the plane whose group was never added beside it. Every
 composite of that kind reads Healthy, including one that failed to
 compose.
 
-**A `resource.customizations.health.<group>_<kind>` key in step 1.**
+**A key under `EXACT KEYS` in step 1.**
 Server-side apply removes a field when the manager that owned it stops
 declaring it, so one that survives is owned by something else. An exact
 key beats a wildcard, so a stale one goes on assessing its kind by
@@ -110,9 +103,9 @@ status matters.
 
 **MUST:**
 
-- Re-read `argocd-cm` after an Argo upgrade, and re-run
-  `just argo-health-kinds` after a Crossplane one.
-  An upgrade is what moves either answer.
+- Re-read the checks with `just argo-health-checks` after an Argo
+  upgrade, and re-run `just argo-health-kinds` after a Crossplane
+  one. An upgrade is what moves either answer.
 - Add an XRD's API group to `compositeGroups` in
   `infra/helm/management-plane/values.yaml`, in the same change as the
   XRD, where the group is not there already. One entry covers every
