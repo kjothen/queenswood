@@ -41,6 +41,28 @@ argo-apps-sync-policy ctx=MGMT_CTX:
           ]) | @tsv' \
       | column -t -s $'\t'
 
+# What each Application's running or last operation is doing.
+argo-apps-operation ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # OP-REV is the revision the running operation replays; NEXT-REV is
+    # what would be synced now. They differ while a retry loop replays a
+    # fault already fixed. RETRIES unset means the operation is not
+    # failing at all.
+    JSON=$(kubectl --context {{ ctx }} -n argocd get applications -o json)
+    jq -r '["NAME","PHASE","RETRIES","OP-REV","NEXT-REV","STARTED"],
+        (.items[] | [
+          .metadata.name,
+          (.status.operationState.phase // "-"),
+          (.status.operationState.retryCount // "-"),
+          ((.operation.sync.revisions // [.operation.sync.revision])
+            | map(select(. != null))[0] // "-" | .[0:7]),
+          ((.status.sync.revisions // [.status.sync.revision])
+            | map(select(. != null))[0] // "-" | .[0:7]),
+          (.status.operationState.startedAt // "-")
+        ]) | @tsv' <<< "$JSON" \
+      | column -t -s $'\t'
+
 # =========================================================================
 # Which Crossplane kinds can never carry a status.
 #

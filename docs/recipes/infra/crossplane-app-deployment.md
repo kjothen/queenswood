@@ -288,7 +288,7 @@ generations.
   billing account, none of which has an API.
 - [crossplane-design](crossplane-design.md) — what a kind covers, and
   what identifies each part of it.
-- [crossplane-diagnosis](crossplane-diagnosis.md) — what a composition
+- [crossplane-debug](crossplane-debug.md) — what a composition
   owns, and where a failure reports.
 - [gcp-iam](gcp-iam.md) — Workload Identity's two halves, and rights held
   by accident.

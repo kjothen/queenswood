@@ -117,6 +117,17 @@ extract_see_block() {
 echo "Rule file: $RULE_FILE"
 echo
 
+# --- Every `just` recipe a Rules block names ------------------------------
+# In order of first appearance, deduped. This is what the rule section's
+# `Commands:` line carries: the names are what reach an agent's context
+# ambiently, where how to read their output stays in the recipe.
+
+extract_commands() {
+  # `|| true`: a Rules block naming no command is the common case, and
+  # grep's exit 1 would otherwise end the script under `set -e`.
+  { grep -oE 'just [a-z0-9][a-z0-9-]*' || true; } | awk '!seen[$0]++'
+}
+
 for f in "$WORKDIR"/*.section; do
   [ -f "$f" ] || continue
   title=$(head -1 "$f")
@@ -127,6 +138,7 @@ for f in "$WORKDIR"/*.section; do
   printf 'See-block: %s\n\n' "$(printf '%s' "$see_block" | tr '\n' ' ')"
 
   links=$(printf '%s\n' "$see_block" | grep -oE '\]\([^)]+\)' | tr -d '][()')
+  cmds=""
 
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
@@ -150,9 +162,21 @@ for f in "$WORKDIR"/*.section; do
         echo "ERROR: $doc has no ## Rules section"
       else
         printf -- '--- %s (## Rules) ---\n%s\n\n' "$doc" "$out"
+        cmds="$cmds$(printf '%s' "$out" | extract_commands)
+"
       fi
     else
       echo "SKIP: $doc (not under docs/adr/ or docs/recipes/)"
     fi
   done <<< "$links"
+
+  cmds=$(printf '%s\n' "$cmds" | { grep -v '^$' || true; } | awk '!seen[$0]++')
+  if [ -n "$cmds" ]; then
+    printf 'Commands line for this section:\n'
+    printf '%s\n' "$cmds" \
+      | awk '{ printf "%s`%s`", (NR == 1 ? "Commands: " : ", "), $0 }
+             END { print "." }' \
+      | fold -s -w 72 | sed 's/ *$//'
+    printf '\n'
+  fi
 done

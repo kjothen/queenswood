@@ -1,17 +1,18 @@
-# Diagnosing an installation
+# Debugging an installation
 
 <!-- tessl-plugin: deployment -->
 
 ## Status
 
-**Verified**, 2026-08-27, on this installation's plane, where nothing
+**Verified**, 2026-08-28, on this installation's plane, where nothing
 is currently failing: step 1 gave a header line and nothing under it,
 and steps 2 to 4 were run against the instance's `XCluster` and the
-`Cluster` under it.
+`Cluster` under it. Step 5 issues no command.
 
 ## Problem
 
-You need Crossplane to tell you why your installation is not healthy.
+You need to use Crossplane to find what in an installation is not
+ready, or not what you declared.
 
 ## Solution
 
@@ -31,27 +32,23 @@ export CODE=qw01
 ### 1. Find what is not ready
 
 ```bash
-kubectl --context "$CODE-mgmt" get composite,managed -A -o json | jq -r '
-  ["KIND","NAME","SYNCED","READY"],
-  (.items[]
-   | {k: .kind, n: .metadata.name,
-      s: ([.status.conditions[]? | select(.type=="Synced")][0].status // "-"),
-      r: ([.status.conditions[]? | select(.type=="Ready")][0].status // "-")}
-   | select(.s != "True" or .r != "True")
-   | [.k, .n, .s, .r]) | @tsv' | column -t
+just crossplane-unready "$CODE-mgmt"
 ```
 
+Rows are where to start: take the composite nearest the top of the list
+into step 2.
+
 A header line with nothing under it means every composite and every
-managed resource on the plane is both synced and ready, and what you
-are looking at is in Failures rather than in a condition.
+managed resource on the plane reads both synced and ready, and what is
+wrong is something that reads correct — a field holding a value nobody
+declared, or missing one that was. Step 4 is what answers those, on
+whichever object carries the field.
 
 ### 2. Trace the composite
 
-Whichever composite is nearest the top of that list:
-
 ```bash
-# the composite to trace, as kind.group/name
-export XR=xcluster.platform.repldriven.com/qw01-n-test
+# the composite step 1 named, as kind.group/name, e.g.
+export XR="xcluster.platform.repldriven.com/$CODE-n-test"
 
 crossplane resource trace "$XR" -n crossplane-system -c "$CODE-mgmt" \
   -o wide
@@ -68,12 +65,10 @@ pipeline rather than in any one resource.
 ### 3. Read the conditions on whatever is not ready
 
 ```bash
-# the object to read, as kind.group/name
-export OBJ=cluster.container.gcp.m.upbound.io/qw01-n-test
+# the object step 2 named, as kind.group/name, e.g.
+export OBJ="cluster.container.gcp.m.upbound.io/$CODE-n-test"
 
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$OBJ" -o json \
-  | jq -r '.status.conditions[]
-      | "\(.type)  \(.status)  \(.reason)  \(.message // "-")"'
+just crossplane-conditions "$OBJ" "$CODE-mgmt"
 ```
 
 Three types, reporting three different failures. `Synced` is whether
@@ -85,26 +80,37 @@ the cloud made.
 ### 4. Find who owns a field
 
 ```bash
-# the object to read, as kind.group/name
-export OBJ=cluster.container.gcp.m.upbound.io/qw01-n-test
+# the object step 2 named, as kind.group/name, e.g.
+export OBJ="cluster.container.gcp.m.upbound.io/$CODE-n-test"
 
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$OBJ" -o json \
-  --show-managed-fields | jq -r '
-  ["OWNER","FIELD"],
-  (.metadata.managedFields[]
-   | (if (.manager | startswith("apiextensions.crossplane.io/composed"))
-      then "composition"
-      elif (.manager | contains("reference-resolver")) then "resolver"
-      else .manager end) as $owner
-   | (.fieldsV1["f:spec"]["f:forProvider"] // {} | keys[])
-   | [$owner, ltrimstr("f:")]) | @tsv' | column -t
+just crossplane-owners "$OBJ" "$CODE-mgmt"
 ```
 
 `composition` is the composition's own manager, `resolver` writes what
 it resolved from a `*Ref`, and `provider` writes what it
-late-initialised from the cloud. A field listed under `composition`
-cannot be held by hand. A field in none of the lists is unowned, and a
-`kubectl patch` of it holds.
+late-initialised from the cloud. A field in none of the lists is
+unowned.
+
+### 5. Change it where its owner is
+
+**Composition-owned.** The change is to
+`infra/platform/crossplane-xrds/<kind>-composition.yml`, and it is a
+merge. Nothing pins a Composition revision, so every live composite of
+that kind takes the edit on its next reconcile. A `kubectl patch` of
+such a field reverts.
+
+**Unowned.** A `kubectl patch` holds until something claims the field.
+
+**Provider-owned.** Leave it. A patch added for a field
+late-initialisation owns takes the field from the provider, and the
+provider stops maintaining it — see
+[crossplane-providers](crossplane-providers.md).
+
+Where the field identifies the cloud resource, no edit reaches it under
+any owner: the provider refuses the replacement and says so in
+`LastAsyncOperation`, so the resource has to be deleted and rebuilt.
+Withhold `Delete` first — see
+[crossplane-changes](crossplane-changes.md).
 
 ## Failures
 
@@ -158,13 +164,19 @@ composite's own status, or what a deletion cascades to.
 
 **MUST:**
 
+- Start from what is not ready — `just crossplane-unready` — rather
+  than from the resource somebody named.
 - Read `Synced`, `Ready` and `LastAsyncOperation` before concluding
-  anything. They report different failures.
+  anything, with `just crossplane-conditions`. They report different
+  failures.
 - Read the composite's own conditions before any composed resource's.
   One pipeline step failing stops them all and reports there.
-- Pass `--show-managed-fields`, and check the owner, before assuming a
-  hand patch will hold or that a field will survive its patch being
-  removed.
+- Check which field manager owns a field — `just crossplane-owners`,
+  which passes `--show-managed-fields` — before assuming a hand patch
+  will hold or that a field will survive its patch being removed.
+- Change a composition-owned field in the Composition and merge it.
+  Nothing pins a revision, so every live composite takes the edit on
+  its next reconcile, and a `kubectl patch` of such a field reverts.
 - Enable an API before composing a kind that needs it. Cloud Storage is
   on by default in a new project and Secret Manager is not.
 - Install a provider for every kind the composite composes, on every
@@ -226,9 +238,10 @@ afterwards — so while both managers declare it, dropping either changes
 nothing.
 `managementPolicies` is set in `base` and therefore composition-owned,
 so a `kubectl patch` of it reverts and the only way to change it is to
-change the composition. `deletionPolicy` is set by nothing, which is
-what makes it the usable lever when a managed resource has to be
-deleted without taking the cloud resource with it.
+change the composition — which is why orphaning a resource before it is
+deleted is a merge rather than something done at the cluster. The v1
+API's `deletionPolicy` would have been the hand lever for that, and the
+`.m.` kinds do not carry the field at all.
 
 **Why a status field can vanish.** A composite's status is derived on
 each reconcile, not accumulated, so a patch that stops firing takes its

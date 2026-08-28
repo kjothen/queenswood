@@ -214,5 +214,5 @@ a plane's own manifests with them.
 
 - [argocd-apps](argocd-apps.md) — Applications, waves, and reading a
   sync that is not applying.
-- [crossplane-diagnosis](crossplane-diagnosis.md) — the composites
+- [crossplane-debug](crossplane-debug.md) — the composites
   whose health this is about.

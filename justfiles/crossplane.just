@@ -1,10 +1,13 @@
 # Crossplane kinds, what they compose, and what Crossplane may do to
 # each composed resource.
 #
-# The first two read the XRDs and Compositions in this repository: the
-# question a design asks is what exists here, not what one cluster is
-# running. `crossplane-slots` reads a plane, because a slot name has to
-# be checked against the objects that already carry one.
+# `crossplane-kinds` and `crossplane-policies` read the XRDs and
+# Compositions in this repository: the question a design asks is what
+# exists here, not what one cluster is running. The rest read a plane,
+# because what is wrong with an installation is only there -- and each
+# captures kubectl's output before piping, since a pipeline takes jq's
+# status and a failed read would otherwise print a header and pass for
+# an empty result.
 
 # What each kind composes, by XRs and managed resources.
 crossplane-kinds:
@@ -88,19 +91,70 @@ crossplane-policies:
             print(f"observed only: {kind} / {what}")
     PY
 
-# The slot name every live managed resource was composed under.
+# Live managed resources by slot, with their management policies.
 crossplane-slots ctx=MGMT_CTX:
     #!/usr/bin/env zsh
     set -e
     # Crossplane matches a composed resource by this annotation, not by
     # metadata.name, so a name already in this list belongs to whatever
-    # composed it.
-    kubectl --context {{ ctx }} get managed -A -o json \
-      | jq -r '["SLOT","KIND","NAME"],
+    # composed it. POLICIES is the live value, which is what governs a
+    # deletion -- the repository may already say something else.
+    JSON=$(kubectl --context {{ ctx }} get managed -A -o json)
+    jq -r '["SLOT","KIND","NAME","POLICIES"],
           (.items[] | [
             (.metadata.annotations["crossplane.io/composition-resource-name"]
               // "-"),
             .kind,
-            .metadata.name
-          ]) | @tsv' \
+            .metadata.name,
+            ((.spec.managementPolicies // ["*"]) | join(","))
+          ]) | @tsv' <<< "$JSON" \
+      | column -t -s $'\t'
+
+# Every composite and managed resource not both synced and ready.
+crossplane-unready ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # A header line with nothing under it is the healthy answer.
+    JSON=$(kubectl --context {{ ctx }} get composite,managed -A -o json)
+    jq -r '["KIND","NAME","SYNCED","READY"],
+          (.items[]
+           | {k: .kind, n: .metadata.name,
+              s: ([.status.conditions[]?
+                    | select(.type=="Synced")][0].status // "-"),
+              r: ([.status.conditions[]?
+                    | select(.type=="Ready")][0].status // "-")}
+           | select(.s != "True" or .r != "True")
+           | [.k, .n, .s, .r]) | @tsv' <<< "$JSON" \
+      | column -t -s $'\t'
+
+# What one object's conditions say, as kind.group/name.
+crossplane-conditions obj ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # Synced, Ready and LastAsyncOperation report different failures.
+    JSON=$(kubectl --context {{ ctx }} -n crossplane-system \
+      get {{ obj }} -o json)
+    jq -r '["TYPE","STATUS","REASON","MESSAGE"],
+          (.status.conditions[] | [
+            .type, .status, .reason, (.message // "-")
+          ]) | @tsv' <<< "$JSON" \
+      | column -t -s $'\t'
+
+# Which field manager owns each of one object's forProvider fields.
+crossplane-owners obj ctx=MGMT_CTX:
+    #!/usr/bin/env zsh
+    set -e
+    # kubectl strips managedFields unless asked for them.
+    JSON=$(kubectl --context {{ ctx }} -n crossplane-system \
+      get {{ obj }} -o json --show-managed-fields)
+    jq -r '["OWNER","FIELD"],
+          (.metadata.managedFields[]
+           | (if (.manager
+                  | startswith("apiextensions.crossplane.io/composed"))
+              then "composition"
+              elif (.manager | contains("reference-resolver"))
+              then "resolver"
+              else .manager end) as $owner
+           | (.fieldsV1["f:spec"]["f:forProvider"] // {} | keys[])
+           | [$owner, ltrimstr("f:")]) | @tsv' <<< "$JSON" \
       | column -t -s $'\t'

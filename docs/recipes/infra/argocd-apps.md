@@ -94,9 +94,15 @@ never applied however many attempts remain — an hour of it, with a
 budget backing off to ten minutes. The status reads as though the fix
 landed: `status.sync.revisions` shows the revision Argo _would_ sync
 and updates the moment the merge is polled, where
-`.operation.sync.revisions` shows the one being retried. Compare the
-two, then merge the fix and remove `.operation`, which takes a JSON
-patch because a merge patch cannot remove a field:
+`.operation.sync.revisions` shows the one being retried. Compare them
+in the `OP-REV` and `NEXT-REV` columns:
+
+```bash
+just argo-apps-operation
+```
+
+Then merge the fix and remove `.operation`, which takes a JSON patch
+because a merge patch cannot remove a field:
 
 ```
 kubectl -n argocd patch app <app> --type json \
@@ -211,13 +217,17 @@ value and keeps it by reading the live object back with Helm's
 
 - Keep concrete resources out of a parent Application. Put anything
   whose kind a child installs into a child of its own.
-- Set `ServerSideApply=true` for charts with large CRDs.
-- Set retry budgets that outlast an operator install.
+- Set `ServerSideApply=true` for charts with large CRDs, and check it
+  landed in the `SSA` column of `just argo-apps-sync-policy`.
+- Set retry budgets that outlast an operator install. `RETRY` in
+  `just argo-apps-sync-policy` is what each Application carries.
 - Read `.operation.sync.revisions` rather than `status.sync.revisions`
-  when a sync is failing. The first is what is being retried; the
+  when a sync is failing — `OP-REV` and `NEXT-REV` in
+  `just argo-apps-operation`. The first is what is being retried; the
   second is only what would be synced next.
-- Read `retryCount` before calling a stuck sync a retry loop. Unset
-  means the operation is not failing at all.
+- Read `retryCount` before calling a stuck sync a retry loop, in the
+  `RETRIES` column of `just argo-apps-operation`. Unset means the
+  operation is not failing at all.
 - Merge the fix before cancelling anything, or the fresh sync hangs the
   same way.
 - Remove `.operation` to cancel a queued sync, with a JSON patch, and
@@ -230,9 +240,11 @@ value and keeps it by reading the live object back with Helm's
 - Strip `argocd.argoproj.io/tracking-id` from a resource handed from
   one Application to another.
 - Set `prune: false` where pruning would delete something a missing
-  file should not delete.
-- Merge a change before expecting Argo to apply it. It reads the
-  revision an Application names, never a working tree.
+  file should not delete, and read `PRUNE` in
+  `just argo-apps-sync-policy` to see what each one carries.
+- Merge a change before expecting Argo to apply it, then confirm it
+  landed with `just argo-apps-status`. Argo reads the revision an
+  Application names, never a working tree.
 
 **MUST NOT:**
 

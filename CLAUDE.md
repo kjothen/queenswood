@@ -192,9 +192,9 @@ topic.
   GitHub App that reaches the private one, the manifest's fields, and
   who holds which access capability. See
   [queenswood-installation.md](docs/recipes/infra/queenswood-installation.md).
-- **Diagnosing an installation** — where a failure reports, which field
+- **Debugging an installation** — where a failure reports, which field
   manager owns what, and why a status field disappears. See
-  [crossplane-diagnosis.md](docs/recipes/infra/crossplane-diagnosis.md).
+  [crossplane-debug.md](docs/recipes/infra/crossplane-debug.md).
 - **Moving or withdrawing a kind** — why the parent's deletion policy is
   the one that governs, the two merges a move takes, and what a
   withdrawal removes. See

@@ -151,6 +151,6 @@ turns out not to exist.
 
 - [crossplane-design](crossplane-design.md) — the engine underneath,
   and how a kind is designed on it.
-- [crossplane-diagnosis](crossplane-diagnosis.md) — why an
-  installation is not healthy.
+- [crossplane-debug](crossplane-debug.md) — what in an installation
+  is not ready, or not what you declared.
 - [gcp-iam](gcp-iam.md) — what the provider's identity needs.

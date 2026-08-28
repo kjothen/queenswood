@@ -24,18 +24,10 @@ metadata:
 
 # sync-rules-from-docs
 
-A Tessl rule (always-loaded agent context) and its source docs
-(`docs/recipes/*/*.md`, `docs/adr/*.md`) are two independent prose
-statements of the same guidance. Left to drift, the rule can quietly
-stop matching its source with no signal. This skill closes that gap:
-it extracts the normative content straight from each section's linked
-docs, then rewrites the rule section as a tight compression of *only*
-that extracted material — no freely re-derived guidance, no invented
-claims.
-
-**Read the docs, write the rule** — never the other way around. If a
-rule currently says something that doesn't trace back to any extracted
-bullet, that's a finding to surface, not something to preserve.
+**Read the docs, write the rule** — never the other way around. Compose
+each rule section from the extracted material only. Where a rule says
+something that traces to no extracted bullet, surface it as a finding
+rather than preserving it.
 
 ## When to Use
 
@@ -72,8 +64,7 @@ shapes below are specific to those two).
      part of step 6 instead.
    - **`mismatched: <doc>`** — currently linked from a rule section,
      but labeled for a *different* plugin (or not labeled at all).
-     Report it; don't act on it. Moving a section to another plugin's
-     rule file is a human call — the target plugin may not exist yet.
+     Report it; don't act on it.
 
 2. **Run the extractor**: `bash plugins/workflow/skills/sync-rules-from-docs/extract.sh [rule-file]`
    (defaults to `plugins/idioms/rules/idioms.md`). This is a
@@ -86,10 +77,9 @@ shapes below are specific to those two).
      if that shape is present.
 
    If the extractor reports `ERROR: <doc> has no ## Rules section` (or
-   `## Decision`), **stop for that section** — fix the doc's structure
-   first, don't guess at what the rule should say. This is a real
-   signal that the doc drifted out of the expected shape, not
-   something to route around.
+   `## Decision`), **stop for that section**: fix the doc's structure,
+   re-run `extract.sh`, and continue once that section extracts
+   cleanly. Don't guess at what the rule should say.
 
 3. **For each section, compose the rule body from the extracted
    material only.** This is the one step that needs judgment — a
@@ -108,6 +98,12 @@ shapes below are specific to those two).
      from one or two docs should read as the rule's existing voice —
      short, imperative, "how to write" not "what's forbidden" — not as
      a pasted list. Match the surrounding sections' tone and length.
+   - **Carry the `Commands:` line verbatim**, immediately above the
+     `See [...]` line, wherever the extractor emits one. It lists every
+     `just` recipe the linked docs' Rules name, in first-appearance
+     order. Keep the command names out of the section's prose: the
+     names are what an agent needs ambiently, and how to read their
+     output belongs in the recipe behind the `See` link.
 
 4. **Flag untraceable claims.** Before rewriting a section, diff its
    *current* body against the extracted material. If the current text
@@ -134,8 +130,11 @@ shapes below are specific to those two).
    reaches the copy agents actually load:
 
    ```bash
-   for d in ./plugins/*/; do tessl install "file:${d%/}"; done
+   just tessl-plugins-install
    ```
+
+   `just tessl-plugins-check` reports whether the installed rules match
+   their sources, and is what catches a sync that stopped here.
 
    `plugins/<name>/rules/<name>.md` is the tracked source, but
    `AGENTS.md` loads `.tessl/RULES.md`, which points at

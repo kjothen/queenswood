@@ -308,8 +308,8 @@ once the manifests do.
 
 ## References
 
-- [crossplane-diagnosis](crossplane-diagnosis.md) — why an
-  installation is not healthy.
+- [crossplane-debug](crossplane-debug.md) — what in an installation
+  is not ready, or not what you declared.
 - [crossplane-changes](crossplane-changes.md) — moving a resource
   between kinds, and withdrawing one.
 - [crossplane-providers](crossplane-providers.md) — what

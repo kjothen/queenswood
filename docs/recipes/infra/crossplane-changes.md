@@ -38,8 +38,8 @@ export CODE=qw01
 just crossplane-slots "$CODE-mgmt"
 ```
 
-The new kind's slots have to be names no live managed resource in this
-list already carries.
+The `SLOT` column. The new kind's slots have to be names nothing in it
+already carries.
 
 ### 2. Withhold `Delete` from what is moving
 
@@ -65,18 +65,12 @@ Merge that on its own, before the change that moves anything.
 ### 3. Check the policy reached the plane
 
 ```bash
-kubectl --context "$CODE-mgmt" get managed -A -o json | jq -r '
-  ["SLOT","KIND","POLICIES"],
-  (.items[]
-   | [(.metadata.annotations["crossplane.io/composition-resource-name"]
-        // "-"),
-      .kind,
-      ((.spec.managementPolicies // ["*"]) | join(","))]) | @tsv' \
-  | column -t
+just crossplane-slots "$CODE-mgmt"
 ```
 
-Every slot that is about to move reads without `Delete`. Until it does,
-step 4 destroys what it was meant to move.
+The `POLICIES` column, against the slots step 2 edited: every one of
+them reads without `Delete`. Until it does, step 4 destroys what it was
+meant to move.
 
 ### 4. Move the resources
 
@@ -92,8 +86,8 @@ Merge it. Two merges in all, not three.
 ### 5. Check the transfer finished
 
 ```bash
-# the parent composite, as kind.group/name
-export XR=xqueenswoodinstance.queenswood.repldriven.com/qw01-n-test
+# the composite the resources moved out of, as kind.group/name, e.g.
+export XR="xqueenswoodinstance.queenswood.repldriven.com/$CODE-n-test"
 
 crossplane resource trace "$XR" -n crossplane-system -c "$CODE-mgmt" \
   -o wide
@@ -109,7 +103,7 @@ resource back by external name.
 Count the live composites of the kind first, against the cluster:
 
 ```bash
-# the kind being withdrawn, plural and lower-case
+# the kind being withdrawn, plural and lower-case, e.g.
 export KIND=xpublicendpoints
 
 kubectl --context "$CODE-mgmt" get "$KIND" -A
@@ -172,7 +166,7 @@ a Composition for a kind it no longer serves.
 composite's status is derived rather than accumulated, so a field
 published by a resource that is mid-transfer is absent while it is
 gone, and server-side apply removes it from whatever was reading it.
-See [crossplane-diagnosis](crossplane-diagnosis.md).
+See [crossplane-debug](crossplane-debug.md).
 
 ## Rules
 
@@ -238,8 +232,8 @@ somewhere this repository can look.
 
 - [crossplane-design](crossplane-design.md) — how much one kind covers,
   and what may be deleted.
-- [crossplane-diagnosis](crossplane-diagnosis.md) — why an
-  installation is not healthy.
+- [crossplane-debug](crossplane-debug.md) — what in an installation
+  is not ready, or not what you declared.
 - [argocd-apps](argocd-apps.md) — what prunes, and why a merged change
   reaches a plane when a working tree does not.
 - [composite-catalogue](../../plan/composite-catalogue.md) — the

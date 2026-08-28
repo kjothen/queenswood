@@ -188,7 +188,37 @@ belongs to the resource it names: one pipeline step failing — an
 unparseable template, a kind with no CRD — stops every composed
 resource and reports on the composite. Read `Synced`, `Ready` and
 `LastAsyncOperation` before concluding anything.
-See [crossplane](../../../docs/recipes/infra/crossplane.md).
+See [crossplane-design](../../../docs/recipes/infra/crossplane-design.md).
+
+## Debug from what is not ready, not from what was named
+
+Start with `just crossplane-unready`, which lists every composite and
+managed resource that is not both synced and ready, rather than with
+the resource somebody pointed at. Read the composite's own conditions
+before any of its composed resources', since one pipeline step failing
+stops them all and reports there — a template that will not parse or a
+kind whose CRD is not installed on the applying plane stops the whole
+composition, and the resources it would have applied are untouched and
+say nothing. Read `Synced`, `Ready` and `LastAsyncOperation` together
+with `just crossplane-conditions`, because they report different
+failures, and never treat a failure as belonging to the resource its
+message names. The reverse is just as misleading: a composite reporting
+`Ready` is no evidence about every resource under it, so enable an API
+before composing a kind that needs it — Cloud Storage is on by default
+in a new project and Secret Manager is not — and install a provider for
+every kind the composite composes, on every plane that composes it.
+
+Settle a question about a field by asking who owns it, with
+`just crossplane-owners`, which passes the `--show-managed-fields`
+kubectl omits by default and would otherwise leave every field reading
+as unowned. Never patch a field the composition sets and expect it to
+hold, and never delete a patch for a field you want kept, since the
+composition owns what it patches and the field goes with the patch. A
+composition-owned field is changed in the Composition and merged:
+nothing pins a revision, so every live composite takes the edit on its
+next reconcile. And a rendered diff is proof of what a composition
+produces, never of what applying it does to what already exists.
+See [crossplane-debug](../../../docs/recipes/infra/crossplane-debug.md).
 
 ## Provider resources are Terraform underneath
 
@@ -387,28 +417,42 @@ fails building a task for an unknown kind and never applies the child
 that would install it. Sync waves do not resolve a missing kind, and
 `SkipDryRunOnMissingResource` skips the dry run rather than making an
 apply succeed. Set `ServerSideApply=true` for charts with large CRDs,
-whose client-side apply exceeds the annotation limit. Set retry budgets
-that outlast an operator install, since an Application that exhausts
-its retries waits for a revision change or a manual sync — a merged fix
-does not reach it. A running retry loop is worse: an operation pins the
-revision it started with and replays that revision's manifests, so read
+whose client-side apply exceeds the annotation limit, and `prune: false`
+where pruning would delete something a missing file should not delete.
+Set retry budgets that outlast an operator install, since an
+Application that exhausts its retries waits for a revision change or a
+manual sync and a merged fix does not reach it.
+
+A running retry loop is worse: an operation pins the revision it
+started with and replays that revision's manifests, so read
 `.operation.sync.revisions` rather than `status.sync.revisions`, which
-shows only what would be synced next, and remove `.operation` to cancel
-a loop replaying a fault already fixed. One object the API server
-rejects fails the whole sync and leaves every well-formed resource
-beside it `OutOfSync`, and server-side apply refuses an undeclared field
-rather than dropping it — so a template that renders is not a template
-that applies. Set `prune: false` where pruning would delete
-something a missing file should not delete. Merge a change before
-expecting Argo to apply it: it reads the revision an Application names,
-never a working tree. Never rely on `lookup` to preserve a generated
-value — Argo renders with `helm template`, where it returns nothing, so
-the generate branch always wins and every sync applies a fresh value
-over whatever the last one left. Generate such a value in the cluster
-instead, from the same Job that registers it wherever its counterpart
-lives, and let the chart declare the Secret without `data` so
-server-side apply leaves the contents to whoever wrote them.
-See [argocd](../../../docs/recipes/infra/argocd.md).
+shows only what would be synced next. Read `retryCount` before calling
+a stuck sync a loop at all, since unset means the operation is not
+failing. Merge the fix before cancelling anything, or the fresh sync
+hangs the same way, then remove `.operation` to cancel a queued sync,
+with a JSON patch, and terminate one already in flight by setting
+`status.operationState.phase` to `Terminating`. Terminate before
+removing `.operation`, never after: operation processing is driven by
+that field, so removing it first leaves nothing to act on the phase and
+the state sits `Terminating` for good.
+
+Strip `argocd.argoproj.io/tracking-id` from a resource handed from one
+Application to another, or its former owner goes on listing it. One
+object the API server rejects fails the whole sync and leaves every
+well-formed resource beside it `OutOfSync`, and server-side apply
+refuses an undeclared field rather than dropping it — so a template
+that renders is not a template that applies. Merge a change before
+expecting Argo to apply it: Argo reads the revision an Application
+names, never a working tree. Never rely on `lookup` to preserve a
+generated value — Argo renders with `helm template`, where it returns
+nothing, so the generate branch always wins and every sync applies a
+fresh value over whatever the last one left. Generate such a value in
+the cluster instead, from the same Job that registers it wherever its
+counterpart lives, and let the chart declare the Secret without `data`
+so server-side apply leaves the contents to whoever wrote them.
+Commands: `just argo-apps-sync-policy`, `just argo-apps-operation`,
+`just argo-apps-status`.
+See [argocd-apps](../../../docs/recipes/infra/argocd-apps.md).
 
 ## Argo reads a private repository as a GitHub App
 
