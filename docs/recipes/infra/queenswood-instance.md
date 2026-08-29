@@ -18,9 +18,8 @@ You want to add a Queenswood instance to an installation.
 
 ### Prerequisites
 
-- An installation with a management plane reconciling it, built by
-  [queenswood-bootstrap](queenswood-bootstrap.md), and its manifest
-  merged.
+- A running Queenswood installation — see
+  [queenswood-installation](queenswood-installation.md).
 - The installation's recovery project, named in its `EnvironmentConfig`
   as `recoveryProjectId`. Absent, the instance composes neither a
   backups bucket nor a backup key entry, and `just gcp-fdb-backup-key`
