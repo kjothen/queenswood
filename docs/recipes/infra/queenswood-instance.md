@@ -12,9 +12,7 @@ omits.
 
 ## Problem
 
-**You** want to add an instance to an installation. The plane takes as
-many as you declare, so this is the same act whether it is the first or
-the fifth.
+**You** want to add a Queenswood instance to an installation.
 
 ## Solution
 
