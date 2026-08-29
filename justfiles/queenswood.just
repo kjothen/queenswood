@@ -1,0 +1,501 @@
+# =========================================================================
+# Queenswood's own manifests: the documents an installation is declared
+# by, rendered from the templates in infra/platform/templates.
+#
+# Here rather than in gcp.just because these write files and touch no
+# cloud resource -- they read GCP to discover what the plane already
+# built, and change nothing in it. See
+# docs/recipes/infra/queenswood-instance.md.
+# =========================================================================
+
+# The instance these recipes act on, and the folder's parent for a first
+# installation. Set once in the environment rather than passed to each
+# recipe: an argument is a value you can get wrong on one command in a
+# sequence and right on the next. Pass one to override for a single run.
+ENV := env_var_or_default("QW_ENV", "")
+LABEL := env_var_or_default("QW_LABEL", "")
+PARENT := env_var_or_default("QW_PARENT", "")
+
+# Which set of templates a unit is rendered from. minimal leans on the
+# XRD's defaults, so the file says what this instance chose rather than
+# what it inherited; full states them, which is what anything
+# long-lived wants, since an immutable field whose default moves later
+# is refused rather than applied. Two complete sets rather than one
+# with a hole in it: each renders to a document you can read whole.
+SPEC := env_var_or_default("QW_SPEC", "minimal")
+
+# Print the installation manifest, resolved. Takes the folder's parent.
+queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing="" recovery="":
+    #!/usr/bin/env zsh
+    set -e
+    # stdout carries the manifest and nothing else, so this can be
+    # redirected straight into a file; every message below goes to
+    # stderr. That file is the installation's whole record -- see
+    # docs/plan/cloud-just-migration.md -- and it lives in a private
+    # repository, because two of the values here are identifiers worth
+    # keeping out of a public one.
+    #
+    # Anything generated rather than derived is minted per call, so
+    # capture the output rather than re-running this and expecting the
+    # same answer.
+    #
+    # Checked here rather than only on the branch that scopes a folder
+    # lookup: the value reaches createFolder.parent either way.
+    if [[ -z "{{ parent }}" ]]; then
+      echo "no parent for the folder" >&2
+      echo "export QW_PARENT, or pass it:" >&2
+      echo "  just queenswood-installation-manifest organizations/<org-id>" >&2
+      exit 1
+    fi
+    # Deterministic, because the code is what tells one installation
+    # from another -- a suffix on top of it would only obscure that.
+    # Pass a name where the folder is handed to you already named.
+    NAME="{{ name }}"
+    if [[ -z "$NAME" ]]; then
+      NAME="fldr-{{ CODE }}"
+      echo ">>> naming the folder $NAME" >&2
+    fi
+    # Refuse to make a second installation by accident. GCP allows the
+    # duplicate name, so this is the only thing that would notice -- and
+    # with a deterministic name it is what catches a rebuild that meant
+    # to adopt.
+    if [[ -z "{{ folder }}" ]]; then
+      case "{{ parent }}" in
+        organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
+        folders/*)       SCOPE="--folder=${${:-{{ parent }}}#folders/}" ;;
+        *) echo "parent must be organizations/<id> or folders/<id>" >&2; exit 1 ;;
+      esac
+      EXISTING=$(gcloud resource-manager folders list $SCOPE \
+                   --filter="displayName=$NAME" \
+                   --format='value(name)' 2>/dev/null | head -1 || true)
+      if [[ -n "$EXISTING" ]]; then
+        echo "a folder named $NAME already exists under {{ parent }}: folders/$EXISTING" >&2
+        echo "adopt it:  just gcp-boot-mgmt-apply {{ parent }} $NAME folders/$EXISTING" >&2
+        echo "or choose a different name" >&2
+        exit 1
+      fi
+    fi
+    # Omitted unless passed, and normally not passed. The account is a
+    # property of the identity -- it holds billing.user on exactly one --
+    # so the manifest does not record it. Once a project exists the
+    # provider's late-initialisation owns forProvider.billingAccount, so
+    # a manifest without this leaves billing alone rather than unsetting
+    # it. gcp-boot-mgmt-apply supplies it, because creating a project is the
+    # one moment it is needed.
+    BILLING_LINE=""
+    if [[ -n "{{ billing }}" ]]; then
+      BILLING_LINE="billingAccountId: \"{{ billing }}\""
+    fi
+
+    # A project id is consumed permanently and cannot be undeleted into
+    # usefulness, so it is generated once and then carried in the
+    # manifest. That is what stops a rebuilt plane minting a second one.
+    MGMT="{{ mgmt }}"
+    if [[ -z "$MGMT" ]]; then
+      MGMT="prj-{{ CODE }}-c-mgmt-$(openssl rand -hex 3)"
+      echo ">>> naming the management project $MGMT" >&2
+    fi
+
+    # Minted here rather than added when backups are first wanted, so a
+    # from-scratch installation has somewhere to keep what it would be
+    # rebuilt from without anyone deciding to. Its own id for the same
+    # reason the management project's is minted once: consumed
+    # permanently, and not derivable afterwards.
+    # Omitted unless an id is given, which is what a bootstrap wants:
+    # the boot cluster composes as little as it can, and the plane
+    # composes the recovery project once it is reconciling. An id here
+    # adopts or creates one at bootstrap instead.
+    RECOVERY_BLOCK=""
+    if [[ -n "{{ recovery }}" ]]; then
+      RECOVERY_BLOCK=$(printf '  recovery:\n    projectId: "%s"' "{{ recovery }}")
+    fi
+
+    # Set only when the project already exists, for the same reason the
+    # folder's adoption field is: a pre-set external name turns a
+    # first-run create into a failed observe.
+    MGMT_ADOPT=""
+    if [[ -n "{{ mgmt }}" ]]; then
+      # Prefixed: that is the form Crossplane records as the external
+      # name, and adoption matches on it exactly.
+      case "$MGMT" in
+        projects/*) MGMT_ADOPT="adopt: \"$MGMT\""; MGMT="${MGMT#projects/}" ;;
+        *)          MGMT_ADOPT="adopt: \"projects/$MGMT\"" ;;
+      esac
+    fi
+
+    # Resolved from the parent where that names an organisation, rather
+    # than rediscovered. An argument the caller supplied and the recipe
+    # then ignores is a run that fails on a question already answered --
+    # and discovery fails outright where more than one organisation is
+    # visible, or where a token has expired.
+    PARENT="{{ parent }}"
+    ORG_ARG=""
+    if [[ "$PARENT" == organizations/* ]]; then
+      ORG_ARG="${PARENT#organizations/}"
+    fi
+    DOMAIN=$(just _gcp-domain "$ORG_ARG")
+
+    FOLDER="{{ folder }}"
+    if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
+      FOLDER="folders/$FOLDER"
+    fi
+    ADOPT=""
+    if [[ -n "$FOLDER" ]]; then
+      ADOPT="folderId: \"$FOLDER\""
+    fi
+
+    # region, zone and regionCode are stated rather than left to the
+    # XRD's defaults. They are load-bearing -- a name carries the
+    # region abbreviation, and moving either rebuilds the subnet and
+    # the cluster -- so a default that changed underneath a live
+    # installation would move it silently.
+    # The document lives in infra/platform/templates/installation.yml.tmpl so it
+    # can be read and reviewed as YAML rather than as shell.
+    CODE="{{ CODE }}" REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
+    ZONE="{{ ZONE }}" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
+    PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
+    PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
+    CLUSTER_ADMIN_GROUP="{{ CLUSTER_ADMIN_GROUP }}" \
+    SECRETS_ADMIN_GROUP="{{ SECRETS_ADMIN_GROUP }}" \
+    RECOVERY_BLOCK="$RECOVERY_BLOCK" MGMT="$MGMT" MGMT_ADOPT="$MGMT_ADOPT" \
+    SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
+    SOURCE_PATH_PREFIX="{{ SOURCE_PATH_PREFIX }}" \
+    MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
+    PARENT="{{ parent }}" NAME="$NAME" ADOPT="$ADOPT" \
+    python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
+      infra/platform/templates/installation.yml.tmpl
+
+# Render a whole unit -- the declaration and the five manifests it
+# names -- into the installations repository.
+queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
+    #!/usr/bin/env zsh
+    set -e
+    # One recipe rather than six redirects, because what makes this safe
+    # is that the project id is minted once and written into three of
+    # the files identically. Rendering them separately is how they come
+    # to disagree, and a wrong id in the external-secrets annotation
+    # yields a service account nothing is bound to rather than an error.
+    if ! INSTANCE=$(just _queenswood-instance "{{ env }}" "{{ label }}"); then
+      exit 1
+    fi
+    # Before anything is deleted or minted, so a typo costs nothing.
+    TEMPLATES=infra/platform/templates/unit/{{ spec }}
+    if [[ ! -d "$TEMPLATES" ]]; then
+      echo "no template set {{ spec }}" >&2
+      echo "sets are:" >&2
+      ls infra/platform/templates/unit | sed 's/^/  /' >&2
+      exit 1
+    fi
+    ROOT={{ INSTALLATIONS_REPO }}/{{ CODE }}
+    UNIT_FILE="$ROOT/{{ label }}.unit.yml"
+    UNIT_DIR="$ROOT/units/{{ label }}"
+
+    # Committed is the line, not merely present. A plane reads the unit
+    # from git, so one that has never been committed cannot have been
+    # applied: nothing was built, the minted id means nothing, and
+    # re-rendering costs nothing. A committed one may already be merged
+    # and built, and then the file is the only record of a project id
+    # GCP has consumed.
+    if [[ -e "$UNIT_FILE" || -d "$UNIT_DIR" ]]; then
+      COMMITTED=""
+      if git -C {{ INSTALLATIONS_REPO }} rev-parse --git-dir >/dev/null 2>&1; then
+        for TRACKED in "{{ CODE }}/{{ label }}.unit.yml" \
+                       "{{ CODE }}/units/{{ label }}/instance.yml"; do
+          if git -C {{ INSTALLATIONS_REPO }} cat-file -e "HEAD:$TRACKED" 2>/dev/null; then
+            COMMITTED="$TRACKED"
+          fi
+        done
+      fi
+      if [[ -n "$COMMITTED" ]]; then
+        echo "$INSTANCE already has a unit, committed:" >&2
+        echo "  $COMMITTED" >&2
+        echo "edit it, or choose another label" >&2
+        exit 1
+      fi
+      echo ">>> replacing the uncommitted unit for $INSTANCE" >&2
+      echo ">>> nothing was built from it, so the id is minted afresh" >&2
+      rm -rf "$UNIT_DIR"
+    fi
+    if [[ ! -d "$ROOT" ]]; then
+      echo "no installation at $ROOT" >&2
+      echo "the plane's manifest is committed there first:" >&2
+      echo "  just queenswood-installation-manifest organizations/<org-id>" >&2
+      exit 1
+    fi
+
+    # Minted here, like the management project's and for the same
+    # reason: consumed permanently, and not derivable afterwards.
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      PROJECT="prj-$INSTANCE-$(openssl rand -hex 3)"
+      echo ">>> naming the project $PROJECT" >&2
+    fi
+
+    # The installation's own apex, read from the manifest the plane
+    # reconciles rather than rediscovered: it is what the zone is named
+    # for, and a second answer here would name a zone nothing composed.
+    INSTALLATION="$ROOT/installation.yml"
+    DNS_BLOCK=$(grep -A1 '^  dns:' "$INSTALLATION" || true)
+    APEX=$(printf '%s\n' "$DNS_BLOCK" \
+             | sed -n 's/^ *domain: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p')
+    if [[ -z "$APEX" ]]; then
+      echo "no dns.domain in $INSTALLATION" >&2
+      echo "an instance answers on a subdomain of the installation's" >&2
+      exit 1
+    fi
+
+    DOMAIN="{{ domain }}"
+    if [[ -z "$DOMAIN" ]]; then
+      DOMAIN="{{ label }}.$APEX"
+    fi
+    # The zone is the installation's, in the management project. Named
+    # the way the plane composes it, so both spell one name.
+    ZONE_NAME="dz-{{ CODE }}-c-${APEX//./-}"
+
+    if ! MGMT=$(just _gcp-mgmt-project); then
+      exit 1
+    fi
+    # Empty is a real answer -- an installation keeping nothing has no
+    # recovery project -- but an instance composes a bucket and a backup
+    # key in it, so this one is required.
+    RECOVERY=$(just _gcp-recovery-project || true)
+    if [[ -z "$RECOVERY" ]]; then
+      echo "no recovery project for {{ CODE }}" >&2
+      echo "the plane composes it from recoveryProjectId -- merge that" >&2
+      echo "into the installation's EnvironmentConfig first" >&2
+      exit 1
+    fi
+    # The bucket carries the recovery project's suffix, not its own: a
+    # bucket named for a project that may be rebuilt changes name when
+    # it is, which is a backup nobody can find under the name recorded.
+    RECOVERY_SUFFIX="${RECOVERY##*-}"
+
+    # Pinned once, on the plane, so a unit cannot install a different
+    # operator from the one the plane runs.
+    ES_VERSION=$(sed -n '/^externalSecrets:/,/^[^ ]/s/^ *version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' \
+                   infra/helm/management-plane/values.yaml | head -1)
+    if [[ -z "$ES_VERSION" ]]; then
+      echo "no externalSecrets.version in the management-plane values" >&2
+      exit 1
+    fi
+
+    mkdir -p "$UNIT_DIR"
+    for T in unit instance external-secrets config queenswood values; do
+      if [[ "$T" == "unit" ]]; then
+        OUT="$UNIT_FILE"
+      else
+        OUT="$UNIT_DIR/$T.yml"
+      fi
+      CODE="{{ CODE }}" ENV="{{ env }}" LABEL="{{ label }}" \
+      INSTANCE="$INSTANCE" PROJECT="$PROJECT" \
+      REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
+      GCP_ZONE="{{ ZONE }}" DOMAIN="$DOMAIN" ZONE_NAME="$ZONE_NAME" \
+      MGMT="$MGMT" RECOVERY="$RECOVERY" \
+      BACKUP_BUCKET="bkt-$INSTANCE-backups-$RECOVERY_SUFFIX" \
+      BACKUP_GENERATION="fdb/continuous/$(date +%Y-%m-%d)" \
+      ORG_DOMAIN="$APEX" \
+      PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
+      PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
+      SECRETS_ADMIN_GROUP="{{ SECRETS_ADMIN_GROUP }}" \
+      SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
+      MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
+      EXTERNAL_SECRETS_VERSION="$ES_VERSION" \
+      python3 -c 'import os,sys,string; sys.stdout.write(string.Template(open(sys.argv[1]).read()).substitute(os.environ))' \
+        "$TEMPLATES/$T.yml.tmpl" > "$OUT"
+      echo ">>> wrote $OUT"
+    done
+
+    echo
+    echo "$INSTANCE"
+    echo "  project   $PROJECT"
+    echo "  domain    $DOMAIN"
+    echo "  zone      $ZONE_NAME in $MGMT"
+    echo "  recovery  $RECOVERY"
+    echo "  spec      {{ spec }}"
+    echo
+    echo "commit these, then merge. The composite builds while you"
+    echo "create the OAuth client and write the three secret versions;"
+    echo "googleClientId in values.yml is empty until you have one."
+
+# Validate an instance's env and label, and print <code>-<env>-<label>.
+[private]
+_queenswood-instance env label:
+    #!/usr/bin/env zsh
+    set -e
+    # The XRD's own patterns, checked while a name is still a string.
+    # just has no named arguments, so a QW_SPEC=full written after the
+    # recipe lands in env and would otherwise reach GCP as a name.
+    if [[ -z "{{ env }}" || -z "{{ label }}" ]]; then
+      echo "no instance named; export QW_ENV and QW_LABEL, or pass them" >&2
+      exit 1
+    fi
+    if [[ ! "{{ env }}" =~ ^[a-z]$ ]]; then
+      echo "env must be one lowercase letter, not {{ env }}" >&2
+      echo "a variable goes before the recipe: QW_SPEC=full just ..." >&2
+      exit 1
+    fi
+    if [[ ! "{{ label }}" =~ ^[a-z][a-z0-9-]{0,10}[a-z0-9]$ ]]; then
+      echo "label must match [a-z][a-z0-9-]{0,10}[a-z0-9], not {{ label }}" >&2
+      exit 1
+    fi
+    printf '%s\n' "{{ CODE }}-{{ env }}-{{ label }}"
+
+# Put the Google OAuth client's secret in an instance's entry, read off
+# the prompt. The client itself is made by hand in the console.
+queenswood-instance-google-secret env=ENV label=LABEL file="":
+    #!/usr/bin/env zsh
+    set -e
+    # A thin naming of gcp-secret-version: the entry is derived from the
+    # instance rather than typed, which is the whole of what this adds.
+    if ! INSTANCE=$(just _queenswood-instance "{{ env }}" "{{ label }}"); then
+      exit 1
+    fi
+    just gcp-secret-version "sec-$INSTANCE-google-oauth" "" "{{ file }}"
+
+# Generate the bootstrap admin an instance's Keycloak database is created
+# with, and put it in that instance's entry. Once, per database.
+queenswood-instance-keycloak-admin env=ENV label=LABEL username="admin" supersede="":
+    #!/usr/bin/env zsh
+    set -e
+    # Its own recipe rather than a value typed into gcp-secret-version,
+    # because the payload is two properties in one entry -- `username`
+    # and `password`, read by name, as sec-<code>-c-github-app is. The
+    # Keycloak CRD wants a kubernetes.io/basic-auth Secret carrying
+    # both, and two entries would be two things to keep in step.
+    #
+    # Generated rather than typed: nothing reads a version back out of
+    # Secret Manager -- secretsAdmin carries no versions.access,
+    # deliberately -- so a value somebody chose is a value they keep
+    # somewhere else. Whoever needs to sign in to the admin console
+    # reads it from the Secret external-secrets writes on the cluster.
+    #
+    # Alphanumeric, which costs nothing at this length and spares every
+    # consumer a quoting question: the realm-import Job urlencodes it,
+    # and the next thing to read it might not.
+    SECRET="sec-{{ CODE }}-{{ env }}-{{ label }}-keycloak-admin"
+    PROJECT=$(just _gcp-instance-project {{ env }} {{ label }} || true)
+
+    # Refused rather than versioned. Keycloak honours a bootstrap admin
+    # only while the master realm is absent, so the database keeps the
+    # account it was created with, and a later version reaches the
+    # running realm not at all -- it materialises a credential nothing
+    # accepts, which is the failure this entry exists to prevent: a
+    # realm serving perfectly well that nothing can administer.
+    #
+    # supersede=yes is for the two cases that are not that -- an entry
+    # written before any database existed, and an account you are about
+    # to change to match. For the second the order is: write, let
+    # external-secrets sync, read the Secret, then set that password on
+    # the account. There is nothing to type, because the value is
+    # generated here.
+    # Not silenced, and checked separately from whether it is empty: a
+    # denial exits non-zero with empty stdout, which would otherwise
+    # read as an entry holding nothing.
+    VERSIONS=""
+    if [[ -n "$PROJECT" ]]; then
+      if ! VERSIONS=$(gcloud secrets versions list "$SECRET" --project="$PROJECT" \
+                        --filter="state=ENABLED" --format='value(name)' 2>&1); then
+        echo "cannot list versions of $SECRET:" >&2
+        printf '%s\n' "$VERSIONS" | sed 's/^/  /' >&2
+        echo "secretsAdmin carries the viewer role this needs" >&2
+        exit 1
+      fi
+    fi
+    if [[ -n "$VERSIONS" ]]; then
+      if [[ "{{ supersede }}" != "yes" ]]; then
+        echo "$SECRET already holds a credential, and a later version does" >&2
+        echo "not change the account the database was created with. Reset" >&2
+        echo "that account in Keycloak to match, or reset the realm beside" >&2
+        echo "a fresh FoundationDB -- then say so:" >&2
+        echo "  just queenswood-instance-keycloak-admin {{ env }} {{ label }} {{ username }} yes" >&2
+        exit 1
+      fi
+      echo ">>> superseding the credential in $SECRET, on your word that the" >&2
+      echo ">>> account in the database is being changed to match" >&2
+    fi
+
+    # Thirty-two alphanumerics out of forty-eight random bytes, so the
+    # strip cannot run its source dry.
+    PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)
+    jq -n --arg u "{{ username }}" --arg p "$PASSWORD" \
+      '{username: $u, password: $p}' \
+      | just gcp-secret-version "$SECRET" "$PROJECT"
+    echo ">>> $SECRET now holds a bootstrap admin. Nothing reads it until"
+    echo ">>> keycloak.bootstrapAdmin.secretName in the instance's values"
+    echo ">>> names the Secret the ExternalSecret writes."
+
+# Generate the key an instance's FDB backups are encrypted under, and
+# put it in that instance's entry. Once, ever.
+queenswood-recovery-backup-key env=ENV label=LABEL supersede="":
+    #!/usr/bin/env zsh
+    set -e
+    # Its own recipe rather than a value typed into gcp-secret-version,
+    # because the encoding is not a thing to leave to whoever is
+    # holding the terminal.
+    #
+    # fdbbackup reads encryptionKeyPath as raw bytes. The ExternalSecret
+    # base64s the Secret Manager payload on its way into the Secret, so
+    # what lands on disk is the payload verbatim -- meaning the entry
+    # holds 32 raw bytes and not the base64 text of them. The previous
+    # generation held the text, because a chart writing into `data`
+    # needed base64 and Kubernetes decoded it again. Same key, two
+    # encodings, and the one that is wrong fails at a restore.
+    #
+    # Piped, never written down: a file you delete afterwards is not
+    # deleted on a copy-on-write filesystem. And not through
+    # gcp-secret-version, which strips a trailing newline -- correct for
+    # a typed secret, and one key in 256 ends in 0x0a.
+    SECRET="sec-{{ CODE }}-{{ env }}-{{ label }}-fdb-backup-key"
+    PROJECT=$(just _gcp-recovery-project || true)
+    if [[ -z "$PROJECT" ]]; then
+      echo "no recovery project for {{ CODE }}" >&2
+      echo "the plane composes it from recoveryProjectId -- merge that first" >&2
+      exit 1
+    fi
+    if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
+      echo "no secret $SECRET in $PROJECT" >&2
+      echo "the composite makes the container -- apply it first" >&2
+      exit 1
+    fi
+    # Refused rather than versioned. An existing backup is readable only
+    # under the key it was written with, so a later version does not
+    # rotate anything -- it strands every backup taken before it. Rotate
+    # by starting a new generation under a new entry and keeping this
+    # one until nothing readable is left under it.
+    #
+    # supersede=yes is for the one case that is not a rotation: a key
+    # nothing has been backed up under, so there is nothing to strand.
+    # An entry written before this recipe existed holds base64 text
+    # rather than raw bytes, and nobody can read it back to check --
+    # secretsAdmin carries no versions.access, deliberately. So the way
+    # out of a wrong value is to write a right one over it.
+    #
+    # It supersedes rather than replaces: the entry is read at `latest`
+    # and nothing pins a version, so the old one is left enabled and
+    # unused. Destroying it would need a role that can also destroy the
+    # key, which is the thing this entry exists to keep.
+    # Not silenced, and checked separately from whether it is empty. A
+    # denial exits non-zero with empty stdout, and reading that as "no
+    # versions" would add the one version that strands every backup.
+    if ! VERSIONS=$(gcloud secrets versions list "$SECRET" --project="$PROJECT" \
+                      --filter="state=ENABLED" --format='value(name)' 2>&1); then
+      echo "cannot list versions of $SECRET:" >&2
+      printf '%s\n' "$VERSIONS" | sed 's/^/  /' >&2
+      echo "secretsAdmin carries the viewer role this needs" >&2
+      exit 1
+    fi
+    if [[ -n "$VERSIONS" ]]; then
+      if [[ "{{ supersede }}" != "yes" ]]; then
+        echo "$SECRET already holds a key, and a later version does not" >&2
+        echo "rotate it -- it strands every backup taken under the current" >&2
+        echo "one. Where nothing has been backed up yet, say so:" >&2
+        echo "  just queenswood-recovery-backup-key {{ env }} {{ label }} yes" >&2
+        exit 1
+      fi
+      echo ">>> superseding the key in $SECRET, on your word that nothing" >&2
+      echo ">>> has been backed up under it" >&2
+    fi
+    openssl rand 32 \
+      | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=- \
+        >/dev/null
+    echo ">>> $SECRET now holds a key. It is the only copy, deliberately."

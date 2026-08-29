@@ -28,7 +28,7 @@ The `just` recipe reads the installation code from the justfile. The
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 ```
 
 ### Check a merged change landed
@@ -61,7 +61,7 @@ does not serve, and stops before applying the child that would install
 it. What it holds:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get application management-plane \
+kubectl --context "$QW_CODE-mgmt" -n argocd get application management-plane \
   -o json | jq -r '[.status.resources[].kind] | unique | .[]'
 ```
 
@@ -199,7 +199,7 @@ That annotation is the marker of annotation tracking. Which method a
 plane uses:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get configmap argocd-cm \
+kubectl --context "$QW_CODE-mgmt" -n argocd get configmap argocd-cm \
   -o json | jq -r '.data["application.resourceTrackingMethod"] // "unset"'
 ```
 

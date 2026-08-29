@@ -25,9 +25,9 @@ what its own pods may take, or any other chart value.
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 export WORK=$(mktemp -d)
-export REL="release.helm.m.crossplane.io/crossplane-$CODE-c-mgmt"
+export REL="release.helm.m.crossplane.io/crossplane-$QW_CODE-c-mgmt"
 export VALUES="$WORK/crossplane-values.json"
 ```
 
@@ -84,10 +84,10 @@ Merge before going further.
 ### 2. Wait for the plane to render it
 
 ```bash
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.chart.version}{"\n"}'
 
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.values}' | python3 -m json.tool
 ```
 
@@ -98,9 +98,9 @@ nothing yet to upgrade to.
 ### 3. Take the values and the version from that object
 
 ```bash
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.values}' > "$VALUES"
-VERSION=$(kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+VERSION=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.chart.version}')
 ```
 
@@ -109,7 +109,7 @@ VERSION=$(kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
 The chart now, against the one step 3 read:
 
 ```bash
-helm --kube-context "$CODE-mgmt" list -n crossplane-system
+helm --kube-context "$QW_CODE-mgmt" list -n crossplane-system
 echo "$VERSION"
 ```
 
@@ -118,7 +118,7 @@ Then the values, where there are any:
 ```bash
 JQ='paths(scalars) as $p | "\($p|map(tostring)|join(".")) = \(getpath($p))"'
 
-helm --kube-context "$CODE-mgmt" get values crossplane \
+helm --kube-context "$QW_CODE-mgmt" get values crossplane \
   -n crossplane-system -o json | jq -r "$JQ" | sort > "$WORK/running.txt"
 jq -r "$JQ" "$VALUES" | sort > "$WORK/desired.txt" \
   && diff "$WORK/running.txt" "$WORK/desired.txt"
@@ -134,7 +134,7 @@ outlive this, but a composite mid-reconcile resumes rather than
 continues.
 
 ```bash
-helm --kube-context "$CODE-mgmt" upgrade crossplane \
+helm --kube-context "$QW_CODE-mgmt" upgrade crossplane \
   crossplane-stable/crossplane --version "$VERSION" \
   -n crossplane-system -f "$VALUES"
 ```
@@ -143,17 +143,17 @@ helm --kube-context "$CODE-mgmt" upgrade crossplane \
 
 ```bash
 # the core is up, and its init container applied the CRDs
-kubectl --context "$CODE-mgmt" -n crossplane-system get pods
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get pods
 
 # every package still installed and healthy
-kubectl --context "$CODE-mgmt" get providers.pkg.crossplane.io
-kubectl --context "$CODE-mgmt" get functions.pkg.crossplane.io
+kubectl --context "$QW_CODE-mgmt" get providers.pkg.crossplane.io
+kubectl --context "$QW_CODE-mgmt" get functions.pkg.crossplane.io
 
 # what landed, and what a rollback would return to
-helm --kube-context "$CODE-mgmt" history crossplane -n crossplane-system
+helm --kube-context "$QW_CODE-mgmt" history crossplane -n crossplane-system
 
 # and reconciliation resumed
-kubectl --context "$CODE-mgmt" -n crossplane-system get xmanagementplane
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get xmanagementplane
 ```
 
 Every provider and function reads `HEALTHY` `True`, every pod
@@ -192,8 +192,8 @@ version — the `REVISION` column is a small integer counting this
 release's upgrades:
 
 ```bash
-helm --kube-context "$CODE-mgmt" history crossplane -n crossplane-system
-helm --kube-context "$CODE-mgmt" rollback crossplane <revision> \
+helm --kube-context "$QW_CODE-mgmt" history crossplane -n crossplane-system
+helm --kube-context "$QW_CODE-mgmt" rollback crossplane <revision> \
   -n crossplane-system
 ```
 

@@ -155,7 +155,7 @@ the value that comes back.
 
 Changing it is not a matter of adding a version, for that same reason:
 a later one reaches the running realm not at all. It goes in through
-`just gcp-keycloak-admin-secret <env> <label>`, which generates the
+`just queenswood-instance-keycloak-admin <env> <label>`, which generates the
 value — nothing reads a version back out of Secret Manager, so whoever
 needs the admin console reads the Secret on the cluster — and refuses an
 entry that already holds one, naming the two ways out: reset the account
@@ -186,8 +186,9 @@ Secret Manager payload on its way into the Secret — so what lands on
 disk is the payload verbatim. The previous generation stored the text,
 because a chart writing into a Secret's `data` needed base64 and
 Kubernetes decoded it again: same key, two encodings, one of them
-wrong. `just gcp-fdb-backup-key <env> <label>` is what puts it in, so
-the encoding is not left to whoever is holding the terminal — and it
+wrong. `just queenswood-recovery-backup-key <env> <label>` is what
+puts it in, so the encoding is not left to whoever is holding the
+terminal — and it
 refuses an entry that already holds one, since a later version does not
 rotate anything, it strands every backup taken under the first. Passing
 `yes` as a third argument supersedes anyway, which is right only where
@@ -254,7 +255,7 @@ does, needs a restart after that.
   reads as bytes holds those bytes and not the text of them — the
   FoundationDB backup key is raw, where the previous generation stored
   base64 because a chart writing into `data` needed it. Use
-  `just gcp-fdb-backup-key` for that one, so the encoding is not a
+  `just queenswood-recovery-backup-key` for that one, so the encoding is not a
   decision.
 - Put a version in with `just gcp-secret-version`, and let it strip the
   trailing newline from anything typed or piped.

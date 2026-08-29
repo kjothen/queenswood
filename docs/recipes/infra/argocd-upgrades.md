@@ -25,9 +25,9 @@ resource request, or any other chart value.
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 export WORK=$(mktemp -d)
-export REL="release.helm.m.crossplane.io/argocd-$CODE-c-mgmt"
+export REL="release.helm.m.crossplane.io/argocd-$QW_CODE-c-mgmt"
 export VALUES="$WORK/argocd-values.json"
 ```
 
@@ -43,7 +43,7 @@ export TO=10.4.0
 
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
-helm --kube-context "$CODE-mgmt" get values argocd -n argocd -o json \
+helm --kube-context "$QW_CODE-mgmt" get values argocd -n argocd -o json \
   > "$WORK/running.json"
 for V in "$FROM" "$TO"; do
   helm template argocd argo/argo-cd --version "$V" -n argocd \
@@ -89,10 +89,10 @@ describing it — with every patch applied. Wait until that object
 carries what you merged — the version, the values, or both:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.chart.version}{"\n"}'
 
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.values}' | python3 -m json.tool
 ```
 
@@ -103,9 +103,9 @@ nothing yet to upgrade to.
 ### 3. Take the values and the version from that object
 
 ```bash
-kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.values}' > "$VALUES"
-VERSION=$(kubectl --context "$CODE-mgmt" -n crossplane-system get "$REL" \
+VERSION=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.chart.version}')
 ```
 
@@ -119,7 +119,7 @@ The version and the values move separately, so check both. The chart
 now, against the one step 3 read:
 
 ```bash
-helm --kube-context "$CODE-mgmt" list -n argocd
+helm --kube-context "$QW_CODE-mgmt" list -n argocd
 echo "$VERSION"
 ```
 
@@ -128,7 +128,7 @@ Then the values:
 ```bash
 JQ='paths(scalars) as $p | "\($p|map(tostring)|join(".")) = \(getpath($p))"'
 
-helm --kube-context "$CODE-mgmt" get values argocd -n argocd -o json \
+helm --kube-context "$QW_CODE-mgmt" get values argocd -n argocd -o json \
   | jq -r "$JQ" | sort > "$WORK/running.txt"
 jq -r "$JQ" "$VALUES" | sort > "$WORK/desired.txt" \
   && diff "$WORK/running.txt" "$WORK/desired.txt"
@@ -157,7 +157,7 @@ merge that drift into the composition, and start again.
 ```bash
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
-helm --kube-context "$CODE-mgmt" upgrade argocd argo/argo-cd \
+helm --kube-context "$QW_CODE-mgmt" upgrade argocd argo/argo-cd \
   --version "$VERSION" -n argocd -f "$VALUES"
 ```
 
@@ -165,16 +165,16 @@ helm --kube-context "$CODE-mgmt" upgrade argocd argo/argo-cd \
 
 ```bash
 # the bootstrap Application still exists
-kubectl --context "$CODE-mgmt" -n argocd get application management-plane
+kubectl --context "$QW_CODE-mgmt" -n argocd get application management-plane
 
 # what landed, and what a rollback would return to
-helm --kube-context "$CODE-mgmt" history argocd -n argocd
+helm --kube-context "$QW_CODE-mgmt" history argocd -n argocd
 
 # every component came back
-kubectl --context "$CODE-mgmt" -n argocd get pods
+kubectl --context "$QW_CODE-mgmt" -n argocd get pods
 
 # and Argo still reconciles
-kubectl --context "$CODE-mgmt" -n argocd get applications
+kubectl --context "$QW_CODE-mgmt" -n argocd get applications
 ```
 
 The newest revision reads `deployed`, against the chart version you
@@ -196,8 +196,8 @@ release's upgrades, and the revision below the newest is where a
 rollback goes:
 
 ```bash
-helm --kube-context "$CODE-mgmt" history argocd -n argocd
-helm --kube-context "$CODE-mgmt" rollback argocd <revision> -n argocd
+helm --kube-context "$QW_CODE-mgmt" history argocd -n argocd
+helm --kube-context "$QW_CODE-mgmt" rollback argocd <revision> -n argocd
 ```
 
 ## Rules

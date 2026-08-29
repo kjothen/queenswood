@@ -422,7 +422,7 @@ spec:
                     Absent composes nothing, which is an installation
                     not yet keeping anything. Optional only because
                     qw01 predates the field: a manifest minted from
-                    gcp-plane-manifest always carries it.
+                    queenswood-installation-manifest always carries it.
 
                     Not audit or evidence, which want a locked
                     retention policy and a different set of readers, so

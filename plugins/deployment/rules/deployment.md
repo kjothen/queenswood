@@ -107,9 +107,9 @@ management project id is minted per call, so the second render replaces
 the recorded id with one no project answers to, and the redirect
 truncates before the renderer runs. Close the seed identity once the
 bootstrap is done and reopen it for the next one: its organisation
-grants otherwise stand for ever, and the plane needs none of them.
-Never assume you can create a
-folder — ids are required, and one may be handed to you instead — and
+grants otherwise stand for ever, and the plane needs none of them. Never
+assume you can create a folder — ids are required, and one may be
+handed to you instead — and
 never delete a project as a side effect of an edit. Standing the
 installation up with no instance at all is valid, since an instance is
 its own composite applied afterwards, asking a platform team for the
@@ -119,9 +119,10 @@ else the same way.
 Commands: `just gcp-boot-cluster-up`, `just gcp-boot-preflight`, `just
 gcp-boot-seed`, `just gcp-boot-seed-grant-org-roles`, `just
 gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
-`just gcp-boot-mgmt-manifest`, `just gcp-boot-mgmt-apply`, `just
-gcp-org-setup`, `just gcp-policy-status`, `just gcp-boot-cluster-down`,
-`just gcp-boot-seed-close`, `just gcp-boot-seed-open`.
+`just queenswood-installation-manifest`, `just gcp-boot-mgmt-apply`,
+`just gcp-org-setup`, `just gcp-policy-status`, `just
+gcp-boot-cluster-down`, `just gcp-boot-seed-close`, `just
+gcp-boot-seed-open`.
 See [queenswood-bootstrap](../../../docs/recipes/infra/queenswood-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
@@ -146,11 +147,12 @@ See [queenswood-installation](../../../docs/recipes/infra/queenswood-installatio
 
 ## An instance is a unit, and its secrets are written while it builds
 
-Render an instance's unit with `just gcp-instance-manifest`, which
+Render an instance's unit with `just queenswood-instance-manifest`, which
 mints the project id once and writes it into every file carrying it,
-and never render one over a unit that has been applied — the id is
-minted per call, and after an apply the file is the only record of the
-one GCP consumed, though re-rendering an unapplied unit is free. Where a
+and never render one over a unit that has been committed — the id is
+minted per call, and a committed unit may already be built, leaving the
+file as the only record of the one GCP consumed; an uncommitted one a
+plane never read is free to re-render. Where a
 file is written by hand instead, the ids have to agree: a wrong one in
 the external-secrets annotation is a service account nothing is bound
 to rather than an error. Put the unit declaration at the top of the
@@ -163,21 +165,29 @@ nothing here, and the denial is reported as a container that does not
 exist. State `ingress.domain` distinct from every other instance's,
 naming the installation's zone in `zone.name` and `zone.project`, and
 never share a domain between two instances — both compose a record for
-the one name and each reconciles it to its own address. Create the
-OAuth client in the console, in the instance's own project, one per
-environment. Write the Keycloak bootstrap admin before the bank first
-starts and name it in the unit's values as
+the one name and each reconciles it to its own address. Merge the composite
+and the Applications separately, the composite first: Keycloak honours a
+bootstrap admin only while the master realm is absent, and nothing
+automatic holds that gap open, where a folder with no Applications in
+it does. Create the OAuth client in the console, in the instance's own
+project, one per environment. Write the Keycloak bootstrap admin before
+the bank first starts and name it in the unit's values as
 `keycloak.bootstrapAdmin.secretName`, or the entry is inert; write the
 other two versions the same way, letting each strip the trailing
 newline, and never add a second version to the FDB backup key. Never
 create an instance with `state: down` — Cloud SQL refuses to create an
 already-stopped database, so an instance is built up and stopped
-afterwards. `network` may be left unstated while the VPCs are isolated,
-an instance may be taken down once it is up, and one stood up with no
-`ingress` answers on no name at all.
-Commands: `just gcp-instance-manifest`, `just
-gcp-keycloak-admin-secret`, `just gcp-secret-version`, `just
-gcp-fdb-backup-key`, `just crossplane-unready`, `just
+afterwards. An instance may lean on the
+XRD's defaults, which `QW_DEFAULTS=true` does, but state them with
+`QW_DEFAULTS=false` for anything long-lived, since the blocks it writes
+out are immutable or nearly so and a default that moves under a live
+instance is refused rather than applied. An instance may be taken down
+once it is up, and one stood up with no `ingress` answers on no name at
+all.
+Commands: `just queenswood-instance-manifest`, `just
+queenswood-instance-keycloak-admin`, `just
+queenswood-instance-google-secret`, `just
+queenswood-recovery-backup-key`, `just crossplane-unready`, `just
 argo-apps-status`, `just gcp-instance-cluster-ctx`.
 See [queenswood-instance](../../../docs/recipes/infra/queenswood-instance.md).
 
@@ -442,7 +452,7 @@ restarting whatever reads the value at startup. A value that is not
 something to type — a key, a certificate — may be passed as a file, and
 several fields that identify each other may be held in one entry as
 JSON.
-Commands: `just gcp-fdb-backup-key`, `just gcp-secret-version`.
+Commands: `just queenswood-recovery-backup-key`, `just gcp-secret-version`.
 See [external-secrets](../../../docs/recipes/infra/external-secrets.md).
 
 ## Google sign-in is two console acts and an Admin API call

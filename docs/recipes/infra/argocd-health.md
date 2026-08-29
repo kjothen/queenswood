@@ -23,13 +23,13 @@ installation.
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 ```
 
 ### 1. Check Argo has the health checks
 
 ```bash
-just argo-health-checks "$CODE-mgmt"
+just argo-health-checks "$QW_CODE-mgmt"
 ```
 
 `GROUPS` exactly these five, and nothing else:

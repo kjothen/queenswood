@@ -113,7 +113,7 @@ Manager entry the composite declares, so a rebuild stops causing this.
 What remains is applying it to this instance.
 
 1. Write a version into `sec-<code>-<env>-<label>-keycloak-admin` with
-   `just gcp-keycloak-admin-secret <env> <label>`, which generates the
+   `just queenswood-instance-keycloak-admin <env> <label>`, which generates the
    value and refuses an entry that already holds one. Two properties,
    `username` and `password` — the `ExternalSecret` reads both and
    materialises a `kubernetes.io/basic-auth` Secret.
@@ -582,8 +582,8 @@ Each leaves the composite Ready and every managed resource green.
   pivot the manifest is read from GitHub — so a local-only file passes
   every check in the ladder and then reconciles from nothing. Producing
   it should know the destination applying it already knows:
-  `gcp-boot-mgmt-apply` resolves `INSTALLATIONS_REPO`, while
-  `gcp-boot-mgmt-manifest` prints to stdout for somebody to redirect there.
+  `gcp-boot-mgmt-apply` resolves `QW_INSTALLATIONS_REPO`, while
+  `queenswood-installation-manifest` prints to stdout for somebody to redirect there.
 - **A secret with no version.** The composite composes the container and
   a person adds the version, so in between Argo holds no credential for
   the repository it reconciles from. That secret is the link between the
@@ -1206,7 +1206,7 @@ checking for at step 5 rather than after step 6.
 ### 4. The manifest in git — done
 
 The private `installations` repository holds
-`qw01/installation.yml`, rendered by `gcp-boot-mgmt-manifest` and carrying
+`qw01/installation.yml`, rendered by `queenswood-installation-manifest` and carrying
 its own `createFolder.folderId` and `management.adopt`. **This step is
 now complete**: `gcp-boot-mgmt-apply` applies that file rather than
 assembling a composite from five arguments, so the boot plane and Argo
@@ -1219,7 +1219,7 @@ processor: `billingAccountId`, because creating a project is the one
 moment it is needed, and `management.bootstrap`, because installing the
 management plane is something only the boot plane may do. Both are true
 of an act of creation rather than of an installation, which is why
-neither belongs in the record. `gcp-boot-mgmt-manifest` cannot emit either
+neither belongs in the record. `queenswood-installation-manifest` cannot emit either
 of them at all — a manifest that carried `bootstrap` would hand the
 management plane the right to reinstall itself.
 
@@ -1513,9 +1513,9 @@ installations/
     └── installation.yml     the XQueenswoodInstallation
 ```
 
-`just gcp-boot-mgmt-manifest` prints that file, resolved, on stdout with
+`just queenswood-installation-manifest` prints that file, resolved, on stdout with
 every message on stderr, so it redirects straight into place. A second
-installation is `qw02/`. `INSTALLATIONS_REPO` in `gcp.just` says where
+installation is `qw02/`. `QW_INSTALLATIONS_REPO` in `gcp.just` says where
 the checkout is, defaulting beside this one.
 
 **Argo's wiring stays in this repository**, beside the XRD it depends

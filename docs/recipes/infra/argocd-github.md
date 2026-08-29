@@ -33,7 +33,7 @@ reads.
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 ```
 
 ### 1. Name the repository in the manifest
@@ -53,8 +53,8 @@ spec:
 ### 2. Wait for the plane to compose the container
 
 ```bash
-kubectl --context "$CODE-mgmt" -n crossplane-system \
-  get secret.secretmanager.gcp.m.upbound.io "sec-$CODE-c-github-app"
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
+  get secret.secretmanager.gcp.m.upbound.io "sec-$QW_CODE-c-github-app"
 ```
 
 `SYNCED` and `READY` are both `True`.
@@ -109,7 +109,7 @@ just gcp-github-app-secret "$PEM" "$APP_ID" "$INSTALL_ID"
 ### 6. Check Argo has it
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get externalsecret \
+kubectl --context "$QW_CODE-mgmt" -n argocd get externalsecret \
   installations-repo
 ```
 
@@ -117,7 +117,7 @@ kubectl --context "$CODE-mgmt" -n argocd get externalsecret \
 itself:
 
 ```bash
-kubectl --context "$CODE-mgmt" -n argocd get application installation
+kubectl --context "$QW_CODE-mgmt" -n argocd get application installation
 ```
 
 `SYNC STATUS` is `Synced`, `HEALTH STATUS` is `Healthy`.

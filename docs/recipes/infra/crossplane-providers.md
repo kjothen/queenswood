@@ -27,7 +27,7 @@ documentation.
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 ```
 
 ### 1. Find the kind, in the namespaced group
@@ -36,7 +36,7 @@ export CODE=qw01
 # the kind, as the CRD spells it, e.g.
 export KIND=Cluster
 
-just crossplane-explain "$KIND" apiVersion "$CODE-mgmt"
+just crossplane-explain "$KIND" apiVersion "$QW_CODE-mgmt"
 ```
 
 The first line is the resource this composes against. Both API groups
@@ -47,7 +47,7 @@ find.
 ### 2. Read the schema from the CRD
 
 ```bash
-just crossplane-explain "$KIND" spec.forProvider "$CODE-mgmt"
+just crossplane-explain "$KIND" spec.forProvider "$QW_CODE-mgmt"
 ```
 
 Field shapes here are the ones that apply. Take a nested field the same
@@ -58,9 +58,9 @@ reading it from the provider's documentation.
 
 ```bash
 # an existing resource of the kind, as kind.group/name, e.g.
-export OBJ="cluster.container.gcp.m.upbound.io/$CODE-n-test"
+export OBJ="cluster.container.gcp.m.upbound.io/$QW_CODE-n-test"
 
-just crossplane-owners "$OBJ" "$CODE-mgmt"
+just crossplane-owners "$OBJ" "$QW_CODE-mgmt"
 ```
 
 What reads `provider` there is late-initialised: composed by nobody and
@@ -77,7 +77,7 @@ the ones the provider filled in while you were not looking.
 ### 4. Decide the external name
 
 ```bash
-just crossplane-external-names "$CODE-mgmt"
+just crossplane-external-names "$QW_CODE-mgmt"
 ```
 
 The external name is the cloud identifier and defaults to
@@ -89,7 +89,7 @@ resource has no field for its id at all.
 ### 5. Compose a value that only exists after create
 
 ```bash
-just crossplane-explain "$KIND" status.atProvider "$CODE-mgmt"
+just crossplane-explain "$KIND" status.atProvider "$QW_CODE-mgmt"
 ```
 
 What a kind publishes only once it exists. Where one of those is

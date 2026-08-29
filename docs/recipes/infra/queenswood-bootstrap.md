@@ -47,7 +47,7 @@ leave again, per
 The steps need no shell of their own. Every recipe below discovers the
 organisation, the billing account and the parents, taking an `org=` or
 `billing=` argument only where discovery is wrong, and reads the
-installation code from `CODE` in the justfile. The folder id is a
+installation code from `QW_CODE` in the justfile. The folder id is a
 manifest value rather than a shell one, set at step 5.
 
 Where a platform team hands you a folder they have run steps 1 to 3 on
@@ -139,16 +139,16 @@ you already named, and the rest defaults from the code:
 # the parent step 1 listed, e.g.
 export PARENT="organizations/<org-id>"
 # the installation code, as the justfile sets it, e.g.
-export CODE=qw01
+export QW_CODE=qw01
 # the private manifests repository, wherever it is checked out
-export INSTALLATIONS_REPO=../installations
+export QW_INSTALLATIONS_REPO=../installations
 
-just gcp-boot-mgmt-manifest "$PARENT" \
-  > "$INSTALLATIONS_REPO/$CODE/installation.yml"
+just queenswood-installation-manifest "$PARENT" \
+  > "$QW_INSTALLATIONS_REPO/$QW_CODE/installation.yml"
 ```
 
-Seven keys under `spec`, and no `recovery` block. `CODE` and
-`INSTALLATIONS_REPO` carry into step 6, which reads the file back from
+Seven keys under `spec`, and no `recovery` block. `QW_CODE` and
+`QW_INSTALLATIONS_REPO` carry into step 6, which reads the file back from
 the same path.
 
 Read it, then commit it. Pushing can wait for step 8.
@@ -180,10 +180,10 @@ folder.
 
 ```bash
 # the installation code, as the justfile sets it, e.g.
-export CODE=qw01
+export QW_CODE=qw01
 
 kubectl --context kind-boot-mgmt -n crossplane-system \
-  get xmanagementplane "$CODE" -o yaml
+  get xmanagementplane "$QW_CODE" -o yaml
 ```
 
 `status` carries the folder id, the management project and the platform
@@ -315,7 +315,7 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   a credential, and revoke it once the throwaway plane is gone with
   `just gcp-boot-seed-impersonate-revoke`. It outlives the plane
   otherwise — the terminal and the reboot too.
-- Render the manifest with `just gcp-boot-mgmt-manifest` and commit it
+- Render the manifest with `just queenswood-installation-manifest` and commit it
   before applying it with `just gcp-boot-mgmt-apply`, and push it
   before any plane takes over reading it from git.
 - Ask for `compute.skipDefaultNetworkCreation` before the first project
@@ -408,7 +408,7 @@ cannot catch the project id at all. Until a renderer exists that reads
 an existing manifest and preserves what it already holds, the file is
 the only record and overwriting it is how an installation is lost.
 
-**Where the exports go.** `CODE` and `INSTALLATIONS_REPO` are
+**Where the exports go.** `QW_CODE` and `QW_INSTALLATIONS_REPO` are
 `env_var_or_default` in the justfile, so the two exports in step 5 set
 both the path the render is redirected to and the path
 `gcp-boot-mgmt-apply` reads back. Writing the path into the redirect

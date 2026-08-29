@@ -443,7 +443,7 @@ one piece the composite deliberately cannot fill.
   capabilities and who holds them.
 - `infra/platform/crossplane-xrds/xmanagementplane-xrd.yml` — the
   fields above, as a schema.
-- `justfiles/gcp-boot.just` — `gcp-boot-mgmt-manifest` renders a first
+- `justfiles/gcp-boot.just` — `queenswood-installation-manifest` renders a first
   manifest and `gcp-boot-mgmt-apply` applies a committed one.
 - `justfiles/gcp.just` — `gcp-github-app-secret` stores the App's three
   values, and `gcp-secret-version` puts any other one into the entry

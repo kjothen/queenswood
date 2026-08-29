@@ -32,7 +32,7 @@ destroys.
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 ```
 
 ### 1. Determine the type of change
@@ -69,7 +69,7 @@ than after.
    names nothing in the `SLOT` column already carries.
 
    ```bash
-   just crossplane-slots "$CODE-mgmt"
+   just crossplane-slots "$QW_CODE-mgmt"
    ```
 
 2. Withhold `Delete` from what is moving, in
@@ -96,7 +96,7 @@ than after.
    to move.
 
    ```bash
-   just crossplane-slots "$CODE-mgmt"
+   just crossplane-slots "$QW_CODE-mgmt"
    ```
 
 4. Move the resources, in one change: delete them from
@@ -114,9 +114,9 @@ than after.
 
    ```bash
    # the composite the resources moved out of, as kind.group/name, e.g.
-   export XR="xqueenswoodinstance.queenswood.repldriven.com/$CODE-n-test"
+   export XR="xqueenswoodinstance.queenswood.repldriven.com/$QW_CODE-n-test"
 
-   crossplane resource trace "$XR" -n crossplane-system -c "$CODE-mgmt" \
+   crossplane resource trace "$XR" -n crossplane-system -c "$QW_CODE-mgmt" \
      -o wide
    ```
 
@@ -138,9 +138,9 @@ if the cloud resource is destroyed and built again.
 
    ```bash
    # the managed resource refusing the change, as kind.group/name, e.g.
-   export OBJ="cluster.container.gcp.m.upbound.io/$CODE-n-test"
+   export OBJ="cluster.container.gcp.m.upbound.io/$QW_CODE-n-test"
 
-   just crossplane-conditions "$OBJ" "$CODE-mgmt"
+   just crossplane-conditions "$OBJ" "$QW_CODE-mgmt"
    ```
 
 2. Merge the new value into the Composition. Nothing applies it, and
@@ -155,7 +155,7 @@ if the cloud resource is destroyed and built again.
    duration, or the cloud resource destroyed by hand.
 
    ```bash
-   just crossplane-slots "$CODE-mgmt"
+   just crossplane-slots "$QW_CODE-mgmt"
    ```
 
 4. Delete the managed resource and let the composition rebuild it.
@@ -188,7 +188,7 @@ restore the policies.
    # the kind being withdrawn, plural and lower-case, e.g.
    export KIND=xpublicendpoints
 
-   kubectl --context "$CODE-mgmt" get "$KIND" -A
+   kubectl --context "$QW_CODE-mgmt" get "$KIND" -A
    ```
 
 2. Delete both `infra/platform/crossplane-xrds/<kind>-xrd.yml` and
