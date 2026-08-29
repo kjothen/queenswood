@@ -113,7 +113,7 @@ Manager entry the composite declares, so a rebuild stops causing this.
 What remains is applying it to this instance.
 
 1. Write a version into `sec-<code>-<env>-<label>-keycloak-admin` with
-   `just gcp-keycloak-admin-secret <env> <label>`, which generates the
+   `just queenswood-instance-keycloak-admin <env> <label>`, which generates the
    value and refuses an entry that already holds one. Two properties,
    `username` and `password` — the `ExternalSecret` reads both and
    materialises a `kubernetes.io/basic-auth` Secret.
@@ -541,7 +541,7 @@ what says who satisfies it.
   container, and what goes inside may never be in git.
 
 They divide by how often each is paid, which is what the two paths in
-[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md) are
+[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md) are
 really distinguishing:
 
 - **Once per organisation** — the organisation, the billing account, the
@@ -582,8 +582,8 @@ Each leaves the composite Ready and every managed resource green.
   pivot the manifest is read from GitHub — so a local-only file passes
   every check in the ladder and then reconciles from nothing. Producing
   it should know the destination applying it already knows:
-  `gcp-boot-mgmt-apply` resolves `INSTALLATIONS_REPO`, while
-  `gcp-boot-mgmt-manifest` prints to stdout for somebody to redirect there.
+  `gcp-boot-mgmt-apply` resolves `QW_INSTALLATIONS_REPO`, while
+  `queenswood-installation-manifest` prints to stdout for somebody to redirect there.
 - **A secret with no version.** The composite composes the container and
   a person adds the version, so in between Argo holds no credential for
   the repository it reconciles from. That secret is the link between the
@@ -598,7 +598,7 @@ Each leaves the composite Ready and every managed resource green.
   `_gcp-allow-sa-keys` reads the effective policy and does nothing where
   it is already off, so the ban holds wherever a folder is handed over
   and
-  [crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md)
+  [queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md)
   is imprecise about where it comes from rather than wrong about it
   holding. The default network has no such default: `cloud.just` set it
   at the organisation, and a folder elsewhere gets a default VPC in
@@ -1048,7 +1048,7 @@ GCP provider configuration has, reached the same way.
 **The credential itself is two human acts**, and they are the last two
 in the chain. The GitHub App is created by a person in a UI, because
 GitHub has no API that creates one — see
-[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md) —
+[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md) —
 and `gcp-github-app-secret` writes its three values into Secret Manager
 as one JSON entry, run by a person holding `secretsAdmin`. The
 identifiers travel with the key rather than through a second channel, so
@@ -1206,7 +1206,7 @@ checking for at step 5 rather than after step 6.
 ### 4. The manifest in git — done
 
 The private `installations` repository holds
-`qw01/installation.yml`, rendered by `gcp-boot-mgmt-manifest` and carrying
+`qw01/installation.yml`, rendered by `queenswood-installation-manifest` and carrying
 its own `createFolder.folderId` and `management.adopt`. **This step is
 now complete**: `gcp-boot-mgmt-apply` applies that file rather than
 assembling a composite from five arguments, so the boot plane and Argo
@@ -1219,7 +1219,7 @@ processor: `billingAccountId`, because creating a project is the one
 moment it is needed, and `management.bootstrap`, because installing the
 management plane is something only the boot plane may do. Both are true
 of an act of creation rather than of an installation, which is why
-neither belongs in the record. `gcp-boot-mgmt-manifest` cannot emit either
+neither belongs in the record. `queenswood-installation-manifest` cannot emit either
 of them at all — a manifest that carried `bootstrap` would hand the
 management plane the right to reinstall itself.
 
@@ -1265,7 +1265,7 @@ the cluster, and points outward. The only thing able to act on GCP is
 the management cluster.
 
 That is stronger than the rule
-[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md)
+[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md)
 states today. "A merge is the privileged action, so merged state applies
 and a `pull_request` trigger gets no cloud identity" exists because the
 alternative was push-based CI holding one. Pull-based and data-only
@@ -1282,7 +1282,7 @@ requiring review is the control that belongs there, a merge being what
 reaches production.
 
 This is a seam the design already has rather than a new one.
-[crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md)
+[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md)
 says the manifest lives "in whichever repository the applier reconciles
 from", allowing that it is not this one, and
 [ADR-0023](../adr/0023-installation-naming-and-access.md) assumes
@@ -1513,9 +1513,9 @@ installations/
     └── installation.yml     the XQueenswoodInstallation
 ```
 
-`just gcp-boot-mgmt-manifest` prints that file, resolved, on stdout with
+`just queenswood-installation-manifest` prints that file, resolved, on stdout with
 every message on stderr, so it redirects straight into place. A second
-installation is `qw02/`. `INSTALLATIONS_REPO` in `gcp.just` says where
+installation is `qw02/`. `QW_INSTALLATIONS_REPO` in `gcp.just` says where
 the checkout is, defaulting beside this one.
 
 **Argo's wiring stays in this repository**, beside the XRD it depends
@@ -2233,7 +2233,7 @@ stays a console step for the same reason, and only its capture changes.
   installation code, the naming scheme and the four capabilities.
 - [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
-- [crossplane-bootstrap](../recipes/infra/crossplane-bootstrap.md) —
+- [queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md) —
   what a deployment builds, and the two identities that build it.
 - [cloud-naming](../recipes/infra/cloud-naming.md) — the inventory every new
   resource takes its name from.

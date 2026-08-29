@@ -36,7 +36,7 @@ See [writing-docs](../../../docs/recipes/practices/writing-docs.md).
 Structure a recipe as Problem, Solution, Failures, Rules, Discussion —
 what, how, what it looks like when it did not work, normative, why —
 with Failures and Discussion appearing only where there is one to give.
-Open the Problem with **You**, saying what you want in a sentence or
+Open the Problem with the word You, saying what you want in a sentence or
 two. Open a procedure's `## Status` with **Verified**, **Untested** or
 **Superseded**; a recipe describing a convention has none.
 

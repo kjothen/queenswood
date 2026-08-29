@@ -1,0 +1,109 @@
+# What only this instance knows, rendered by
+# `just queenswood-instance-manifest`. Every name here is one the instance
+# composite made, restated rather than derived: the chart cannot see
+# cloud-naming, so a prefix changed there would leave the Gateway
+# naming an address that does not exist.
+image:
+  tag: "latest"
+
+keycloak:
+  mode: operator
+  host:
+    domain: ${DOMAIN}
+  # The OAuth client Google sign-in runs on, created by hand in this
+  # project's console. Empty leaves the realm's placeholder in place,
+  # which is a sign-in that returns invalid_client. It reaches the realm
+  # over the Admin API, from a Job carrying the value in its own name.
+  googleClientId: ""
+
+  realmExport:
+    enabled: true
+    bucket: ${BACKUP_BUCKET}
+    project: ${RECOVERY}
+    gcpServiceAccount: sa-${INSTANCE}-backup@${PROJECT}.iam.gserviceaccount.com
+
+  # Keycloak's file vault, where the client's secret arrives. The secret
+  # is a version written by hand into sec-${INSTANCE}-google-oauth; the
+  # mount is optional, so enabling this before the Secret exists leaves
+  # the expression unresolved rather than wedging the pod.
+  vault:
+    enabled: true
+
+  # From sec-${INSTANCE}-keycloak-admin rather than from the operator,
+  # which regenerates it with the cluster while the database keeps what
+  # it was created with. Unset leaves the operator's own password, which
+  # is the stranded-admin failure.
+  bootstrapAdmin:
+    secretName: queenswood-keycloak-bootstrap-admin
+
+  database:
+    # cloud-naming names the database for its instance. The chart's own
+    # default is `keycloak`, which is right for a local Postgres.
+    name: sql-${INSTANCE}-keycloak
+keycloakOperator:
+  enabled: true
+
+# The public front door. consoleRedirectUri stays unset: a realm is
+# imported once and never overwritten, so a value here reaches an
+# existing realm not at all.
+gateway:
+  enabled: true
+  # Named because the :80 redirect route matches on it, and not
+  # published: nothing serves the bare domain over HTTPS.
+  host: ${DOMAIN}
+  consoleHost: console.${DOMAIN}
+  apiHost: api.${DOMAIN}
+  gcp:
+    staticIpName: addr-${INSTANCE}
+    # Two certificates rather than one with two names, because a
+    # certificate's domains cannot be added to.
+    certManagerCerts: "crt-${INSTANCE},crt-${INSTANCE}-wildcard"
+
+# Reached through the shared proxy. No password anywhere: the account
+# below is the database user and the proxy presents a token for it.
+postgres:
+  cloudsql:
+    grant:
+      # Composed beside the workload's, so that giving a database user
+      # its rights is not something that user can do.
+      serviceAccount: "sa-${INSTANCE}-sqladmin@${PROJECT}.iam.gserviceaccount.com"
+    proxy:
+      connectionName: "${PROJECT}:${REGION}:sql-${INSTANCE}"
+      serviceAccount: "sa-${INSTANCE}-sql@${PROJECT}.iam.gserviceaccount.com"
+
+fdb:
+  enabled: true
+  # FoundationDB sizes its page cache by configuration rather than by
+  # dataset -- --cache_memory defaults to 2GiB before a record is
+  # stored -- and the cache fills lazily. The limit is what matters;
+  # requests stay modest because this applies to every general process.
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "1Gi"
+    limits:
+      cpu: "1000m"
+      memory: "4Gi"
+  backup:
+    enabled: true
+    # Composed by the instance, in the installation's recovery project.
+    bucket: ${BACKUP_BUCKET}
+    # The generation written into. Open a new one after any recovery:
+    # a version alone cannot say which container to read.
+    backupName: ${BACKUP_GENERATION}
+    # The bucket's, and what the agent's SigV4 signature is computed
+    # over. Not optional: the agent reads a region off an AWS-shaped
+    # hostname and finds none here.
+    region: ${REGION}
+    proxy:
+      # Where the bucket is, which the instance's own project is not.
+      projectId: ${RECOVERY}
+      # Half of Workload Identity, spelled rather than derived twice.
+      serviceAccount: sa-${INSTANCE}-backup@${PROJECT}.iam.gserviceaccount.com
+  restore:
+    # Only during a deliberate restore. backupName is the source and
+    # backup.backupName the destination; after a recovery they differ.
+    enabled: false
+
+kafka:
+  enabled: true

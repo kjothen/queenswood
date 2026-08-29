@@ -1,0 +1,36 @@
+# The installation's environment, rendered by
+# `just queenswood-environment-manifest` and committed beside its
+# manifest. What is true of the whole installation and carries no
+# naming or ordering consequence.
+#
+# Cluster-scoped, so nothing composes it -- a namespaced composite may
+# not compose a cluster-scoped kind -- and Argo applies it from this
+# directory like everything else.
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: ${CODE}
+  labels:
+    # What selects it. A composition matches this against its own
+    # spec.code, because the name has to follow the code and a
+    # reference takes a literal.
+    installation: ${CODE}
+data:
+  # Read off the management project rather than committed by hand. Both
+  # composites need it: a project composed without one comes up unbilled
+  # and looks healthy.
+  billingAccountId: "${BILLING}"
+  # An instance grants Argo access to its own project and needs the full
+  # email. The code is on the instance and the management project is
+  # not, and a combine cannot mix a composite field with an environment
+  # one.
+  argoServiceAccount: "${ARGO_SA}"
+  # Read by every XManagedUnit, and the only Required patch it carries,
+  # so a unit's folder says which folder it is and never which
+  # repository. A fork, a mirror or a moved organisation is one edit
+  # here.
+  manifestRepoURL: "${MANIFEST_REPO_URL}"
+  # Stated once for the installation, here rather than in the manifest:
+  # the plane and every instance resolve it from this file, and two
+  # copies of one id is two places to disagree.
+  recoveryProjectId: "${RECOVERY}"

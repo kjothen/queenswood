@@ -5,7 +5,7 @@
 ## Status
 
 **Untested as written**, and incomplete: one installation was built
-this way, but step 7 — moving the composite onto the cluster it just
+this way, but step 8 — moving the composite onto the cluster it just
 created — has no recipe behind it and was not performed. Until it is,
 the plane a run of this page leaves behind is the throwaway one, and
 the durable cluster reconciles nothing.
@@ -22,9 +22,14 @@ the control plane your organisation runs cannot apply this kind.
 - A Google Cloud organisation, a billing account, and a parent to
   create in. With none of these, start at
   [cloud-account](cloud-account.md), which is the browser-only half.
+- The installation's four access groups, from
+  [queenswood-groups](queenswood-groups.md). Step 5 renders a manifest
+  naming them, and IAM rejects a binding to a principal that does not
+  exist.
 - Either a folder id, written `folders/<folder-id>`, or a parent to
   create one under. Step 1 lists the parents you can see.
-- Step 5 — write access to the manifests repository, and a merge.
+- Steps 5 and 8 — write access to the manifests repository, and a
+  merge.
 - Google group memberships, by capability:
   - Step 1 — any account in the organisation. What it cannot read it
     says so about, and that blocks nothing.
@@ -34,9 +39,9 @@ the control plane your organisation runs cannot apply this kind.
     organisation.
   - Step 3 — `grp-gcp-org-admin@`. It grants six roles at the
     organisation, and nothing below Organization Administrator can.
-  - Steps 4 to 9 — `grp-gcp-<code>-platform-admin@`, which step 2
+  - Steps 4 to 10 — `grp-gcp-<code>-platform-admin@`, which step 2
     grants impersonation of the seed identity to.
-  - Step 10 — `grp-gcp-org-admin@` again. Removing an organisation
+  - Step 11 — `grp-gcp-org-admin@` again. Removing an organisation
     binding is `organizations.setIamPolicy`, the same as adding one.
 
 Those are break-glass groups and normally empty: join for the act and
@@ -46,7 +51,7 @@ leave again, per
 The steps need no shell of their own. Every recipe below discovers the
 organisation, the billing account and the parents, taking an `org=` or
 `billing=` argument only where discovery is wrong, and reads the
-installation code from `CODE` in the justfile. The folder id is a
+installation code from `QW_CODE` in the justfile. The folder id is a
 manifest value rather than a shell one, set at step 5.
 
 Where a platform team hands you a folder they have run steps 1 to 3 on
@@ -110,10 +115,11 @@ just gcp-boot-cluster-up
 
 A local kind cluster running Crossplane and the GCP providers,
 authenticating from ADC that impersonates the seed identity. No key
-exists, and step 9 ends the impersonation.
+exists, and step 10 ends the impersonation.
 
 It ends by applying `xmanagementplane-xrd.yml` and its Composition from
-this repository, so the boot cluster serves the one kind step 5 needs.
+this repository, so the boot cluster serves the one kind step 6
+applies.
 Only that kind, and only the providers it composes with:
 `XManagementPlane` composes managed resources and no other composite,
 where an instance composes four. The management cluster gets the rest
@@ -121,86 +127,80 @@ from git once Argo is running there.
 
 Safe against an installation that already has a management plane: the
 cluster is local, and Crossplane on it reconciles nothing until a
-composite is applied there, which is step 5. What it does leave is a
+composite is applied there, which is step 6. What it does leave is a
 control plane on your machine holding credentials to the whole folder,
-which is what steps 8 and 9 take away.
+which is what steps 9 and 10 take away.
 
-### 5. Write the manifest, commit it, then apply it
+### 5. Render the manifest into the installations repository
 
-This is the other repository. Step 4 loaded the kind from this one;
-what step 5 applies is the installation's own manifest, which lives in
-the private manifests repository.
-
-Render the smallest document that builds a plane — the folder, the
-management project, and what runs in it. The parent is one step 1
-listed, the folder is named `fldr-<code>` unless you pass a name for
-one handed to you already named, and the rest defaults from the code:
+This is the other repository. Step 4 loaded the kind from this one; the
+installation's own manifest lives in the private manifests repository,
+and this step puts it there. The parent is one step 1 listed, the
+folder is named `fldr-<code>` unless you pass a name for one handed to
+you already named, and the rest defaults from the code:
 
 ```bash
 # the parent step 1 listed, e.g.
-export PARENT="organizations/<org-id>"
-# the installation code, as the justfile sets it, e.g.
-export CODE=qw01
+export QW_PARENT="organizations/<org-id>"
+# the installation code, e.g.
+export QW_CODE=qw01
 # the private manifests repository, wherever it is checked out
-export INSTALLATIONS_REPO=../installations
+export QW_INSTALLATIONS_REPO=../installations
 
-just gcp-boot-mgmt-manifest "$PARENT" \
-  > "$INSTALLATIONS_REPO/$CODE/installation.yml"
+just queenswood-installation-manifest \
+  > "$QW_INSTALLATIONS_REPO/$QW_CODE/installation.yml"
 ```
 
-Seven keys under `spec`, and no `recovery` block: the recovery project
-and the instances join the manifest afterwards, composed by the plane
-rather than by this cluster. The document is
-`infra/platform/installation.yml.tmpl` with values substituted, so what
-it will say is readable before it is run.
+Seven keys under `spec`, and no `recovery` block. `QW_CODE` and
+`QW_INSTALLATIONS_REPO` carry into step 6, which reads the file back from
+the same path.
 
-Read it, then commit it. Nothing has been created yet: the file is a
-request, and the ids in it are consumed the moment it is applied — so
-the commit is what records them before they become permanent, not
-something the apply needs. Pushing can wait for step 7.
+Read it, then commit it. Pushing can wait for step 8.
 
-Then apply the committed file:
+> [!WARNING]
+> Only where that file does not exist yet. The management project id is
+> minted per call, so a second render replaces the recorded id with one
+> no project answers to.
+
+### 6. Apply the committed manifest
 
 ```bash
 just gcp-boot-mgmt-apply
 ```
 
-> [!WARNING]
-> Only for an installation with no management plane yet. Applying
-> patches `management.bootstrap: true` in, which flips the `Release`s
-> installing Crossplane and Argo from `Observe` to `Create, Update` —
-> so against an installation that already has a plane, the boot plane
-> takes over the Crossplane and Argo running on it, and two planes
-> reconcile the same composite and the same managed resources.
->
-> Push before the pivot, not before this. The apply reads your working
-> tree, so pushing now changes nothing here — but from step 7 the plane
-> reconciles the installation from the repository, and a manifest that
-> never got there leaves it with nothing to reconcile. On a rebuild,
-> pushing while the boot plane is still applying is the same two-planes
-> hazard arriving through git.
+It reads the file step 5 wrote, merges in the billing account and
+`management.bootstrap: true`, prints the whole document, and asks
+before applying. It ends by waiting on the composite and reporting the
+folder.
 
-### 6. Read back what it built
+> [!WARNING]
+> Only for an installation with no management plane yet. `bootstrap`
+> flips the `Release`s installing Crossplane and Argo from `Observe` to
+> `Create, Update`, so against an installation that already has a plane
+> the boot cluster takes over the Crossplane and Argo running on it,
+> and two planes reconcile the same composite.
+
+### 7. Read back what it built
 
 ```bash
 # the installation code, as the justfile sets it, e.g.
-export CODE=qw01
+export QW_CODE=qw01
 
 kubectl --context kind-boot-mgmt -n crossplane-system \
-  get xmanagementplane "$CODE" -o yaml
+  get xmanagementplane "$QW_CODE" -o yaml
 ```
 
 `status` carries the folder id, the management project and the platform
 identity. Those are what everything later is named and bound against.
 
-### 7. Pivot onto the cluster it built
+### 8. Pivot onto the cluster it built
 
 Push the manifest first: from here the management cluster reconciles
 the installation from the repository rather than from your checkout,
 and a manifest that never reached git leaves it with nothing to
 reconcile.
 
-Then move the composite onto the management cluster created in step 5.
+Then move the composite onto the management cluster created in step 6.
 No recipe does the move yet, and until one exists this step is the
 reason the Status says incomplete.
 
@@ -208,7 +208,7 @@ After it, the management cluster reconciles its own project and folder,
 and every later change is a merge. The manifest driving them is
 [queenswood-installation](queenswood-installation.md).
 
-### 8. Delete the boot cluster
+### 9. Delete the boot cluster
 
 ```bash
 just gcp-boot-cluster-down
@@ -218,7 +218,7 @@ The folder and everything in it are orphaned, not deleted: the cluster
 holds no cloud state, and what it created is now the management
 plane's. The `gcp-creds` Secret — a copy of your ADC — goes with it.
 
-### 9. Revoke the impersonation
+### 10. Revoke the impersonation
 
 > [!WARNING]
 > Until this runs, ADC on your machine can create projects and folders
@@ -234,7 +234,7 @@ Run it as soon as the throwaway plane is gone — the management cluster
 reconciles with its own Workload Identity and needs nothing on your
 machine.
 
-### 10. Close the seed identity
+### 11. Close the seed identity
 
 ```bash
 just gcp-boot-seed-close
@@ -290,6 +290,13 @@ fixed in a shared template refuses the second one. The folder id is the
 identifier; the display name labels the installation for people and
 nothing else.
 
+**A manifest naming a management project that was never built.** Step 5
+was run twice, and the second render overwrote the recorded id with a
+freshly minted one — so the file names a project nothing created, while
+the project that was created goes unrecorded. The folder guard does not
+cover this: it refuses only where a folder named `fldr-<code>` already
+exists under the parent.
+
 **A `folders.create` denial on an identity that plainly has the role.**
 `roles/orgpolicy.policyAdmin` and its relatives are organisation-only,
 and the refusal is a 400 declining the scope rather than a permission
@@ -312,7 +319,7 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   a credential, and revoke it once the throwaway plane is gone with
   `just gcp-boot-seed-impersonate-revoke`. It outlives the plane
   otherwise — the terminal and the reboot too.
-- Render the manifest with `just gcp-boot-mgmt-manifest` and commit it
+- Render the manifest with `just queenswood-installation-manifest` and commit it
   before applying it with `just gcp-boot-mgmt-apply`, and push it
   before any plane takes over reading it from git.
 - Ask for `compute.skipDefaultNetworkCreation` before the first project
@@ -334,6 +341,10 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   handed to you instead.
 - Delete a project as a side effect of an edit.
 - Fix a default VPC in a composition. It cannot be undone there.
+- Render a manifest over one that already exists. The management
+  project id is minted per call, so the second render replaces the
+  recorded id with one no project answers to, and the redirect
+  truncates before the renderer runs.
 
 **MAY:**
 
@@ -379,6 +390,50 @@ because `iam.disableServiceAccountKeyCreation` is enforced at the
 organisation by default — inherited rather than established here, so it
 holds for a folder handed to you as well, and worth confirming rather
 than assuming.
+
+**Why the manifest is committed before it is applied.** Nothing has
+been created when step 5 finishes: the file is a request, and the
+folder name and the management project id in it are consumed the moment
+step 6 applies them. The commit records them while they are still only
+proposed, which is what the file is for — a project id is consumed
+permanently and cannot be undeleted into usefulness, so one that was
+minted, applied and then lost is not recoverable from anything the
+cluster holds. The document is `infra/platform/templates/installation.yml.tmpl`
+with values substituted, so what it will say is readable before it is
+run.
+
+That id is minted rather than derived, on every call, which is what
+makes step 5 a first-run act: a second render over the same file
+replaces the recorded id with one no project answers to, and the
+redirect truncates before the renderer runs. The folder is guarded —
+a name already in use under the parent is refused, with the adopt
+command printed — but that catches a rebuild which reached GCP and
+cannot catch the project id at all. Until a renderer exists that reads
+an existing manifest and preserves what it already holds, the file is
+the only record and overwriting it is how an installation is lost.
+
+**Where the exports go.** `QW_CODE` and `QW_INSTALLATIONS_REPO` are
+`env_var_or_default` in the justfile, so the two exports in step 5 set
+both the path the render is redirected to and the path
+`gcp-boot-mgmt-apply` reads back. Writing the path into the redirect
+literally instead leaves the render in one place and the apply reading
+another.
+
+**Two values that belong to the act rather than the installation.** The
+billing account and `management.bootstrap: true` are merged into the
+document as it is applied rather than written into the file. Billing is
+discovered from the identity's own binding and is wanted only at the
+moment a project is created; `bootstrap` is true of the boot plane and
+not of the installation. So the file stays the thing Argo reads, and
+the two planes cannot disagree about what the installation is.
+
+**Why the push waits for the pivot.** The apply reads your working
+tree, so pushing at step 5 changes nothing about what step 6 does. From
+step 8 the management plane reconciles the installation from the
+repository instead, and a manifest that never got there leaves it with
+nothing to reconcile. On a rebuild, pushing while the boot plane is
+still applying is the same two-planes hazard arriving through git
+rather than through `bootstrap`.
 
 **Why organisation policy is not composed.** `orgpolicy.policyAdmin` is
 granted at the organisation and nowhere else, so the management plane

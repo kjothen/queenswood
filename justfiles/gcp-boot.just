@@ -2,7 +2,7 @@
 # and the management project, and the identity it runs as.
 #
 # Split out of gcp.just because these twelve are one procedure, written
-# up in docs/recipes/infra/crossplane-bootstrap.md. Helpers and shared
+# up in docs/recipes/infra/queenswood-bootstrap.md. Helpers and shared
 # variables stay in gcp.just -- justfile imports share one namespace.
 
 # Check the organisation, billing and rights held before bootstrapping.
@@ -650,138 +650,6 @@ gcp-boot-cluster-up:
     echo
     echo ">>> plane ready. Next: just gcp-boot-mgmt-apply <parent> [display-name]"
 
-# Print the installation manifest, resolved. Takes the folder's parent.
-gcp-boot-mgmt-manifest parent name="" folder="" mgmt="" billing="" recovery="":
-    #!/usr/bin/env zsh
-    set -e
-    # stdout carries the manifest and nothing else, so this can be
-    # redirected straight into a file; every message below goes to
-    # stderr. That file is the installation's whole record -- see
-    # docs/plan/cloud-just-migration.md -- and it lives in a private
-    # repository, because two of the values here are identifiers worth
-    # keeping out of a public one.
-    #
-    # Anything generated rather than derived is minted per call, so
-    # capture the output rather than re-running this and expecting the
-    # same answer.
-    # Deterministic, because the code is what tells one installation
-    # from another -- a suffix on top of it would only obscure that.
-    # Pass a name where the folder is handed to you already named.
-    NAME="{{ name }}"
-    if [[ -z "$NAME" ]]; then
-      NAME="fldr-{{ CODE }}"
-      echo ">>> naming the folder $NAME" >&2
-    fi
-    # Refuse to make a second installation by accident. GCP allows the
-    # duplicate name, so this is the only thing that would notice -- and
-    # with a deterministic name it is what catches a rebuild that meant
-    # to adopt.
-    if [[ -z "{{ folder }}" ]]; then
-      case "{{ parent }}" in
-        organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
-        folders/*)       SCOPE="--folder=${${:-{{ parent }}}#folders/}" ;;
-        *) echo "parent must be organizations/<id> or folders/<id>" >&2; exit 1 ;;
-      esac
-      EXISTING=$(gcloud resource-manager folders list $SCOPE \
-                   --filter="displayName=$NAME" \
-                   --format='value(name)' 2>/dev/null | head -1 || true)
-      if [[ -n "$EXISTING" ]]; then
-        echo "a folder named $NAME already exists under {{ parent }}: folders/$EXISTING" >&2
-        echo "adopt it:  just gcp-boot-mgmt-apply {{ parent }} $NAME folders/$EXISTING" >&2
-        echo "or choose a different name" >&2
-        exit 1
-      fi
-    fi
-    # Omitted unless passed, and normally not passed. The account is a
-    # property of the identity -- it holds billing.user on exactly one --
-    # so the manifest does not record it. Once a project exists the
-    # provider's late-initialisation owns forProvider.billingAccount, so
-    # a manifest without this leaves billing alone rather than unsetting
-    # it. gcp-boot-mgmt-apply supplies it, because creating a project is the
-    # one moment it is needed.
-    BILLING_LINE=""
-    if [[ -n "{{ billing }}" ]]; then
-      BILLING_LINE="billingAccountId: \"{{ billing }}\""
-    fi
-
-    # A project id is consumed permanently and cannot be undeleted into
-    # usefulness, so it is generated once and then carried in the
-    # manifest. That is what stops a rebuilt plane minting a second one.
-    MGMT="{{ mgmt }}"
-    if [[ -z "$MGMT" ]]; then
-      MGMT="prj-{{ CODE }}-c-mgmt-$(openssl rand -hex 3)"
-      echo ">>> naming the management project $MGMT" >&2
-    fi
-
-    # Minted here rather than added when backups are first wanted, so a
-    # from-scratch installation has somewhere to keep what it would be
-    # rebuilt from without anyone deciding to. Its own id for the same
-    # reason the management project's is minted once: consumed
-    # permanently, and not derivable afterwards.
-    # Omitted unless an id is given, which is what a bootstrap wants:
-    # the boot cluster composes as little as it can, and the plane
-    # composes the recovery project once it is reconciling. An id here
-    # adopts or creates one at bootstrap instead.
-    RECOVERY_BLOCK=""
-    if [[ -n "{{ recovery }}" ]]; then
-      RECOVERY_BLOCK=$(printf '  recovery:\n    projectId: "%s"' "{{ recovery }}")
-    fi
-
-    # Set only when the project already exists, for the same reason the
-    # folder's adoption field is: a pre-set external name turns a
-    # first-run create into a failed observe.
-    MGMT_ADOPT=""
-    if [[ -n "{{ mgmt }}" ]]; then
-      # Prefixed: that is the form Crossplane records as the external
-      # name, and adoption matches on it exactly.
-      case "$MGMT" in
-        projects/*) MGMT_ADOPT="adopt: \"$MGMT\""; MGMT="${MGMT#projects/}" ;;
-        *)          MGMT_ADOPT="adopt: \"projects/$MGMT\"" ;;
-      esac
-    fi
-
-    # Resolved from the parent where that names an organisation, rather
-    # than rediscovered. An argument the caller supplied and the recipe
-    # then ignores is a run that fails on a question already answered --
-    # and discovery fails outright where more than one organisation is
-    # visible, or where a token has expired.
-    PARENT="{{ parent }}"
-    ORG_ARG=""
-    if [[ "$PARENT" == organizations/* ]]; then
-      ORG_ARG="${PARENT#organizations/}"
-    fi
-    DOMAIN=$(just _gcp-domain "$ORG_ARG")
-
-    FOLDER="{{ folder }}"
-    if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
-      FOLDER="folders/$FOLDER"
-    fi
-    ADOPT=""
-    if [[ -n "$FOLDER" ]]; then
-      ADOPT="folderId: \"$FOLDER\""
-    fi
-
-    # region, zone and regionCode are stated rather than left to the
-    # XRD's defaults. They are load-bearing -- a name carries the
-    # region abbreviation, and moving either rebuilds the subnet and
-    # the cluster -- so a default that changed underneath a live
-    # installation would move it silently.
-    # The document lives in infra/platform/installation.yml.tmpl so it
-    # can be read and reviewed as YAML rather than as shell.
-    CODE="{{ CODE }}" REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
-    ZONE="{{ ZONE }}" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
-    PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
-    PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
-    CLUSTER_ADMIN_GROUP="{{ CLUSTER_ADMIN_GROUP }}" \
-    SECRETS_ADMIN_GROUP="{{ SECRETS_ADMIN_GROUP }}" \
-    RECOVERY_BLOCK="$RECOVERY_BLOCK" MGMT="$MGMT" MGMT_ADOPT="$MGMT_ADOPT" \
-    SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
-    SOURCE_PATH_PREFIX="{{ SOURCE_PATH_PREFIX }}" \
-    MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
-    PARENT="{{ parent }}" NAME="$NAME" ADOPT="$ADOPT" \
-    python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
-      infra/platform/installation.yml.tmpl
-
 # Apply the committed manifest to the boot cluster, as its bootstrap.
 gcp-boot-mgmt-apply billing="" yes="":
     #!/usr/bin/env zsh
@@ -796,7 +664,7 @@ gcp-boot-mgmt-apply billing="" yes="":
       echo "no manifest at $FILE" >&2
       echo "a first installation is rendered, then committed, then" >&2
       echo "applied -- the ids it holds are consumed permanently:" >&2
-      echo "  just gcp-boot-mgmt-manifest organizations/<org-id> > $FILE" >&2
+      echo "  just queenswood-installation-manifest organizations/<org-id> > $FILE" >&2
       exit 1
     fi
 

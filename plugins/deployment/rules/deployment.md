@@ -43,10 +43,18 @@ A GCP folder is what an installation is: an IAM boundary, the one place
 an org-policy exemption is expressed, and the only stable handle, since
 project ids carry random suffixes and everything else is discovered from
 the folder down. Inside it, a management project running Crossplane and
-Argo, never torn down, and one disposable project per instance. There
-may be as many folders as the installer wants; each is independent and
-identically shaped, with its own seed identity and management
-project because those rights are folder-scoped.
+Argo, never torn down, and one durable project per instance holding
+that instance's own data — what an instance stops is its compute, not
+its project. There may be as many folders as the installer wants; each
+is independent and identically shaped, with its own seed identity and
+management project because those rights are folder-scoped. One
+management plane serves every environment: isolation comes from a
+provider identity per environment, Argo `AppProject`s and manual sync
+for prod, not from a plane each. A seed project exists only where you
+are your own platform team, keeps its random-suffixed id and is
+retained rather than deleted; creating a folder is checked on the
+parent, so the seed identity holds `folderCreator` and `folderIamAdmin`
+there — the pair, never `folderAdmin`, so it cannot delete one.
 
 Protect a foundation in GCP rather than in a manifest. Projects, DNS
 zones and backup buckets carry `managementPolicies` without `Delete` and
@@ -55,60 +63,172 @@ that nobody holds `resourcemanager.folders.delete`. The lien matters
 more than the policy — a policy is a convention a later edit undoes, and
 the hazard is not a deleted control plane, which leaves managed
 resources with no finalizers running, but a live one watching its
-resources vanish through a prune and doing what it was told. Only the
-disposable tier — clusters, databases, addresses, certificates — is
-fully managed with `Delete`.
+resources vanish through a prune and doing what it was told. Only what
+rebuilds from its own declaration — clusters, addresses, certificates —
+is fully managed with `Delete`; a database holds state and belongs with
+the protected tier.
 
 Express off as a desired state rather than an absence of one:
 Crossplane reconciles toward what is declared and has no notion of
-stopped.
+stopped. An instance carries `state: up | draining | down`, and `down`
+is node pools at zero and CloudSQL `activationPolicy: NEVER`, with data
+untouched. Order a teardown with `Usage` gates whose `by` is the export
+Job itself, `replayDeletion: true`, emitted on `draining`: a `Usage`
+blocks while its `by` exists, so the Job loops until the export succeeds
+and only then exits — never `ttlSecondsAfterFinished` on a Job that can
+fail, since TTL collects `Failed` too and a failed export would release
+the deletion of what it failed to preserve. Disable CloudSQL's automated
+backups outside prod and take the export yourself, alongside FDB's
+restore version so restore points pair by construction; prod keeps
+automated backups and point-in-time recovery. Prod shares nothing;
+non-prod may share Keycloak first, a database second, FoundationDB last
+and probably never. Hold outside GCP only what git and Secret Manager
+in the management project cannot: the directory acts — the domain, the
+billing account, the groups — are done in a browser.
 See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle.md).
 
 ## Build the plane before a merge can install anything
 
 Build the plane before expecting a merge to install anything: a control
-plane running another toolchain cannot apply this kind. Grant the seed
-identity its rights on the folder or the parent, never a key, and never
-grant a person `serviceAccountTokenCreator` on the platform identity or
-create a key for any of the four. Commit the manifest before applying it
-and before any plane takes over reading it from git, and pivot the
-composite off a throwaway plane before discarding that plane. Never
-assume you can create a folder — ids are required, and one may be handed
-to you instead — and never delete a project as a side effect of an edit.
-Standing the installation up with no instance at all is valid, since an
-instance is its own composite applied afterwards, asking a platform team
-for the folder and the identity shortens the path without changing it,
-and another XRD and composition loaded onto the plane deploys something
+plane running another toolchain cannot apply this kind. Read what you
+can reach before choosing between creating a folder and adopting one.
+Grant the seed identity its rights on the folder or the parent, never a
+key; impersonate it rather than holding a credential, and revoke the
+impersonation once the throwaway plane is gone, since it outlives the
+plane, the terminal and the reboot otherwise. Never grant a person
+`serviceAccountTokenCreator` on the platform identity or create a key
+for any of the four. Ask for `compute.skipDefaultNetworkCreation` before
+the first project is created, and never fix a default VPC in a
+composition — it cannot be undone there. Commit the manifest before
+applying it and push it before any plane takes over reading it from
+git, and pivot the composite off a throwaway plane before discarding
+that plane. Never render a manifest over one that already exists: the
+management project id is minted per call, so the second render replaces
+the recorded id with one no project answers to, and the redirect
+truncates before the renderer runs. Close the seed identity once the
+bootstrap is done and reopen it for the next one: its organisation
+grants otherwise stand for ever, and the plane needs none of them. Never
+assume you can create a folder — ids are required, and one may be
+handed to you instead — and
+never delete a project as a side effect of an edit. Standing the
+installation up with no instance at all is valid, since an instance is
+its own composite applied afterwards, asking a platform team for the
+folder and the identity shortens the path without changing it, and
+another XRD and composition loaded onto the plane deploys something
 else the same way.
 Commands: `just gcp-boot-cluster-up`, `just gcp-boot-preflight`, `just
 gcp-boot-seed`, `just gcp-boot-seed-grant-org-roles`, `just
 gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
-`just gcp-boot-mgmt-manifest`, `just gcp-boot-mgmt-apply`, `just
-gcp-org-setup`, `just gcp-policy-status`, `just gcp-boot-cluster-down`,
-`just gcp-boot-seed-close`, `just gcp-boot-seed-open`.
-See [crossplane-bootstrap](../../../docs/recipes/infra/crossplane-bootstrap.md).
+`just queenswood-installation-manifest`, `just gcp-boot-mgmt-apply`,
+`just gcp-org-setup`, `just gcp-policy-status`, `just
+gcp-boot-cluster-down`, `just gcp-boot-seed-close`, `just
+gcp-boot-seed-open`.
+See [queenswood-bootstrap](../../../docs/recipes/infra/queenswood-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
 
-Change what exists by editing the manifest rather than by acting on GCP,
-and apply from merged state only, since a `pull_request` trigger gets no
-cloud identity. Push the manifest before a plane takes over reading it
-from git. Supply `management.projectId` always and
-`createFolder.folderId` wherever the folder already exists, give
-`metadata.name` and `spec.code` the same string, keep the manifests
-repository private, and read `status` back rather than committing it.
-Never commit anything secret beside the manifest, never name a principal
-in `access` that does not exist — IAM rejects the binding, not the
-manifest — never create a key for an identity the installation
-composes, and never leave a new XRD field required when the manifest
-that sets it lives in another repository. `management.source` may point
-at upstream, a fork, or a mirror that vendors the layout, with
-`targetRevision` pinned to a tag; an empty `access` mapping installs and
-capabilities may be added later; and one manifest per folder allows
+Change what exists by editing the manifest and merging it, never by
+acting on GCP, and apply from merged state only, since a
+`pull_request` trigger gets no cloud identity and a fork's would
+otherwise run as the platform identity. Push the manifest before a
+plane takes over reading it from git, and give Argo the credential for
+the manifests repository before expecting any later merge to reach the
+plane at all.
+Supply `management.projectId` always and `createFolder.folderId`
+wherever the folder already exists, give `metadata.name` and
+`spec.code` the same string — nothing enforces it and the tooling
+assumes it — and state `region`, `regionCode`, `zone` and anything else
+immutable rather than leaving it to a default that may move. Render the
+installation's environment and merge it before the first instance is
+composed, keep the manifests repository private, and read `status` back
+rather than committing it. Never commit anything secret beside the
+manifest, never
+name a principal in `access` that does not exist — IAM rejects the
+binding, not the manifest — never create a key for an identity the
+installation composes, never leave a new XRD field required when the
+manifest that sets it lives in another repository, never retype a
+verification token into the manifest, since the block is rendered from
+what the domain answers and a token that exists only in the file proves
+nothing, and never delete and recreate the public zone, whose
+nameservers change with it while the registrar does not follow.
+`management.source` may point at upstream, a fork, or a mirror that vendors
+the layout, with `targetRevision` pinned
+to a tag; an empty `access` mapping installs and capabilities may be
+added later, which on a first installation is the only order available;
+an existing recovery project may be adopted by passing its id; and one
+manifest per folder allows
 more than one installation.
+Commands: `just queenswood-environment-manifest`, `just
+queenswood-dns-manifest-snippet`.
 See [queenswood-installation](../../../docs/recipes/infra/queenswood-installation.md).
 
+## An instance is a unit, and its secrets are written while it builds
+
+Render an instance's unit with `just queenswood-instance-manifest`, which
+mints the project id once and writes it into every file carrying it,
+and never render one over a unit that has been committed — the id is
+minted per call, and a committed unit may already be built, leaving the
+file as the only record of the one GCP consumed; an uncommitted one a
+plane never read is free to re-render. Where a
+file is written by hand instead, the ids have to agree: a wrong one in
+the external-secrets annotation is a service account nothing is bound
+to rather than an error. Put the unit declaration at the top of the
+installation's directory, never inside the unit's folder, since the
+installation's Application is not recursive and a declaration filed
+inside is never applied at all. Give the instance its own `access`
+mapping and let it reconcile before writing any secret version: the
+installation's `secretsAdmin` binds on the management project, writes
+nothing here, and the denial is reported as a container that does not
+exist. State `ingress.domain` distinct from every other instance's,
+naming the installation's zone in `zone.name` and `zone.project`, and
+never share a domain between two instances — both compose a record for
+the one name and each reconciles it to its own address. Merge the composite
+and the Applications separately, the composite first: Keycloak honours a
+bootstrap admin only while the master realm is absent, and nothing
+automatic holds that gap open, where a folder with no Applications in
+it does. Create the OAuth client in the console, in the instance's own
+project, one per environment. Write the Keycloak bootstrap admin before
+the bank first starts and name it in the unit's values as
+`keycloak.bootstrapAdmin.secretName`, or the entry is inert; write the
+other two versions the same way, letting each strip the trailing
+newline, and never add a second version to the FDB backup key. Never
+create an instance with `state: down` — Cloud SQL refuses to create an
+already-stopped database, so an instance is built up and stopped
+afterwards. An instance may lean on the
+XRD's defaults, which `QW_DEFAULTS=true` does, but state them with
+`QW_DEFAULTS=false` for anything long-lived, since the blocks it writes
+out are immutable or nearly so and a default that moves under a live
+instance is refused rather than applied. An instance may be taken down
+once it is up, and one stood up with no `ingress` answers on no name at
+all.
+Commands: `just queenswood-instance-manifest`, `just
+queenswood-instance-keycloak-admin`, `just
+queenswood-instance-google-secret`, `just
+queenswood-recovery-backup-key`, `just crossplane-unready`, `just
+argo-apps-status`, `just gcp-instance-cluster-ctx`.
+See [queenswood-instance](../../../docs/recipes/infra/queenswood-instance.md).
+
 ## A composite builds what an instance is, Argo installs what runs there
+
+The plane is the only thing that reconciles anything, the durable home,
+and where the API lives; it manages the instances and does not compose
+them. Make each instance one XR of its own kind — `XQueenswoodInstance`
+in `queenswood.repldriven.com`, beside `XManagementPlane` in
+`platform.repldriven.com` — never a field or a list on the plane's XR:
+a composite is a unit of replacement and so a blast radius, `state` is
+a per-instance property a plane does not have, a list item's name
+renumbers when one before it is removed and rebuilds the live
+environment it named, and the plane's kind stays generic. Give the
+instance its own project with the protected tier's policies, so `down`
+stops it rather than deletes it, and keep the instance's operational
+state — database, disks, buckets — in that project; retire a project
+deliberately, by lifting its lien, never by reconciling it away. Find
+the folder by naming the composed `Folder` as `fldr-<code>` from the
+instance's own `spec.code`, never by referring to the plane's composite,
+so neither composite knows about the other. Keep one manifest per
+composite, flat in the installation's directory — its Application does
+not recurse, and `prune: false` there means adding a file never removes
+anything.
 
 The composite builds the project, network, cluster, identities, database
 and names an instance answers on. It does not install the workloads:
@@ -135,6 +255,21 @@ the manifests from the repo, and workloads on GKE are themselves
 Crossplane `Release` resources of `provider-helm`.
 See [ADR-0016](../../../docs/adr/0016-crossplane-over-terraform.md).
 
+## The catalogue holds only what has an API
+
+A kind needs a provider that can create the thing, and some of what an
+installation depends on has no API at all: the organisation, domain
+verification, the registrar's delegation, an OAuth client with a chosen
+redirect URI. These are not kinds nobody has written yet — they cannot
+be in the catalogue, and somebody will eventually go looking for the
+abstraction that cannot exist. The manual half lives in the
+`cloud-account`, `cloud-dns` and `google-sign-in` recipes and is as
+much a part of building an installation as anything composed. What is
+excluded is only the thing itself: the OAuth client cannot be composed,
+but the Secret Manager entry holding its secret is an ordinary managed
+resource and belongs in the catalogue like any other.
+See [ADR-0025](../../../docs/adr/0025-building-blocks-and-what-cannot-be-one.md).
+
 ## A composed resource is identified by its composition name
 
 Give the application one kind, and decompose inside it into kinds that
@@ -143,7 +278,10 @@ resources with different deletion criteria into one kind, since
 deleting a kind deletes what it composed — a public zone does not
 belong with a public endpoint, nor a network with a cluster. Fix the
 invariants in `base`, constants included, and leave the caller only
-what does not change what the kind guarantees. Read the slot names
+what does not change what the kind guarantees; fix a field that cannot
+change after create in `base` too, never in a caller-supplied patch,
+and compose a second resource where a caller must vary one — nothing in
+the CRD says which fields those are. Read the slot names
 already in use before naming a composed resource, and change a
 resource's `- name:` to rebuild it under a new `metadata.name` —
 deleting the object alone rebuilds the old one. Set
@@ -198,7 +336,10 @@ See [crossplane-debug](../../../docs/recipes/infra/crossplane-debug.md).
 
 ## A change to a live resource applies, is refused, or destroys
 
-Read `LastAsyncOperation` on the managed resource before treating a
+Determine what kind of change it is before making it: ownership decides
+what happens to a field, and identity is visible nowhere, so it is
+settled when the kind is designed rather than looked up here. Read
+`LastAsyncOperation` on the managed resource before treating a
 change as applied, since a refusal reports there while the composite
 above goes on reading `Synced`. Never expect a merged value to reach a
 field that identifies its resource: upjet refuses the replacement
@@ -257,22 +398,58 @@ Commands: `just crossplane-explain`, `just crossplane-owners`,
 `just crossplane-external-names`.
 See [crossplane-providers](../../../docs/recipes/infra/crossplane-providers.md).
 
+## Do it in order, and each recipe leaves what the next reads
+
+An organisation, its groups, an installation's groups, the plane, the
+installation, then an instance. Choose the installation's code before
+the groups are named and never change it, since every name derives from
+it, and create groups before the manifest that names them, since IAM
+rejects a binding to a principal that does not exist. Stopping after
+the installation is valid — that is one with no instance on it, and
+what a platform team hands over — and the organisation's own half is
+done once however many installations follow. The first three are a
+browser and have no API at all; from the plane onwards everything is a
+file in a repository, which is where the work stops being performed and
+starts being recorded.
+See [queenswood-up-and-running](../../../docs/recipes/infra/queenswood-up-and-running.md).
+
+## Groups are made in a directory, and bound from a shell
+
+Create every access group without an owner or a manager, since both are
+members, and set Restricted before Only invited users or the join rule
+is discarded. Bind from no active project. Never script the creation:
+every Cloud Identity write attributes quota to a project and at
+foundation time none exists, which is also why
+`gcloud identity groups describe` answers that a group plainly present
+does not exist. The organisation's four outlive every installation and
+are bound at the organisation; an installation's four are coded to it,
+created before the manifest that names them, and only `platform-viewer`
+is bound at the organisation, taking Browser there because tooling
+cannot reach a folder without resolving the organisation above it. The
+rest is folder and project scoped and reaches them through the
+manifest. An installation may be stood up with no groups at all and an
+empty `access` mapping, which reconciles correctly and which nobody can
+reach, and a capability may be answered by a user or a `principalSet://`
+rather than a group.
+Commands: `just gcp-groups-bind`.
+See [cloud-groups](../../../docs/recipes/infra/cloud-groups.md) and
+[queenswood-groups](../../../docs/recipes/infra/queenswood-groups.md).
+
 ## Humans hold groups, and a break-glass group stays empty
 
 Set recovery email and phone on the super admin, and 2-step
 verification: it has no mailbox and no one above it, and a second super
 admin, unused, means one lost device is not the end of the
 organisation. Bind groups where humans hold access and principals
-directly where automation does, and give the groups no owner or
-manager — both are members. Keep one direct human administrator on the
-billing account, which may be an existing one reused rather than
+directly where automation does. Keep one direct human administrator on
+the billing account, which may be an existing one reused rather than
 created. Revoke the super admin's local credentials, and its direct
 organisation binding, once the group carries the role. Never leave
 anybody standing in a break-glass group — `grp-gcp-org-admin@`,
 `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
 `grp-gcp-<code>-platform-admin@`, `grp-gcp-<code>-cluster-admin@`,
-`grp-gcp-<code>-secrets-admin@` — and never use
-`gcloud identity groups describe` to test whether a group exists.
+`grp-gcp-<code>-secrets-admin@`. The groups themselves are the section
+above.
 See [cloud-account](../../../docs/recipes/infra/cloud-account.md).
 
 ## An automation identity is granted, never inherited
@@ -328,7 +505,7 @@ restarting whatever reads the value at startup. A value that is not
 something to type — a key, a certificate — may be passed as a file, and
 several fields that identify each other may be held in one entry as
 JSON.
-Commands: `just gcp-fdb-backup-key`, `just gcp-secret-version`.
+Commands: `just queenswood-recovery-backup-key`, `just gcp-secret-version`.
 See [external-secrets](../../../docs/recipes/infra/external-secrets.md).
 
 ## Google sign-in is two console acts and an Admin API call
@@ -372,7 +549,7 @@ See [google-sign-in](../../../docs/recipes/infra/google-sign-in.md).
 
 Verify the domain before a public zone is created, as the operator
 account in its own right, adding it as a Domain property rather than a
-URL prefix and adding the composition's identity as an Owner — Full and
+URL prefix and adding the automation identity as an Owner — Full and
 Restricted confer no ownership. Never read an existing
 `google-site-verification` record as evidence your account owns the
 domain, or an absent Search Console property as evidence it is
@@ -391,19 +568,32 @@ registry rather than the zone, and take several spaced probes across
 more than one resolver before calling DNSSEC recovery complete. Unsign
 first for a domain not yet serving anything, so the wait overlaps
 everything else, and last for one serving traffic, to keep the window
-tight. Check the new zone by querying its assigned nameservers directly
-and the delegation against the registry's authority section, and
-confirm the verification TXT resolves from the new authority
-afterwards. Never change the delegation before the new zone answers or
+tight. Never delete and recreate a zone to change it: the nameservers
+change with it, the registrar does not follow, and each fresh zone
+draws from a finite per-domain pool. Move the apex once rather than
+delegating a subdomain per environment. Moving the delegation itself is
+the section below.
+Commands: `just gcp-platform-sa`, `just dns-records`, `just
+dns-carried`.
+See [cloud-dns](../../../docs/recipes/infra/cloud-dns.md).
+
+## A delegation moves only once the new zone answers
+
+Diff the same sweep from each authority before delegating, aiming it at
+the new zone's nameservers and at the registrar's in turn: a public
+resolver still answers from the old authority and can say nothing about
+the new one. Query the registry's authority section to check the
+delegation itself, since a referral carries the NS records there rather
+than in the answer, and a short query looks empty and reads as failure.
+Confirm the verification TXT resolves from the new authority
+afterwards. Never change the delegation before the new zone answers, or
 while a DS record still names the old nameservers' keys, never replace
 only some of the registrar's nameservers, never delete the old records
 there — they are the way back — and never re-enable DNSSEC at the
-registrar afterwards. Never delete and recreate a zone to change it:
-the nameservers change with it, the registrar does not follow, and each
-fresh zone draws from a finite per-domain pool. Move the apex once
-rather than delegating a subdomain per environment, and set a CAA
-record naming the issuing CA.
-See [cloud-dns](../../../docs/recipes/infra/cloud-dns.md).
+registrar afterwards. Set a CAA record naming the issuing CA. Done in
+this order the propagation window is a no-op, since both authorities
+answer the same and no resolver holding either one is wrong.
+See [cloud-dns-delegation](../../../docs/recipes/infra/cloud-dns-delegation.md).
 
 ## A parent Application holds only kinds that already exist
 
@@ -539,6 +729,54 @@ posted. A name may take a qualifier where it would otherwise collide,
 most often a region, and a folder or project handed to us already named
 keeps the name its supplier chose.
 See [cloud-naming](../../../docs/recipes/infra/cloud-naming.md).
+
+## An installation has a code, and humans are read-only or break-glass
+
+Give each installation a four-character code, chosen when it is created
+and carried in its manifest, and derive every name from it with the
+environment letter — `b` bootstrap, `c` common, `d` dev, `n` nonprod,
+`p` prod — so nothing needs a lookup and a second installation cannot
+collide with the first; the code is not descriptive, because a project
+id's budget is real. A name does not repeat what its container already
+says, nor carry a prefix the platform supplies: a cluster is
+`<code>-<env>-<label>` with no kind prefix, since GKE prefixes `gke-`
+itself, and a node pool is `np-<code>-<env>-<label>-primary` — never
+`default`, which reads as GKE's own. Name a managed resource for what
+it manages, so `kubectl get managed` and the console read the same, and
+where GCP would allow a shorter name than the namespace does, the one
+both accept wins in both — `crossplane.io/external-name` is for a name
+Kubernetes cannot express, never for one that is merely tidier. The
+seed project alone carries no code, since it belongs to no
+installation; its identities are named per installation. Group names
+hold only in an organisation we own, since a directory is never inside
+a folder.
+
+Inside the folder, automation owns everything: no human holds a write
+role there, and what restrains automation is its own declaration —
+`managementPolicies`, `deletionProtection`, liens — reviewable in a pull
+request. Humans are read-only or break-glass, with no third category:
+standing membership grants sight, and changing anything means joining a
+normally empty group, doing the work and leaving. Assuming an
+automation identity is a write capability and belongs in the second
+category. Per installation there are four capabilities, named area then
+relation — `platformViewer`, populated; `platformAdmin`, `clusterAdmin`
+and `secretsAdmin`, empty — bound with predefined granular roles, never
+Owner, Editor or Viewer, including `platformViewer`, which is assembled
+from predefined viewer roles. An installation's capabilities are not an
+instance's: `platformViewer` inherits into every project deliberately,
+but Kubernetes and secret administration on one instance is granted on
+that instance's own project, with the environment in the group name,
+and expires with it — an instance's `secretsAdmin` is viewer plus
+`secretVersionAdder`, so writing a secret and reading one back stay
+separate rights. Capabilities are logical names; what each resolves to
+is an IAM member string in the manifest's `access` mapping — a group, a
+user, a `principalSet://` — and a capability the organisation declines
+to provide is absent and binds nothing. Creating the principals is the
+organisation's act and binding them inside the folder is ours. Above
+the folder, consume and do not manage: the organisation, the billing
+account, the parent and the identity holding rights in it are taken as
+given.
+See [ADR-0023](../../../docs/adr/0023-installation-naming-and-access.md).
 
 ## Name the shape, never the instance
 

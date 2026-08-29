@@ -493,8 +493,8 @@ without naming the operation.
   Discussion — what, how, what it looks like when it did not work,
   normative, why. Failures and Discussion appear only where there is
   one to give.
-- Open a Problem with **You**, and say what you want in a sentence or
-  two.
+- Open a Problem with the word You, and say what you want in a
+  sentence or two.
 - Key a Failures entry on what the reader observes, never on its
   cause.
 - Open a step-based Solution with `### Prerequisites`.

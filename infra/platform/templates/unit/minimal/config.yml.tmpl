@@ -1,0 +1,47 @@
+# The secret stores and the credentials the bank reads, rendered by
+# `just queenswood-instance-manifest`. Sync-wave 2: after the operator whose
+# kinds these are, before the bank that consumes them.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ${INSTANCE}-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    description: Secret store and the credentials the bank reads
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    name: ${INSTANCE}
+    namespace: queenswood
+  source:
+    repoURL: ${SOURCE_REPO}
+    targetRevision: ${SOURCE_REVISION}
+    path: infra/helm/queenswood-config
+    helm:
+      releaseName: queenswood-config
+      valuesObject:
+        # Quoted, all of them: YAML reads a bare `n` as false, and the
+        # chart builds entry names with printf "%s".
+        code: "${CODE}"
+        env: "${ENV}"
+        label: "${LABEL}"
+        projectId: "${PROJECT}"
+        # A store names one project, so the recovery project takes a
+        # second store. The backup key lives there because it has to
+        # survive whatever loses the instance.
+        recoveryProjectId: "${RECOVERY}"
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

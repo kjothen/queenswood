@@ -1,0 +1,50 @@
+# The bank, rendered by `just queenswood-instance-manifest`. Sync-wave 3:
+# last, behind the secret store and the credentials it materialises.
+# Keycloak reads its vault directory at startup, so a Secret arriving
+# after the pod leaves the realm's expression unresolved.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ${INSTANCE}-queenswood
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  destination:
+    # The name the registration Secret carries, not a server URL, so a
+    # rebuilt cluster with a new address needs no edit here.
+    name: ${INSTANCE}
+    namespace: queenswood
+  sources:
+    - repoURL: ${SOURCE_REPO}
+      targetRevision: ${SOURCE_REVISION}
+      path: infra/helm/queenswood
+      helm:
+        # Stated, or Argo takes the Application's name, which repeats
+        # what the cluster and the namespace already say.
+        releaseName: queenswood
+        # The chart names no cloud; values-gcp.yaml is what makes this a
+        # GCP install, and the file below carries what only this
+        # instance knows.
+        valueFiles:
+          - values-gcp.yaml
+          - $$values/${CODE}/units/${LABEL}/values.yml
+    - repoURL: ${MANIFEST_REPO_URL}
+      targetRevision: main
+      ref: values
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

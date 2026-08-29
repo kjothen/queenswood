@@ -176,10 +176,25 @@ topic.
   for, why an instance is its own composite rather than a field on the
   plane's, the kind and the group, and what `down` leaves standing. See
   [ADR-0024](docs/adr/0024-instances-are-their-own-composites.md).
+- **Up and running, end to end** — every recipe from an empty Google
+  account to a bank serving traffic, in order, and what each leaves for
+  the next.
+  See [up-and-running](docs/recipes/infra/queenswood-up-and-running.md).
+- **The organisation's access groups** — four groups outliving every
+  installation, why they have no owner, and why creating them cannot be
+  scripted. See [cloud-groups.md](docs/recipes/infra/cloud-groups.md).
+- **An installation's access groups** — the four coded to it, created
+  before the manifest that names them, since IAM rejects a binding to a
+  principal that does not exist. See
+  [queenswood-groups.md](docs/recipes/infra/queenswood-groups.md).
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See
-  [crossplane-bootstrap](docs/recipes/infra/crossplane-bootstrap.md).
+  [queenswood-bootstrap](docs/recipes/infra/queenswood-bootstrap.md).
+- **Adding an instance to an installation** — the unit's two places,
+  why the secrets are written while the composite builds, and why
+  `down` is not a starting state. See
+  [queenswood-instance.md](docs/recipes/infra/queenswood-instance.md).
 - **Upgrading or reconfiguring Argo CD** — the steps for a plane whose
   own Argo is `Observe`, the `extraObjects` a values file must carry,
   and why a merged change does not reach it. See
@@ -188,9 +203,9 @@ topic.
   Argo's with the opposite hazards: no values block to lose, and a
   restart that stops every managed resource being reconciled. See
   [crossplane-upgrades.md](docs/recipes/infra/crossplane-upgrades.md).
-- **Installing Queenswood** — the two repositories a plane reads, the
-  GitHub App that reaches the private one, the manifest's fields, and
-  who holds which access capability. See
+- **Bringing an installation into service** — the credential that has to
+  land before any merge means anything, the shared facts, the recovery
+  project and the zone, and why the access mapping comes last. See
   [queenswood-installation.md](docs/recipes/infra/queenswood-installation.md).
 - **Debugging an installation** — where a failure reports, which field
   manager owns what, and why a status field disappears. See
@@ -231,9 +246,12 @@ topic.
   placeholder pair reaches it by two different routes. See
   [google-sign-in.md](docs/recipes/infra/google-sign-in.md).
 - **Cloud DNS** — the manual half: proving domain ownership before a
-  public zone may be created, what has to survive a registrar move,
-  and checking the new zone before the delegation follows. See
-  [cloud-dns.md](docs/recipes/infra/cloud-dns.md).
+  public zone may be created, and what has to survive a registrar move.
+  See [cloud-dns.md](docs/recipes/infra/cloud-dns.md).
+- **Moving a domain's delegation** — the diff that makes the
+  propagation window a no-op, replacing all four nameservers, and why
+  the registry rather than the zone is what you ask. See
+  [cloud-dns-delegation.md](docs/recipes/infra/cloud-dns-delegation.md).
 - **Writing about an installation** — what counts as an identifier,
   what to write instead, and why masking happens while you write rather
   than when a check fails. See

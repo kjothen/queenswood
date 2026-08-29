@@ -4,7 +4,7 @@
 # All new GCP work lands here, and anything still needed from
 # cloud.just moves here rather than being called across -- cloud.just is
 # the previous generation and shrinks as its recipes are replaced by
-# managed resources. See docs/recipes/infra/crossplane-bootstrap.md.
+# managed resources. See docs/recipes/infra/queenswood-bootstrap.md.
 # =========================================================================
 
 # Throwaway control plane used to create the folder and the management
@@ -14,8 +14,8 @@ BOOT_CLUSTER := "boot-mgmt"
 BOOT_CTX := "kind-boot-mgmt"
 
 # The installation these recipes act on. Names derive from the code, so
-# a second installation is CODE=qw02 rather than an edit here.
-CODE := env_var_or_default("CODE", "qw01")
+# a second installation is QW_CODE=qw02 rather than an edit here.
+CODE := env_var_or_default("QW_CODE", "qw01")
 
 # The region abbreviated, for the names that carry one. GCP publishes
 # no short form, so the installation states it. REGION and ZONE come
@@ -45,7 +45,7 @@ MANIFEST_REPO_URL := "https://github.com/repldriven/installations"
 # The default is beside this checkout, which is not where it is from a
 # worktree, so it is overridable from the environment as well as with
 # --set.
-INSTALLATIONS_REPO := env_var_or_default("INSTALLATIONS_REPO", "../installations")
+INSTALLATIONS_REPO := env_var_or_default("QW_INSTALLATIONS_REPO", "../installations")
 
 # The management cluster's kubectl context, added by
 # gcp-mgmt-cluster-ctx. Every recipe acting on a cluster names the
@@ -541,9 +541,8 @@ _gcp-mgmt-project:
     fi
     printf '%s\n' "$ID"
 
-# Print the platform identity's email.
-[private]
-_gcp-platform-sa:
+# Print the platform identity's email address.
+gcp-platform-sa:
     @printf 'sa-{{ CODE }}-platform@%s.iam.gserviceaccount.com\n' "$(just _gcp-mgmt-project)"
 
 # Let the platform identity bill the projects it creates (as a billing admin).
@@ -557,7 +556,7 @@ gcp-platform-billing-role billing="":
     # so it cannot delegate what it was given. Run this as an
     # administrator of the billing account: the direct one it keeps, or
     # a member of grp-gcp-billing-admin joined for the task.
-    SA=$(just _gcp-platform-sa)
+    SA=$(just gcp-platform-sa)
 
     BILLING="{{ billing }}"
     if [[ -z "$BILLING" ]]; then
@@ -579,136 +578,6 @@ gcp-platform-billing-role billing="":
     fi
     echo ">>> granted. The platform identity can now bill the projects"
     echo ">>> it creates, which is what an instance needs."
-
-# Generate the key an instance's FDB backups are encrypted under, and
-# put it in that instance's entry. Once, ever.
-gcp-fdb-backup-key env label supersede="":
-    #!/usr/bin/env zsh
-    set -e
-    # Its own recipe rather than a value typed into gcp-secret-version,
-    # because the encoding is not a thing to leave to whoever is
-    # holding the terminal.
-    #
-    # fdbbackup reads encryptionKeyPath as raw bytes. The ExternalSecret
-    # base64s the Secret Manager payload on its way into the Secret, so
-    # what lands on disk is the payload verbatim -- meaning the entry
-    # holds 32 raw bytes and not the base64 text of them. The previous
-    # generation held the text, because a chart writing into `data`
-    # needed base64 and Kubernetes decoded it again. Same key, two
-    # encodings, and the one that is wrong fails at a restore.
-    #
-    # Piped, never written down: a file you delete afterwards is not
-    # deleted on a copy-on-write filesystem. And not through
-    # gcp-secret-version, which strips a trailing newline -- correct for
-    # a typed secret, and one key in 256 ends in 0x0a.
-    SECRET="sec-{{ CODE }}-{{ env }}-{{ label }}-fdb-backup-key"
-    PROJECT=$(just _gcp-recovery-project || true)
-    if [[ -z "$PROJECT" ]]; then
-      echo "no recovery project for {{ CODE }}" >&2
-      echo "the plane composes it from recoveryProjectId -- merge that first" >&2
-      exit 1
-    fi
-    if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
-      echo "no secret $SECRET in $PROJECT" >&2
-      echo "the composite makes the container -- apply it first" >&2
-      exit 1
-    fi
-    # Refused rather than versioned. An existing backup is readable only
-    # under the key it was written with, so a later version does not
-    # rotate anything -- it strands every backup taken before it. Rotate
-    # by starting a new generation under a new entry and keeping this
-    # one until nothing readable is left under it.
-    #
-    # supersede=yes is for the one case that is not a rotation: a key
-    # nothing has been backed up under, so there is nothing to strand.
-    # An entry written before this recipe existed holds base64 text
-    # rather than raw bytes, and nobody can read it back to check --
-    # secretsAdmin carries no versions.access, deliberately. So the way
-    # out of a wrong value is to write a right one over it.
-    #
-    # It supersedes rather than replaces: the entry is read at `latest`
-    # and nothing pins a version, so the old one is left enabled and
-    # unused. Destroying it would need a role that can also destroy the
-    # key, which is the thing this entry exists to keep.
-    if VERSIONS=$(gcloud secrets versions list "$SECRET" --project="$PROJECT" \
-                    --filter="state=ENABLED" --format='value(name)' 2>/dev/null) \
-       && [[ -n "$VERSIONS" ]]; then
-      if [[ "{{ supersede }}" != "yes" ]]; then
-        echo "$SECRET already holds a key, and a later version does not" >&2
-        echo "rotate it -- it strands every backup taken under the current" >&2
-        echo "one. Where nothing has been backed up yet, say so:" >&2
-        echo "  just gcp-fdb-backup-key {{ env }} {{ label }} yes" >&2
-        exit 1
-      fi
-      echo ">>> superseding the key in $SECRET, on your word that nothing" >&2
-      echo ">>> has been backed up under it" >&2
-    fi
-    openssl rand 32 \
-      | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=- \
-        >/dev/null
-    echo ">>> $SECRET now holds a key. It is the only copy, deliberately."
-
-# Generate the bootstrap admin an instance's Keycloak database is created
-# with, and put it in that instance's entry. Once, per database.
-gcp-keycloak-admin-secret env label username="admin" supersede="":
-    #!/usr/bin/env zsh
-    set -e
-    # Its own recipe rather than a value typed into gcp-secret-version,
-    # because the payload is two properties in one entry -- `username`
-    # and `password`, read by name, as sec-<code>-c-github-app is. The
-    # Keycloak CRD wants a kubernetes.io/basic-auth Secret carrying
-    # both, and two entries would be two things to keep in step.
-    #
-    # Generated rather than typed: nothing reads a version back out of
-    # Secret Manager -- secretsAdmin carries no versions.access,
-    # deliberately -- so a value somebody chose is a value they keep
-    # somewhere else. Whoever needs to sign in to the admin console
-    # reads it from the Secret external-secrets writes on the cluster.
-    #
-    # Alphanumeric, which costs nothing at this length and spares every
-    # consumer a quoting question: the realm-import Job urlencodes it,
-    # and the next thing to read it might not.
-    SECRET="sec-{{ CODE }}-{{ env }}-{{ label }}-keycloak-admin"
-    PROJECT=$(just _gcp-instance-project {{ env }} {{ label }} || true)
-
-    # Refused rather than versioned. Keycloak honours a bootstrap admin
-    # only while the master realm is absent, so the database keeps the
-    # account it was created with, and a later version reaches the
-    # running realm not at all -- it materialises a credential nothing
-    # accepts, which is the failure this entry exists to prevent: a
-    # realm serving perfectly well that nothing can administer.
-    #
-    # supersede=yes is for the two cases that are not that -- an entry
-    # written before any database existed, and an account you are about
-    # to change to match. For the second the order is: write, let
-    # external-secrets sync, read the Secret, then set that password on
-    # the account. There is nothing to type, because the value is
-    # generated here.
-    if [[ -n "$PROJECT" ]] \
-       && VERSIONS=$(gcloud secrets versions list "$SECRET" --project="$PROJECT" \
-                       --filter="state=ENABLED" --format='value(name)' 2>/dev/null) \
-       && [[ -n "$VERSIONS" ]]; then
-      if [[ "{{ supersede }}" != "yes" ]]; then
-        echo "$SECRET already holds a credential, and a later version does" >&2
-        echo "not change the account the database was created with. Reset" >&2
-        echo "that account in Keycloak to match, or reset the realm beside" >&2
-        echo "a fresh FoundationDB -- then say so:" >&2
-        echo "  just gcp-keycloak-admin-secret {{ env }} {{ label }} {{ username }} yes" >&2
-        exit 1
-      fi
-      echo ">>> superseding the credential in $SECRET, on your word that the" >&2
-      echo ">>> account in the database is being changed to match" >&2
-    fi
-
-    # Thirty-two alphanumerics out of forty-eight random bytes, so the
-    # strip cannot run its source dry.
-    PASSWORD=$(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 32)
-    jq -n --arg u "{{ username }}" --arg p "$PASSWORD" \
-      '{username: $u, password: $p}' \
-      | just gcp-secret-version "$SECRET" "$PROJECT"
-    echo ">>> $SECRET now holds a bootstrap admin. Nothing reads it until"
-    echo ">>> keycloak.bootstrapAdmin.secretName in the instance's values"
-    echo ">>> names the Secret the ExternalSecret writes."
 
 # Add a version to a Secret Manager entry, reading the value off stdin.
 gcp-secret-version secret project="" file="":
@@ -805,7 +674,7 @@ gcp-github-app-secret pem app_id installation_id:
     set -e
     # A person's act, once per App, from the secretsAdmin capability --
     # GitHub has no API that creates an App, so nothing here can be
-    # declared. See docs/recipes/infra/crossplane-bootstrap.md for the console
+    # declared. See docs/recipes/infra/queenswood-bootstrap.md for the console
     # steps that produce these three values.
     #
     # The container is composed by the installation; this adds a
@@ -829,7 +698,7 @@ gcp-github-app-secret pem app_id installation_id:
 gcp-platform-status:
     #!/usr/bin/env zsh
     set -e
-    SA=$(just _gcp-platform-sa)
+    SA=$(just gcp-platform-sa)
     PROJECT=$(just _gcp-mgmt-project)
     echo "identity  $SA"
     echo "project   $PROJECT"

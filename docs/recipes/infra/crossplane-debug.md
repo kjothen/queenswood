@@ -26,13 +26,13 @@ ready, or not what you declared.
 
 ```bash
 # the installation code, e.g. qw01
-export CODE=qw01
+export QW_CODE=qw01
 ```
 
 ### 1. Find what is not ready
 
 ```bash
-just crossplane-unready "$CODE-mgmt"
+just crossplane-unready "$QW_CODE-mgmt"
 ```
 
 Rows are where to start: take the composite nearest the top of the list
@@ -48,9 +48,9 @@ whichever object carries the field.
 
 ```bash
 # the composite step 1 named, as kind.group/name, e.g.
-export XR="xcluster.platform.repldriven.com/$CODE-n-test"
+export XR="xcluster.platform.repldriven.com/$QW_CODE-n-test"
 
-crossplane resource trace "$XR" -n crossplane-system -c "$CODE-mgmt" \
+crossplane resource trace "$XR" -n crossplane-system -c "$QW_CODE-mgmt" \
   -o wide
 ```
 
@@ -66,9 +66,9 @@ pipeline rather than in any one resource.
 
 ```bash
 # the object step 2 named, as kind.group/name, e.g.
-export OBJ="cluster.container.gcp.m.upbound.io/$CODE-n-test"
+export OBJ="cluster.container.gcp.m.upbound.io/$QW_CODE-n-test"
 
-just crossplane-conditions "$OBJ" "$CODE-mgmt"
+just crossplane-conditions "$OBJ" "$QW_CODE-mgmt"
 ```
 
 Three types, reporting three different failures. `Synced` is whether
@@ -81,9 +81,9 @@ the cloud made.
 
 ```bash
 # the object step 2 named, as kind.group/name, e.g.
-export OBJ="cluster.container.gcp.m.upbound.io/$CODE-n-test"
+export OBJ="cluster.container.gcp.m.upbound.io/$QW_CODE-n-test"
 
-just crossplane-owners "$OBJ" "$CODE-mgmt"
+just crossplane-owners "$OBJ" "$QW_CODE-mgmt"
 ```
 
 `composition` is the composition's own manager, `resolver` writes what

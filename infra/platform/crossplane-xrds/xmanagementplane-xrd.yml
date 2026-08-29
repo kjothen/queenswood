@@ -53,7 +53,7 @@ spec:
 
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
-                # are built; see docs/recipes/infra/crossplane-bootstrap.md.
+                # are built; see docs/recipes/infra/queenswood-bootstrap.md.
                 billingAccountId:
                   type: string
                   description: |
@@ -422,7 +422,7 @@ spec:
                     Absent composes nothing, which is an installation
                     not yet keeping anything. Optional only because
                     qw01 predates the field: a manifest minted from
-                    gcp-plane-manifest always carries it.
+                    queenswood-installation-manifest always carries it.
 
                     Not audit or evidence, which want a locked
                     retention policy and a different set of readers, so

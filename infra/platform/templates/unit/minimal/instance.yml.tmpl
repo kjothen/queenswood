@@ -1,0 +1,40 @@
+# The instance, rendered by `just queenswood-instance-manifest`. Applied at
+# sync-wave 0 by the unit's own Application, which holds every other
+# manifest in this folder behind it until the composite reports ready.
+#
+# state is up because Cloud SQL refuses to create an already-stopped
+# database. Take it down afterwards.
+apiVersion: queenswood.repldriven.com/v1alpha1
+kind: XQueenswoodInstance
+metadata:
+  name: ${INSTANCE}
+  namespace: crossplane-system
+spec:
+  code: "${CODE}"
+  env: "${ENV}"
+  label: "${LABEL}"
+  # Minted once and carried here. A project id is consumed permanently.
+  projectId: "${PROJECT}"
+  state: "up"
+  region: ${REGION}
+  regionCode: ${REGION_CODE}
+  zone: ${GCP_ZONE}
+  # platformAdmin holds roles/oauthconfig.editor on this project, which
+  # is what creating the OAuth client needs. secretsAdmin is this
+  # instance's own: the installation's binds on the management project
+  # and writes nothing here.
+  access:
+    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${ORG_DOMAIN}"]
+    platformAdmin: ["group:${PLATFORM_ADMIN_GROUP}@${ORG_DOMAIN}"]
+    secretsAdmin: ["group:${SECRETS_ADMIN_GROUP}@${ORG_DOMAIN}"]
+  # Identical in every instance, which is safe while the VPCs are
+  # isolated. State them per instance before two of them peer, not
+  # after: a range is immutable.
+  # The zone is the installation's, in the management project, so it is
+  # named rather than derived. The domain must differ from every other
+  # instance's: both would compose a record for the one name.
+  ingress:
+    domain: "${DOMAIN}"
+    zone:
+      name: "${ZONE_NAME}"
+      project: "${MGMT}"
