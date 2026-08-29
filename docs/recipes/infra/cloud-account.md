@@ -49,77 +49,13 @@ action.
 
 ### 5. Create the access groups
 
-Eight security groups, in `admin.google.com` under Directory then
-Groups. Each carries one capability, and the descriptions below are
-worth pasting in — a group whose purpose is not written down acquires
-members. A description says what holding the capability lets you do, and
-never which roles implement it: those change in a pull request, and
-nothing goes back to correct a field in the directory. The display name
-is the address, so one string appears on every screen and the console
-sorts by scope.
+Nobody should hold a standing right in the organisation, so every
+capability is a group and the groups are made in the directory:
+[cloud-groups](cloud-groups.md) for the organisation's four, and
+[queenswood-groups](queenswood-groups.md) for an installation's.
 
-Four at the organisation, which outlive every installation:
-
-- **`grp-gcp-org-admin@`** — Empty. *"Grants and revokes IAM across the
-  organisation. Break-glass: join for the task, then leave."*
-- **`grp-gcp-folder-admin@`** — Empty. *"Creates, moves and deletes
-  folders. Break-glass: join for the task, then leave."*
-- **`grp-gcp-billing-admin@`** — Empty. *"Administers the billing account
-  — linking projects, budgets and payment. Break-glass: join for the
-  task, then leave. One person also holds this directly, because a
-  billing account has no recovery path outside its own policy."*
-- **`grp-gcp-security-reviewer@`** — Populated. *"Reads IAM policy across
-  the organisation and changes nothing. Populated: auditing who holds
-  what must never require the power to change it."*
-
-Four per installation, coded to it and deleted with it — `qw01` here:
-
-- **`grp-gcp-qw01-platform-viewer@`** — Populated. *"Reads qw01 and
-  everything inside it, and writes nothing. Populated: this is
-  day-to-day operation."*
-- **`grp-gcp-qw01-platform-admin@`** — Empty. *"Assumes the identity that
-  runs qw01, which administers all of it. Break-glass: join for the
-  task, then leave."*
-- **`grp-gcp-qw01-cluster-admin@`** — Empty. *"Administers qw01's
-  Kubernetes clusters directly. Break-glass: join for the task, then
-  leave. Acting on a cluster by hand bypasses whatever reconciles it."*
-- **`grp-gcp-qw01-secrets-admin@`** — Empty. *"Reads and manages qw01's
-  secrets. Break-glass: join for the task, then leave. Handling secret
-  contents is a different job from running the infrastructure that holds
-  them."*
-
-Only the organisation set is bound by `gcp-groups-bind`, and billing is
-bound on the billing account rather than on the organisation. The one
-exception is `grp-gcp-qw01-platform-viewer@`, which takes Browser there
-too: it is hierarchy metadata, and the tooling cannot reach a folder
-without first resolving the organisation holding it. The rest of the
-installation set is folder and project scoped, so it belongs in the
-installation manifest beside the resources it applies to. The manifest
-names each capability and maps it to a principal, so which group answers
-is configuration; see
-[ADR-0023](../../adr/0023-installation-naming-and-access.md).
-
-For each, in this order: **Access type: Restricted**, *then* **Who can
-join: Only invited users**. Reversing it discards the join rule, and the
-type then reads Custom, which is correct. Leave the access matrix alone.
-
-Create each **without an owner**. An owner is always a member, so owning
-the admins group means holding Organization Administrator permanently.
-No managers either — administering a privilege-granting group is
-privileged, and a super admin can do it without being in the group.
-
-Bind the organisation roles:
-
-```bash
-gcloud config unset project
-just gcp-groups-bind
-```
-
-Creating groups cannot be scripted here: every Cloud Identity call needs
-a project to attribute quota to, taken from the active gcloud project,
-and none exists yet. Beware that without one,
-`gcloud identity groups describe` answers "There is no such a group" for
-groups that plainly exist.
+Come back when `just gcp-groups-bind` reports every organisation group
+bound.
 
 ### 6. Create the operating user
 
@@ -191,15 +127,6 @@ never appear there anyway.
 - Revoke the super admin's local credentials, and its direct organisation
   binding, once the group carries the role.
 
-**MUST NOT:**
-
-- Leave anybody standing in a break-glass group: `grp-gcp-org-admin@`,
-  `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
-  `grp-gcp-qw01-platform-admin@`, `grp-gcp-qw01-cluster-admin@`,
-  `grp-gcp-qw01-secrets-admin@`.
-- Give these groups an owner or a manager. Both are members.
-- Use `gcloud identity groups describe` to test whether a group exists.
-
 **MAY:**
 
 - Reuse an existing billing account instead of creating one.
@@ -208,5 +135,9 @@ never appear there anyway.
 
 ## References
 
-- [queenswood-bootstrap](queenswood-bootstrap.md) — what to do
-  once the organisation exists.
+- [cloud-groups](cloud-groups.md) — the organisation's access groups,
+  which step 5 hands off to.
+- [queenswood-groups](queenswood-groups.md) — an installation's four,
+  beside them.
+- [queenswood-up-and-running](queenswood-up-and-running.md) — every
+  recipe from here to a bank serving traffic, in order.

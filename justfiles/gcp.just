@@ -541,9 +541,8 @@ _gcp-mgmt-project:
     fi
     printf '%s\n' "$ID"
 
-# Print the platform identity's email.
-[private]
-_gcp-platform-sa:
+# Print the platform identity's email address.
+gcp-platform-sa:
     @printf 'sa-{{ CODE }}-platform@%s.iam.gserviceaccount.com\n' "$(just _gcp-mgmt-project)"
 
 # Let the platform identity bill the projects it creates (as a billing admin).
@@ -557,7 +556,7 @@ gcp-platform-billing-role billing="":
     # so it cannot delegate what it was given. Run this as an
     # administrator of the billing account: the direct one it keeps, or
     # a member of grp-gcp-billing-admin joined for the task.
-    SA=$(just _gcp-platform-sa)
+    SA=$(just gcp-platform-sa)
 
     BILLING="{{ billing }}"
     if [[ -z "$BILLING" ]]; then
@@ -699,7 +698,7 @@ gcp-github-app-secret pem app_id installation_id:
 gcp-platform-status:
     #!/usr/bin/env zsh
     set -e
-    SA=$(just _gcp-platform-sa)
+    SA=$(just gcp-platform-sa)
     PROJECT=$(just _gcp-mgmt-project)
     echo "identity  $SA"
     echo "project   $PROJECT"

@@ -22,6 +22,10 @@ the control plane your organisation runs cannot apply this kind.
 - A Google Cloud organisation, a billing account, and a parent to
   create in. With none of these, start at
   [cloud-account](cloud-account.md), which is the browser-only half.
+- The installation's four access groups, from
+  [queenswood-groups](queenswood-groups.md). Step 5 renders a manifest
+  naming them, and IAM rejects a binding to a principal that does not
+  exist.
 - Either a folder id, written `folders/<folder-id>`, or a parent to
   create one under. Step 1 lists the parents you can see.
 - Steps 5 and 8 — write access to the manifests repository, and a
@@ -137,13 +141,13 @@ you already named, and the rest defaults from the code:
 
 ```bash
 # the parent step 1 listed, e.g.
-export PARENT="organizations/<org-id>"
-# the installation code, as the justfile sets it, e.g.
+export QW_PARENT="organizations/<org-id>"
+# the installation code, e.g.
 export QW_CODE=qw01
 # the private manifests repository, wherever it is checked out
 export QW_INSTALLATIONS_REPO=../installations
 
-just queenswood-installation-manifest "$PARENT" \
+just queenswood-installation-manifest \
   > "$QW_INSTALLATIONS_REPO/$QW_CODE/installation.yml"
 ```
 

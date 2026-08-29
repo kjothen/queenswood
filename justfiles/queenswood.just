@@ -165,8 +165,7 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
       infra/platform/templates/installation.yml.tmpl
 
-# Render a whole unit -- the declaration and the five manifests it
-# names -- into the installations repository.
+# Render a whole unit into the installations repository.
 queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
     #!/usr/bin/env zsh
     set -e
@@ -499,3 +498,166 @@ queenswood-recovery-backup-key env=ENV label=LABEL supersede="":
       | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=- \
         >/dev/null
     echo ">>> $SECRET now holds a key. It is the only copy, deliberately."
+
+# Render the installation's environment, beside its manifest.
+queenswood-environment-manifest recovery="" billing="":
+    #!/usr/bin/env zsh
+    set -e
+    ROOT={{ INSTALLATIONS_REPO }}/{{ CODE }}
+    FILE="$ROOT/environment.yml"
+    if [[ ! -d "$ROOT" ]]; then
+      echo "no installation at $ROOT" >&2
+      echo "the plane's manifest is committed there first:" >&2
+      echo "  just queenswood-installation-manifest organizations/<org-id>" >&2
+      exit 1
+    fi
+    # Committed is the line, as it is for a unit: nothing has read an
+    # uncommitted file, so re-rendering costs nothing, and a committed
+    # one may carry an edit this cannot reproduce.
+    if [[ -e "$FILE" ]]; then
+      if git -C {{ INSTALLATIONS_REPO }} rev-parse --git-dir >/dev/null 2>&1 \
+         && git -C {{ INSTALLATIONS_REPO }} cat-file -e \
+              "HEAD:{{ CODE }}/environment.yml" 2>/dev/null; then
+        echo "{{ CODE }} already has a committed environment:" >&2
+        echo "  $FILE" >&2
+        echo "edit it" >&2
+        exit 1
+      fi
+      echo ">>> replacing the uncommitted $FILE" >&2
+    fi
+
+    if ! MGMT=$(just _gcp-mgmt-project); then
+      exit 1
+    fi
+
+    # Read off the project rather than asked of the seed identity, which
+    # is closed by the time this runs. Not silenced: a denial exits
+    # non-zero with empty stdout, and an empty billing account renders a
+    # file that composes projects nothing pays for.
+    BILLING="{{ billing }}"
+    if [[ -z "$BILLING" ]]; then
+      if ! OUT=$(gcloud billing projects describe "$MGMT" \
+                   --format='value(billingAccountName)' 2>&1); then
+        echo "cannot read the billing account of $MGMT:" >&2
+        printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+        exit 1
+      fi
+      BILLING="${OUT#billingAccounts/}"
+    fi
+    if [[ -z "$BILLING" ]]; then
+      echo "$MGMT is billed to nothing; link it, then re-run" >&2
+      exit 1
+    fi
+
+    # Adopted where one already exists, and minted where there is none,
+    # so a from-scratch installation has somewhere to keep what it would
+    # be rebuilt from without anyone deciding to. Never regenerated: a
+    # project id is consumed permanently, and a second would strand what
+    # the first was holding.
+    RECOVERY="{{ recovery }}"
+    if [[ -z "$RECOVERY" ]]; then
+      RECOVERY=$(just _gcp-recovery-project || true)
+    fi
+    if [[ -z "$RECOVERY" ]]; then
+      RECOVERY="prj-{{ CODE }}-c-recovery-$(openssl rand -hex 3)"
+      echo ">>> naming the recovery project $RECOVERY" >&2
+    fi
+
+    CODE="{{ CODE }}" BILLING="$BILLING" \
+    ARGO_SA="sa-{{ CODE }}-c-argo@$MGMT.iam.gserviceaccount.com" \
+    MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
+    RECOVERY="$RECOVERY" \
+    python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
+      infra/platform/templates/environment.yml.tmpl > "$FILE"
+
+    echo ">>> wrote $FILE"
+    echo
+    echo "  billing   $BILLING"
+    echo "  argo      sa-{{ CODE }}-c-argo@$MGMT.iam.gserviceaccount.com"
+    echo "  recovery  $RECOVERY"
+
+# Print the nameservers Cloud DNS assigned the installation's zone.
+queenswood-zone-nameservers domain="":
+    #!/usr/bin/env zsh
+    set -e
+    # The domain is read from the installation's own manifest, which
+    # names it before the plane composes anything: two answers here
+    # would name a zone nothing made.
+    DOMAIN="{{ domain }}"
+    if [[ -z "$DOMAIN" ]]; then
+      INSTALLATION={{ INSTALLATIONS_REPO }}/{{ CODE }}/installation.yml
+      if [[ ! -f "$INSTALLATION" ]]; then
+        echo "no manifest at $INSTALLATION" >&2
+        exit 1
+      fi
+      DNS_BLOCK=$(grep -A1 '^  dns:' "$INSTALLATION" || true)
+      DOMAIN=$(printf '%s\n' "$DNS_BLOCK" \
+                 | sed -n 's/^ *domain: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p')
+    fi
+    if [[ -z "$DOMAIN" ]]; then
+      echo "no dns.domain for {{ CODE }}; merge it, then re-run" >&2
+      exit 1
+    fi
+    # Named the way the composition names it, so nobody has to know the
+    # scheme to read the answer.
+    ZONE="dz-{{ CODE }}-c-${DOMAIN//./-}"
+    if ! OUT=$(kubectl --context {{ MGMT_CTX }} -n crossplane-system \
+                 get managedzone "$ZONE" \
+                 -o jsonpath='{.status.atProvider.nameServers}' 2>&1); then
+      echo "cannot read $ZONE on {{ MGMT_CTX }}:" >&2
+      printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+      exit 1
+    fi
+    if [[ -z "$OUT" || "$OUT" == "[]" ]]; then
+      echo "$ZONE has no nameservers yet; it is still being composed" >&2
+      exit 1
+    fi
+    printf '%s\n' "$OUT" | tr -d '[]"' | tr ',' '\n'
+
+# Print the installation's dns block, to paste into its manifest.
+queenswood-dns-manifest-snippet domain:
+    #!/usr/bin/env zsh
+    set -e
+    # A snippet rather than a manifest: every other -manifest here
+    # writes the file it names, and this one cannot.
+    # The records come from what the domain answers today rather than
+    # from anyone retyping them: dns-carried decides what a new zone has
+    # to keep, and this only shapes it. stdout carries the block and
+    # nothing else.
+    #
+    # Printed rather than written, unlike every other manifest here: the
+    # file it belongs in is committed and carries comments, and nothing
+    # can insert into that safely.
+    if ! FACTS=$(just dns-carried "{{ domain }}"); then
+      exit 1
+    fi
+    COUNT=$(printf '%s' "$FACTS" | jq '.verification | length')
+    if [[ "$COUNT" -eq 0 ]]; then
+      echo "{{ domain }} carries no verification token" >&2
+      echo "a zone cannot be composed for a domain nobody has proved" >&2
+      exit 1
+    fi
+    # One TXT entry at the apex carrying every token and SPF, and _dmarc
+    # beside it. Built here because a record list varies in length,
+    # which a template cannot. The two quote characters are passed in
+    # rather than escaped: an rrdata needs both, and shell is the wrong
+    # place to spell that.
+    RECORDS=$(printf '%s' "$FACTS" | jq -r --arg q "'" --arg d '"' '
+      "      - type: TXT",
+      "        rrdatas:",
+      ([.verification[]
+        | "          - " + $q + $d + "google-site-verification=" + . + $d + $q]
+       | join("\n")),
+      ([.spf[] | "          - " + $q + $d + . + $d + $q] | join("\n")),
+      "      - name: " + $d + "_dmarc" + $d,
+      "        type: TXT",
+      "        rrdatas:",
+      ([.dmarc[] | "          - " + $q + $d + . + $d + $q] | join("\n"))
+      | select(. != "")')
+
+    DOMAIN="{{ domain }}" RECORDS="$RECORDS" \
+    python3 -c 'import os,sys,string; sys.stdout.write(string.Template(open(sys.argv[1]).read()).substitute(os.environ))' \
+      infra/platform/templates/dns.yml.tmpl
+
+    echo >&2
+    echo ">>> paste this into spec in {{ CODE }}/installation.yml" >&2

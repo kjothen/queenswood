@@ -32,18 +32,22 @@ composition, not here.
 
 ## Solution
 
-### Before you start
+### Prerequisites
 
-You have an organisation, a management project, and a plane running in
-it. The domain is registered and verified for Cloud Identity, and
-serves whatever the registrar has always served — a parked page, or
-nothing.
-
-- An account at the registrar that can edit DNS and change nameservers.
+- An organisation, a management project, and a plane running in it. The
+  domain is registered and verified for Cloud Identity, and serves
+  whatever the registrar has always served — a parked page, or nothing.
+- An account at the registrar that can edit DNS and change nameservers,
+  for steps 4 and 7.
 - The operator account for the installation — the one the organisation
-  is administered with, not a personal one.
-- The email address of the identity the composition runs as.
-- The management project, which is where the zone goes.
+  is administered with, not a personal one. Steps 1 and 2 are done as
+  it, in a browser. It is a Google account rather than a GCP role, and
+  no group confers it.
+- Google group memberships, by capability:
+  - Step 2 — `grp-gcp-<code>-platform-viewer@`, which is what
+    `just gcp-platform-sa` reads the management project to answer.
+    Not `platform-admin@`: the identity is granted ownership here,
+    never impersonated.
 
 ### The order, and why it is this order
 
@@ -51,11 +55,10 @@ Three things gate each other, and getting them the wrong way round
 costs hours rather than minutes.
 
 Ownership comes first, because a public zone cannot be created without
-it. The zone comes before the delegation, because a delegation to a
-zone that does not answer is an outage. And the token that proves
-ownership has to be answering from the new zone *before* the delegation
-moves, or the move takes ownership away with it — which is the failure
-that takes the zone with it too.
+it. Everything here comes before the zone, and the zone before the
+delegation — a delegation to a zone that does not answer is an outage,
+and the token proving ownership has to answer from the new zone before
+the move, or the move takes ownership away with it.
 
 Unsigning is the long pole and the one that hurts. Read step 4 before
 choosing where to put it: it wants to be early, and there is one case
@@ -110,15 +113,24 @@ console manages Cloud Identity's domains. The registrar has an account
 model of its own, granting people the right to edit DNS and move the
 registration. Neither grants ownership in Google's sense.
 
-### 2. Grant the composition's identity ownership
+### 2. Add the automation identity as an owner
 
-The plane authenticates through Workload Identity, so the provider
-creates the zone as the platform service account rather than as you,
-and a service account is never a verified owner by default.
+The zone is created by a service account rather than by you, and a
+service account is never a verified owner by default. Print its address:
 
-**Settings, then Users and permissions, then Manage property owners.**
-The Add an owner box takes a service account address like any other.
-Choose **Owner** — Full and Restricted grant report access and confer no
+```bash
+just gcp-platform-sa
+```
+
+An email ending `.iam.gserviceaccount.com`, which is what goes in the
+box below.
+
+Signed in as yourself — the account step 1 verified — go to **Settings,
+then Users and permissions, then Manage property owners**, and paste
+that address into **Add an owner**. Nothing is impersonated: you are
+granting the service account ownership, not acting as it.
+
+Choose **Owner**. Full and Restricted grant report access and confer no
 ownership, and a zone create refuses them exactly as it refuses a
 stranger.
 
@@ -130,30 +142,30 @@ and let the composite adopt it.
 Find out what the domain is actually serving. The records that matter
 are rarely the ones it is visibly for.
 
-```
-for r in NS A AAAA MX TXT CAA DS SOA; do
-  echo "-- $r"; dig +short $r <domain>
-done
-for n in _dmarc _domainconnect _acme-challenge; do
-  echo "-- $n"; dig +short ANY $n.<domain>
-done
+```bash
+just dns-records <domain>
 ```
 
-A sweep of the apex alone misses the records that matter most, because
-the ones carrying policy sit under names nothing advertises. `_dmarc`
-is the other half of an SPF lockdown and is invisible from the apex.
+Every apex type, and the underscore names that carry policy. A sweep of
+the apex alone misses the records that matter most, because the ones
+carrying policy sit under names nothing advertises — `_dmarc` is the
+other half of an SPF lockdown and is invisible from there.
 
-Then decide record by record:
+```bash
+just dns-carried <domain>
+```
 
-- **Carries.** Verification tokens, including any you cannot attribute.
-  SPF, whose `-all` states the domain sends no mail, and DMARC, which is
-  the half that makes it enforceable.
-- **Does not carry.** A placeholder site's A records and `www` CNAME,
-  which describe a page nobody depends on. `_domainconnect`, which names
-  the old provider's one-click DNS endpoint and means nothing once the
-  domain delegates elsewhere.
+Of that, what a new zone has to keep: the verification tokens, SPF and
+DMARC. A placeholder site's A records and `www` CNAME describe a page
+nobody depends on, and `_domainconnect` names the old provider's
+one-click endpoint, which means nothing once the domain delegates
+elsewhere.
 
-Whatever carries goes into the manifest the zone is composed from.
+Read the first against the second. That narrowing is right for a domain
+serving nothing but policy, and the sweep is where you find out this
+one is different — an MX the organisation receives on, a CAA, an A
+record something points at. Anything like that goes into the zone by
+hand, because nothing below will notice it missing.
 
 ### 4. Unsign, if the domain is signed
 
@@ -172,7 +184,7 @@ ownership the zone rests on.
 
 The mismatch fails closed deliberately, since the alternative would let
 an attacker strip signatures to downgrade a protected domain. It is
-also the one failure the diff in step 6 cannot protect against: that
+also the one failure the delegation diff cannot protect against: that
 makes the two authorities agree on content, and the parent's assertion
 is not about content.
 
@@ -205,77 +217,10 @@ each node caches independently, and one probe hits one node, so a
 single clean answer proves nothing. Take several, spaced, across more
 than one resolver.
 
-### 5. Let the plane compose the zone
-
-Merge the manifest naming the domain and the records from step 3. The
-zone and its records compose together, so this covers both the create
-and the populate. Then read the nameservers Cloud DNS assigned it —
-four, unpredictable, and not the same for two zones:
-
-```
-kubectl --context <plane> -n crossplane-system \
-  get managedzone <zone> -o jsonpath='{.status.atProvider.nameServers}'
-```
-
-### 6. Diff the two authorities
-
-Query the new zone's own nameservers directly. A public resolver still
-answers from the old authority, so it cannot tell you anything about
-the new one.
-
-```
-dig @<assigned-nameserver> <domain> TXT +short
-dig @<assigned-nameserver> _dmarc.<domain> TXT +short
-```
-
-Compare against the same queries aimed at the registrar's nameservers.
-Everything that carries should answer identically. Done in this order
-the propagation window is a no-op, because there is no interval in
-which the two authorities disagree.
-
-### 7. Move the delegation
-
-At the registrar, choose custom nameservers and replace **all four**
-with the assigned ones, without trailing dots. A mixture of the two
-providers' nameservers leaves resolvers getting different answers
-depending on which they ask.
-
-The registrar will warn that this reduces functionality or disconnects
-the site. That is accurate and intended: its DNS stops being
-authoritative, and everything in its DNS panel stops applying.
-
-**Leave the old records in the registrar's panel.** They cost nothing
-dormant, and they are what makes reverting a matter of switching the
-nameservers back.
-
-**Do not re-enable DNSSEC there.** If signing is wanted again it goes on
-the new zone, with a fresh DS published at the registrar afterwards.
-
-### 8. Check
-
-The registrar saving is not the delegation moving. The registrar
-submits the change to the registry, which is its own hop and its own
-wait. Ask the registry, and ask for the authority section — a referral
-carries the NS records there rather than in the answer, so a `+short`
-query looks empty and reads as failure:
-
-```
-dig NS <domain> @<a registry nameserver> +noall +authority
-```
-
-Two TTLs then govern the tail. The registry's delegation TTL is one,
-and the NS records inside the old zone are the other, usually much
-longer. Resolvers holding the latter keep using the old nameservers
-after the parent has changed, so expect a period where resolvers
-disagree about who is authoritative. Both answer the same, which is the
-entire point of step 6.
-
-Last, confirm the verification TXT answers from the new authority. The
-organisation rests on that record, and it is the one whose absence does
-not show up as a broken page.
-
-Set a CAA record naming the issuing CA once it is known. An absent CAA
-authorises every CA rather than none.
+Move the delegation once the zone exists — that is
+[cloud-dns-delegation](cloud-dns-delegation.md), and it cannot start
+before [queenswood-installation](queenswood-installation.md) has
+composed one.
 
 ## Rules
 
@@ -284,23 +229,21 @@ authorises every CA rather than none.
 - Verify the domain before a public zone is created, as the operator
   account in its own right.
 - Add the property as a Domain property, not a URL prefix.
-- Add the composition's identity as an **Owner** of the property. Full
-  and Restricted confer no ownership.
+- Add the automation identity — `just gcp-platform-sa` prints its
+  address — as an **Owner** of the property. Full and Restricted confer
+  no ownership.
 - Add the DNS TXT verification method explicitly where the domain was
   auto-verified through its provider.
-- Inventory every record type at the registrar, and the
+- Inventory with `just dns-records`, every record type and the
   underscore-prefixed names, before moving a domain.
-- Carry the verification tokens, SPF and DMARC into the new zone before
-  the delegation moves.
+- Carry over what `just dns-carried` names — the verification tokens,
+  SPF and DMARC — and read the full sweep against it, since that
+  narrowing is right only for a domain serving nothing else.
 - Check for a DS record before delegating, and where one exists unsign
   at the registrar and wait out the DS TTL first, watching the parent
   registry rather than the zone.
 - Take several spaced probes across more than one resolver before
   calling DNSSEC recovery complete.
-- Query the assigned nameservers directly to check the new zone, and
-  the registry's authority section to check the delegation.
-- Confirm the verification TXT resolves from the new authority
-  afterwards.
 
 **MUST NOT:**
 
@@ -312,12 +255,6 @@ authorises every CA rather than none.
   from both authorities across the switch.
 - Leave the installation's identities delegated from a personal
   account.
-- Change the delegation before the new zone answers, or while a DS
-  record still names the old nameservers' keys.
-- Replace only some of the registrar's nameservers.
-- Delete the old records at the registrar as part of the move. They are
-  the way back.
-- Re-enable DNSSEC at the registrar after moving.
 - Delete and recreate a zone to change it. The nameservers change with
   it, the registrar does not follow, and each fresh zone draws from a
   finite per-domain pool.
@@ -329,7 +266,6 @@ authorises every CA rather than none.
   keep the window tight.
 - Move the apex once rather than delegating a subdomain per
   environment, so the registrar is a one-time act.
-- Set a CAA record naming the issuing CA.
 
 ## References
 
@@ -341,3 +277,5 @@ authorises every CA rather than none.
   and its records.
 - [queenswood-installation](queenswood-installation.md) — the manifest
   the domain is named in.
+- [cloud-dns-delegation](cloud-dns-delegation.md) — moving the
+  registrar, once the zone answers.

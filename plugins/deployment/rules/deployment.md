@@ -127,22 +127,39 @@ See [queenswood-bootstrap](../../../docs/recipes/infra/queenswood-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
 
-Change what exists by editing the manifest rather than by acting on GCP,
-and apply from merged state only, since a `pull_request` trigger gets no
-cloud identity. Push the manifest before a plane takes over reading it
-from git. Supply `management.projectId` always and
-`createFolder.folderId` wherever the folder already exists, give
-`metadata.name` and `spec.code` the same string, keep the manifests
-repository private, and read `status` back rather than committing it.
-Never commit anything secret beside the manifest, never name a principal
-in `access` that does not exist — IAM rejects the binding, not the
-manifest — never create a key for an identity the installation
-composes, and never leave a new XRD field required when the manifest
-that sets it lives in another repository. `management.source` may point
-at upstream, a fork, or a mirror that vendors the layout, with
-`targetRevision` pinned to a tag; an empty `access` mapping installs and
-capabilities may be added later; and one manifest per folder allows
+Change what exists by editing the manifest and merging it, never by
+acting on GCP, and apply from merged state only, since a
+`pull_request` trigger gets no cloud identity and a fork's would
+otherwise run as the platform identity. Push the manifest before a
+plane takes over reading it from git, and give Argo the credential for
+the manifests repository before expecting any later merge to reach the
+plane at all.
+Supply `management.projectId` always and `createFolder.folderId`
+wherever the folder already exists, give `metadata.name` and
+`spec.code` the same string — nothing enforces it and the tooling
+assumes it — and state `region`, `regionCode`, `zone` and anything else
+immutable rather than leaving it to a default that may move. Render the
+installation's environment and merge it before the first instance is
+composed, keep the manifests repository private, and read `status` back
+rather than committing it. Never commit anything secret beside the
+manifest, never
+name a principal in `access` that does not exist — IAM rejects the
+binding, not the manifest — never create a key for an identity the
+installation composes, never leave a new XRD field required when the
+manifest that sets it lives in another repository, never retype a
+verification token into the manifest, since the block is rendered from
+what the domain answers and a token that exists only in the file proves
+nothing, and never delete and recreate the public zone, whose
+nameservers change with it while the registrar does not follow.
+`management.source` may point at upstream, a fork, or a mirror that vendors
+the layout, with `targetRevision` pinned
+to a tag; an empty `access` mapping installs and capabilities may be
+added later, which on a first installation is the only order available;
+an existing recovery project may be adopted by passing its id; and one
+manifest per folder allows
 more than one installation.
+Commands: `just queenswood-environment-manifest`, `just
+queenswood-dns-manifest-snippet`.
 See [queenswood-installation](../../../docs/recipes/infra/queenswood-installation.md).
 
 ## An instance is a unit, and its secrets are written while it builds
@@ -381,22 +398,58 @@ Commands: `just crossplane-explain`, `just crossplane-owners`,
 `just crossplane-external-names`.
 See [crossplane-providers](../../../docs/recipes/infra/crossplane-providers.md).
 
+## Do it in order, and each recipe leaves what the next reads
+
+An organisation, its groups, an installation's groups, the plane, the
+installation, then an instance. Choose the installation's code before
+the groups are named and never change it, since every name derives from
+it, and create groups before the manifest that names them, since IAM
+rejects a binding to a principal that does not exist. Stopping after
+the installation is valid — that is one with no instance on it, and
+what a platform team hands over — and the organisation's own half is
+done once however many installations follow. The first three are a
+browser and have no API at all; from the plane onwards everything is a
+file in a repository, which is where the work stops being performed and
+starts being recorded.
+See [queenswood-up-and-running](../../../docs/recipes/infra/queenswood-up-and-running.md).
+
+## Groups are made in a directory, and bound from a shell
+
+Create every access group without an owner or a manager, since both are
+members, and set Restricted before Only invited users or the join rule
+is discarded. Bind from no active project. Never script the creation:
+every Cloud Identity write attributes quota to a project and at
+foundation time none exists, which is also why
+`gcloud identity groups describe` answers that a group plainly present
+does not exist. The organisation's four outlive every installation and
+are bound at the organisation; an installation's four are coded to it,
+created before the manifest that names them, and only `platform-viewer`
+is bound at the organisation, taking Browser there because tooling
+cannot reach a folder without resolving the organisation above it. The
+rest is folder and project scoped and reaches them through the
+manifest. An installation may be stood up with no groups at all and an
+empty `access` mapping, which reconciles correctly and which nobody can
+reach, and a capability may be answered by a user or a `principalSet://`
+rather than a group.
+Commands: `just gcp-groups-bind`.
+See [cloud-groups](../../../docs/recipes/infra/cloud-groups.md) and
+[queenswood-groups](../../../docs/recipes/infra/queenswood-groups.md).
+
 ## Humans hold groups, and a break-glass group stays empty
 
 Set recovery email and phone on the super admin, and 2-step
 verification: it has no mailbox and no one above it, and a second super
 admin, unused, means one lost device is not the end of the
 organisation. Bind groups where humans hold access and principals
-directly where automation does, and give the groups no owner or
-manager — both are members. Keep one direct human administrator on the
-billing account, which may be an existing one reused rather than
+directly where automation does. Keep one direct human administrator on
+the billing account, which may be an existing one reused rather than
 created. Revoke the super admin's local credentials, and its direct
 organisation binding, once the group carries the role. Never leave
 anybody standing in a break-glass group — `grp-gcp-org-admin@`,
 `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
 `grp-gcp-<code>-platform-admin@`, `grp-gcp-<code>-cluster-admin@`,
-`grp-gcp-<code>-secrets-admin@` — and never use
-`gcloud identity groups describe` to test whether a group exists.
+`grp-gcp-<code>-secrets-admin@`. The groups themselves are the section
+above.
 See [cloud-account](../../../docs/recipes/infra/cloud-account.md).
 
 ## An automation identity is granted, never inherited
@@ -496,7 +549,7 @@ See [google-sign-in](../../../docs/recipes/infra/google-sign-in.md).
 
 Verify the domain before a public zone is created, as the operator
 account in its own right, adding it as a Domain property rather than a
-URL prefix and adding the composition's identity as an Owner — Full and
+URL prefix and adding the automation identity as an Owner — Full and
 Restricted confer no ownership. Never read an existing
 `google-site-verification` record as evidence your account owns the
 domain, or an absent Search Console property as evidence it is
@@ -515,19 +568,32 @@ registry rather than the zone, and take several spaced probes across
 more than one resolver before calling DNSSEC recovery complete. Unsign
 first for a domain not yet serving anything, so the wait overlaps
 everything else, and last for one serving traffic, to keep the window
-tight. Check the new zone by querying its assigned nameservers directly
-and the delegation against the registry's authority section, and
-confirm the verification TXT resolves from the new authority
-afterwards. Never change the delegation before the new zone answers or
+tight. Never delete and recreate a zone to change it: the nameservers
+change with it, the registrar does not follow, and each fresh zone
+draws from a finite per-domain pool. Move the apex once rather than
+delegating a subdomain per environment. Moving the delegation itself is
+the section below.
+Commands: `just gcp-platform-sa`, `just dns-records`, `just
+dns-carried`.
+See [cloud-dns](../../../docs/recipes/infra/cloud-dns.md).
+
+## A delegation moves only once the new zone answers
+
+Diff the same sweep from each authority before delegating, aiming it at
+the new zone's nameservers and at the registrar's in turn: a public
+resolver still answers from the old authority and can say nothing about
+the new one. Query the registry's authority section to check the
+delegation itself, since a referral carries the NS records there rather
+than in the answer, and a short query looks empty and reads as failure.
+Confirm the verification TXT resolves from the new authority
+afterwards. Never change the delegation before the new zone answers, or
 while a DS record still names the old nameservers' keys, never replace
 only some of the registrar's nameservers, never delete the old records
 there — they are the way back — and never re-enable DNSSEC at the
-registrar afterwards. Never delete and recreate a zone to change it:
-the nameservers change with it, the registrar does not follow, and each
-fresh zone draws from a finite per-domain pool. Move the apex once
-rather than delegating a subdomain per environment, and set a CAA
-record naming the issuing CA.
-See [cloud-dns](../../../docs/recipes/infra/cloud-dns.md).
+registrar afterwards. Set a CAA record naming the issuing CA. Done in
+this order the propagation window is a no-op, since both authorities
+answer the same and no resolver holding either one is wrong.
+See [cloud-dns-delegation](../../../docs/recipes/infra/cloud-dns-delegation.md).
 
 ## A parent Application holds only kinds that already exist
 

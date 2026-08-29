@@ -1,450 +1,263 @@
-# Queenswood installation
+# Bringing an installation into service
 
 <!-- tessl-plugin: deployment -->
 
+## Status
+
+**Untested as written.** One installation was built this way, but over
+many changes rather than in this order, and several steps below are a
+hand-edited file where a recipe ought to be. Expect the first run to
+find a missing primitive rather than a wrong instruction.
+
 ## Problem
 
-You have a control plane that deploys Crossplane applications, and want
-to deploy Queenswood.
+You have a plane, and want an installation that can serve instances.
 
 ## Solution
 
-Configure it for your organisation, then commit a manifest. An
-installation is one file — everything Queenswood needs from your
-organisation is in it or named by it — and changing what exists
-afterwards is a merge.
+### Prerequisites
 
-Building the plane that reads that file is
-[queenswood-bootstrap](queenswood-bootstrap.md). This recipe
-starts once you have one.
+- A management plane, built by
+  [queenswood-bootstrap](queenswood-bootstrap.md), reconciling its own
+  manifest.
+- Owner of the GitHub organisation holding the private manifests
+  repository, for step 1 and nothing else.
+- A domain you can prove ownership of, for steps 3 to 5. Proving it is
+  [cloud-dns](cloud-dns.md) and moving its delegation is
+  [cloud-dns-delegation](cloud-dns-delegation.md); between them they
+  are the only browser work here.
+- Google group memberships, by capability:
+  - Every step — `grp-gcp-<code>-platform-viewer@` to read what the
+    plane does with each merge.
+  - Step 1 — `grp-gcp-<code>-secrets-admin@`, for the one write.
 
-### An installation, in full
+`QW_CODE` is [cloud-naming](cloud-naming.md)'s `<code>`, which every
+composed name derives from, and `QW_INSTALLATIONS_REPO` is where the
+manifest this page edits is checked out. Both are stated once here and
+carried through every step below.
 
-This is the whole of it. The sections below take it a field at a time.
-
-```yaml
-apiVersion: platform.repldriven.com/v1alpha1
-kind: XManagementPlane
-metadata:
-  name: "<metadata-name>" # e.g. qw01
-  namespace: crossplane-system
-spec:
-  code: "<code>" # e.g. qw01
-  region: "<region>" # e.g. europe-west2
-  regionCode: "<region-code>" # e.g. euw2
-  zone: "<zone>" # e.g. europe-west2-a
-  network:
-    subnetCidr: "10.60.0.0/16"
-    podsCidr: "10.61.0.0/16"
-    servicesCidr: "10.62.0.0/20"
-  cluster:
-    machineType: "e2-standard-2"
-    nodeCount: 1
-    diskSize: 50
-    diskType: "pd-standard"
-    releaseChannel: "REGULAR"
-    upgradeSettings:
-      strategy: "SURGE"
-      maxSurge: 1
-      maxUnavailable: 0
-  access:
-    platformViewer: ["group:grp-gcp-<code>-platform-viewer@<your-domain>"]
-    platformAdmin: ["group:grp-gcp-<code>-platform-admin@<your-domain>"]
-    clusterAdmin: ["group:grp-gcp-<code>-cluster-admin@<your-domain>"]
-    secretsAdmin: ["group:grp-gcp-<code>-secrets-admin@<your-domain>"]
-  management:
-    projectId: "prj-<code>-c-mgmt-xxxxxx"
-    adopt: "projects/prj-<code>-c-mgmt-xxxxxx"
-    source:
-      repoURL: "<source-repo>"
-      targetRevision: "main"
-      pathPrefix: "."
-    manifestRepoURL: "<manifest-repo>"
-  createFolder:
-    parent: "organizations/<org-id>"
-    displayName: "fldr-<code>"
-    folderId: "folders/<folder-id>"
+```bash
+# the installation code, e.g.
+export QW_CODE=qw01
+# the private manifests repository, wherever it is checked out
+export QW_INSTALLATIONS_REPO=../installations
 ```
 
-A first apply carries neither `adopt` nor `folderId`: both name
-something that does not exist yet, and a pre-set external name turns a
-create into a failed observe. Both are added once the folder and project
-do, and what they then do is below.
+### 1. Give Argo the credential for the private repository
 
-Angle brackets mark what differs on every installation: your domain,
-your GitHub organisation, and the numeric organisation and folder ids —
-which are placeholders for a second reason too, since a public document
-should carry names rather than account identifiers. `xxxxxx` stands for
-the random suffix GCP appends to a project id.
+The plane reconciles from a repository it cannot yet read, and
+[argocd-github](argocd-github.md) is the whole of that: it names the
+repository in the manifest, creates a GitHub App, installs it on that
+repository, and stores the App ID, Installation ID and private key
+together in the one entry the composite made for them.
 
-`<source-repo>` is upstream — `https://github.com/repldriven/queenswood`
-— unless you run a fork you review or a mirror that vendors this layout,
-which is a real choice rather than a placeholder.
-`<manifest-repo>` is always yours.
+Come back when the `installation` Application reports `Synced`.
 
-The kind is `XManagementPlane` rather than anything named after this
-bank. What the manifest builds is the folder's control plane — a
-management project, a cluster, the identities that run it, and
-Crossplane and Argo on top — and Queenswood is then one of the things
-that plane can install, rather than the reason it exists. The
-installation is still the folder, and the manifest is still one file
-per folder.
+### 2. Render the installation's environment
 
-`metadata.name` and `spec.code` carry the same string and are not the
-same thing. Nothing in the composition reads `metadata.name`: every
-composed name derives from `spec.code`, which the XRD constrains to four
-lowercase characters because it is baked into GCP resource names across
-the whole organisation. `metadata.name` only has to be unique in one
-namespace on one cluster. Nothing enforces that they agree, and the
-recipes assume they do — `gcp-boot-mgmt-apply` waits on
-`xmanagementplane/<code>` — so a manifest where they differ
-reconciles correctly and is then invisible to the tooling that built it.
-
-`billingAccountId` is absent for the reason given below.
-
-### Two repositories
-
-Queenswood arrives as an API and is described by a manifest. The two sit
-apart because they differ in who owns them and who may read them.
-
-**The source**, named by `management.source`, holds the XRD, the
-composition and the provider packages — what an `XManagementPlane`
-means. `repoURL` names it, `targetRevision` pins the revision the plane
-follows, and `pathPrefix` says where in that repository the project sits:
-`.` for a fork that keeps this layout, a directory for a mirror that
-vendors it. Upstream, a fork you control, or a mirror inside your own
-network; the plane only has to reach it. An organisation that reviews
-what it runs forks and pins a tag, and upgrading is then a merge like
-everything else.
-
-**The manifests**, named by `management.manifestRepoURL`, hold one file
-per installation. Private, because a manifest is identifiers — the
-organisation, the folder, the billing account, the project ids. Nothing
-in it is secret, and nothing in it wants indexing either.
-
-A change to the composition and the manifest change it needs land in
-different repositories, so keep a new XRD field optional with a default.
-That makes the two-sided change rare rather than co-ordinated.
-
-### The App that reads the private repository
-
-The source repository may be public, and then needs no credential. The
-manifests are private, so Argo authenticates as a GitHub App — created
-once by an organisation owner, yielding an App ID, an Installation ID
-and a private key. See [argocd-github](argocd-github.md) for how one is
-made and what goes wrong with it.
-
-All three go to Secret Manager in the management project, into the
-container the composite composes for them, where the secrets identity
-reads them. They are stored together so the identifiers travel with the
-key rather than through a second channel, and nothing else on the
-cluster holds a credential at all.
-
-### The manifest
-
-One file, and the fields it carries. `management.*` says which project
-and where its configuration comes from, which a plane needs because it
-composes a folder and a project and `createFolder.*` is the other half
-of that pair. What describes the cluster it builds groups under
-`cluster` and `network`, the same two sections an instance carries and
-for the same reason: a plane whose only sized thing was a machine type
-could state it flat, and one that also states a node count, two disk
-fields, a release channel and an upgrade strategy cannot.
-
-- **`code`** — the installation's short name, which every resource name
-  derives from. See [cloud-naming](cloud-naming.md).
-- **`region`, `regionCode`, `zone`** — stated rather than left to the
-  XRD's defaults. A name carries the region abbreviation, and moving
-  the region or the zone rebuilds a subnet or a cluster, so a default
-  that changed underneath a live installation would move it silently.
-- **`cluster.*`** — `machineType`, `nodeCount`, `diskSize`, `diskType`,
-  `releaseChannel` and `upgradeSettings`. State the machine type the
-  pool is already running: it is immutable, so a value that merely
-  differs replaces the pool, and the pool being replaced is the one
-  running the Crossplane doing the replacing.
-
-  `machineType` is also read from the top level, where it was stated
-  before this section existed, and `cluster.machineType` supersedes it
-  where a manifest carries both. That one field is deliberately
-  undefaulted, since a default would override every manifest still
-  spelling it flat.
-
-  `upgradeSettings` is stated because unset it is not unset: the
-  provider late-initialises whatever GKE defaulted to when the pool was
-  made, so the spec reads as declared while nobody chose it, and the
-  next pool starts from whatever the defaults are then.
-
-  **Size the plane once, because it cannot resize itself.** `nodeCount`
-  is mutable and `machineType` is not, so a plane that turns out too
-  small can gain nodes and cannot gain a bigger one — changing the
-  machine type replaces the pool that the plane's own Crossplane is
-  running on, and nothing is left to create the replacement. The
-  default is one node large enough for what a plane holds: an
-  `e2-standard-2` leaves about 6GB allocatable, and crossplane-system
-  alone takes around 4.1GB of it, because each upjet provider is a
-  Terraform runtime. What that shortfall looks like is worth knowing,
-  because it does not look like memory: every pod in `argocd` and
-  `crossplane-system` is BestEffort, so the scheduler reads the node as
-  a third committed while it is full, and the largest pods die of
-  liveness-probe timeouts while the small ones with limits are the only
-  things the kernel kills outright.
-- **`network.*`** — `subnetCidr`, `podsCidr` and `servicesCidr`. The
-  plane's default ranges are disjoint from an instance's by
-  construction, which is what makes the two safe to leave alone. A
-  range is immutable, so state them before anything is peered rather
-  than after — moving one rebuilds the subnet and the cluster standing
-  on it, which here is the cluster doing the rebuilding. No `proxyCidr`
-  or `psaPrefixLength`: the plane composes neither a proxy-only subnet
-  nor a private services range, and a field the composition ignores is
-  worse than an absent one.
-
-  The general rule is stronger than the silent-move argument, and
-  applies to any field an XRD defaults and a composition patches from.
-  A default is absent until the regenerated CRD arrives, which is a
-  window a composition can reconcile inside. See
-  [crossplane-design](crossplane-design.md).
-- **`management.projectId`** — always supplied. A project id is consumed
-  permanently and cannot be undeleted into usefulness, so carrying it in
-  the file is what stops a rebuilt plane minting a second management
-  project beside the first.
-- **`createFolder.parent`** — where a folder would be created.
-  **`createFolder.folderId`** adopts an existing one instead, which is
-  what you set when a folder was handed to you, and what makes a rebuilt
-  plane take over rather than build a second installation.
-- **`billingAccountId`** — supplied when the management project is
-  created rather than committed, because the account is a property of
-  the identity, which holds `billing.user` on exactly one. Nothing then
-  declares it: the field is absent from the managed resource and absent
-  from `atProvider` too, so a project billed once stays billed with
-  reconciliation neither owning the field nor fighting a change to it.
-  Instances get theirs from the installation's shared facts instead.
-- **`access`** — below.
-
-### An instance manifest
-
-One file per instance, beside the plane's. Every field below is stated
-at what the XRD already defaults to, so this is both a worked example
-and the answer to "what can I change".
-
-```yaml
-apiVersion: queenswood.repldriven.com/v1alpha1
-kind: XQueenswoodInstance
-metadata:
-  name: qw01-n-test
-  namespace: crossplane-system
-spec:
-  code: "qw01"
-  env: "n"
-  label: "test"
-  projectId: "prj-qw01-n-test-xxxxxx"
-  state: "up"
-  region: "europe-west2"
-  regionCode: "euw2"
-  zone: "europe-west2-a"
-  access:
-    # Granted the pod-log-reader role in this project. Empty binds
-    # nothing, and reading a log then means joining clusterAdmin.
-    platformViewer: ["group:grp-gcp-<code>-platform-viewer@<your-domain>"]
-  network:
-    podsCidr: "10.20.0.0/16"
-    proxyCidr: "10.40.0.0/24"
-    psaPrefixLength: 16
-    servicesCidr: "10.30.0.0/20"
-    subnetCidr: "10.10.0.0/16"
-  cluster:
-    diskSize: 50
-    diskType: "pd-standard"
-    machineType: "e2-standard-2"
-    nodeCount: 3
-    releaseChannel: "REGULAR"
-  keycloak:
-    database:
-      availabilityType: "ZONAL"
-      backupEnabled: true
-      diskSize: 10
-      diskType: "PD_HDD"
-      edition: "ENTERPRISE"
-      pointInTimeRecovery: false
-      tier: "db-custom-1-3840"
-      version: "POSTGRES_18"
+```bash
+just queenswood-environment-manifest
 ```
 
-`code`, `env`, `label` and `projectId` are the only required fields;
-everything else defaults. State them anyway, for the reason
-[crossplane-design](crossplane-design.md) gives — a defaulted field is
-absent for as long as a regenerated CRD takes to arrive, and a manifest
-that states its values does not care.
+> [!WARNING]
+> Re-render as often as you like until the environment is committed: a
+> plane reads it from git, so nothing was built and the recovery
+> project id it minted means nothing. Once it is committed that file
+> may be the only record of an id GCP has consumed, and the recipe
+> refuses rather than minting a second.
 
-`adopt`, `displayName` and `billingAccountId` are omitted rather than
-defaulted. The first takes over an existing project, the second names
-it for humans, and the third overrides the installation's billing
-account for this instance alone.
+Commit and merge the new environment manifest in
+`QW_INSTALLATIONS_REPO`.
 
-**Grouped where a name would otherwise be ambiguous.** `diskSize` on an
-instance could mean a node's or the database's, so both group, and the
-plane groups the same way now that its cluster is described by more
-than a machine type. `keycloak.database` rather than `database` because
-FoundationDB is the bank's own store and will want a section of its own
-— neither should get to be "the database".
-
-**What is not here is deliberate.** The composition keeps
-`ipv4Enabled: false`, `sslMode: ENCRYPTED_ONLY`,
-`cloudsql.iam_authentication`, `GKE_METADATA`, `removeDefaultNodePool`
-and the deletion protections as literals. Those are not choices an
-environment makes differently; they are the properties the ADRs argue
-for, and a field that can be set to the wrong value is a way to lose
-them in a file reviewed as configuration rather than as architecture.
-
-### The installation's shared facts
-
-
-A second file in the same directory, holding what is true of the whole
-installation rather than of one composite:
-
-```yaml
-apiVersion: apiextensions.crossplane.io/v1beta1
-kind: EnvironmentConfig
-metadata:
-  name: <code>
-  labels:
-    installation: <code>
-data:
-  billingAccountId: "<billing-account-id>"
-  argoServiceAccount: "sa-<code>-c-argo@prj-<code>-c-mgmt-xxxxxx.iam.gserviceaccount.com"
+```bash
+just crossplane-conditions "xmanagementplane/$QW_CODE"
 ```
 
-The label is what selects it: a composition matches `installation`
-against its own `spec.code`, because the name has to follow the code and
-a reference takes a literal. The resource is cluster-scoped, so nothing
-composes it — a namespaced composite may not compose a cluster-scoped
-kind — and Argo applies it from this directory like everything else.
+`Ready` back to `True`, with the recovery project composed under it.
 
-What belongs here is a fact identical across every instance that carries
-no naming or ordering consequence. A billing account qualifies, and so
-does Argo's own address: an instance grants Argo access to its project,
-which needs the account's full email — the code is on the instance and
-the management project is not, and a combine cannot mix a composite
-field with an environment one.
-**Region does not**: it is baked into resource names, so an
-installation-wide default would silently want to rebuild every
-instance's subnet and cluster when edited, which is the hazard the
-manifest's own `region` field avoids by being stated. **A folder id
-does not** for parenting either — a composition resolves the folder by
-reference, which orders the two resources and cannot go stale, where a
-copied number does neither.
+### 3. Prepare the domain
 
-Resolution is `Required`, so an installation with no config is a
-composite that says so rather than a project that comes up unbilled and
-looks healthy. That makes the order matter in one direction: this file
-exists before a composition reads it, and adding it early is free
-because a config nothing reads does nothing.
+[cloud-dns](cloud-dns.md) is the whole of this: it verifies the domain,
+adds the automation identity as an owner of the property, inventories
+what the registrar serves, and unsigns the domain where it is signed.
 
-### Who holds which capability
+Come back when `just dns-carried <domain>` names a verification token.
 
-`access` maps a capability to the principals that hold it, and carries
-whole IAM member strings because a principal need not be a group. An
-organisation with access groups already maps them straight in and mints
-nothing:
+### 4. Compose the zone
 
-- **`platformViewer`** — day-to-day reading, across the folder and the
-  management project.
-- **`platformAdmin`** — impersonating the identity that builds a plane.
-- **`clusterAdmin`** — administering the clusters.
-- **`secretsAdmin`** — the management project's secrets.
+```bash
+just queenswood-dns-manifest-snippet <domain>
+```
 
-The last three are break-glass: joined for a task and left. Only the
-viewer capability is expected to carry anybody day to day, and it is the
-one capability also bound at the organisation, with `roles/browser`,
-because tooling cannot reach a folder without resolving the organisation
-above it. Everything else `access` grants is folder- or project-scoped
-and composed from this mapping.
+Paste it into `spec` in `<code>/installation.yml`, and merge.
 
-A capability left out binds nothing, so an empty mapping installs. That
-matters where the principals do not exist yet: minting groups needs a
-quota project, and until the management project exists there is none. So
-install first, mint the groups against the new project, and add them in
-a second merge.
+```bash
+just queenswood-zone-nameservers
+```
 
-### Changing what exists
+Four names, which nothing is delegated to yet. Every instance writes
+its records into this one zone.
 
-By editing the manifest and merging it. A merge is the privileged
-action, so merged state applies and a `pull_request` trigger gets no
-cloud identity; otherwise a fork's pull request runs as the platform
-identity.
+### 5. Move the delegation
 
-No edit deletes a project. Retiring one is a deliberate second act — lift
-its lien, then delete — and where no lien is on yet, what stands between
-a manifest edit and a deleted project is `managementPolicies` without
-`Delete`.
+[cloud-dns-delegation](cloud-dns-delegation.md) is the whole of this:
+it diffs the two authorities, replaces all four nameservers at the
+registrar, and checks the delegation at the registry.
 
-`status` is read back rather than committed. It carries the folder id,
-the management project and the platform identity, which is where to read
-them rather than from any document.
+Come back when the verification TXT answers from the new authority.
 
-### Two states that pass every check
+### 6. Check it can take an instance
 
-Both leave the composite Ready and every managed resource green.
+```bash
+just crossplane-unready
+```
 
-**A manifest that was never pushed.** Applying from a boot plane reads
-the file from a checkout, and that is all a boot plane needs. A plane
-that has taken over reads it from GitHub, so a file that exists locally
-and was never pushed satisfies everything up to the handover and then
-reconciles from nothing.
+A header line with nothing under it. The installation now carries
+everything an instance derives from it: the folder, the billing
+account, Argo's identity, the recovery project and the zone.
 
-**A secret with no version.** The composite composes the container the
-App's credentials go in, and a person adds the version. Between the two,
-Argo holds no credential for the repository it reconciles from. That
-secret is the link between the plane and its manifests, and it is the
-one piece the composite deliberately cannot fill.
+Adding one is [queenswood-instance](queenswood-instance.md).
+
+## Failures
+
+**A plane that is `Ready` and reconciling nothing.** The manifest exists
+in a checkout and was never pushed. Applying from a boot plane reads a
+working tree and is satisfied by it, so everything up to the handover
+passes; afterwards the plane reads the revision its Application names
+and finds no file.
+
+**A repository reported unreachable.** Read this as an entry with no
+version before reading it as a wrong credential. The composite composes
+the container and a person adds the value, and between the two Argo
+holds nothing for the repository it reconciles from.
+
+**An instance project that comes up unbilled.** The environment was
+added after the instance rather than before. Nothing else declares a
+billing account: the field is absent from the managed resource and from
+`atProvider`, so a project billed once stays billed and one never
+billed stays that way.
+
+**A composed name that moved on its own.** A field the XRD defaults was
+left unstated, and the default changed. Where the field is immutable —
+a region, a machine type, a subnet range — the change is refused rather
+than applied, and the refusal is in `LastAsyncOperation` while `Synced`
+goes on reading `True`.
 
 ## Rules
 
 **MUST:**
 
-- Change what exists by editing the manifest, not by acting on GCP.
+- Change what exists by editing the manifest and merging it, never by
+  acting on GCP.
 - Apply from merged state only. A `pull_request` trigger gets no cloud
-  identity.
+  identity, and a fork's would otherwise run as the platform identity.
 - Push the manifest before a plane takes over reading it from git.
+- Give Argo the credential for the manifests repository before
+  expecting any later merge to reach the plane at all.
 - Supply `management.projectId` always, and `createFolder.folderId`
   wherever the folder already exists.
-- Give `metadata.name` and `spec.code` the same string.
+- Give `metadata.name` and `spec.code` the same string. Nothing
+  enforces it, and the tooling assumes it.
+- State `region`, `regionCode`, `zone` and anything else immutable
+  rather than leaving it to a default that may move.
+- Render the environment with `just queenswood-environment-manifest`,
+  and merge it before the first instance is composed.
 - Keep the manifests repository private, and read `status` back rather
   than committing it.
 
 **MUST NOT:**
 
 - Commit anything secret beside the manifest.
-- Name a principal in `access` that does not exist. IAM rejects the
-  binding, not the manifest.
+- Name a principal in `access` that does not exist.
 - Create a key for any identity the installation composes.
 - Leave a new XRD field required, when the manifest that sets it lives
   in another repository.
+- Delete and recreate the public zone. The nameservers change with it
+  and the registrar does not follow.
+- Retype a verification token into the manifest.
+  `just queenswood-dns-manifest-snippet` renders the block from what the domain
+  answers, and a token that only exists in the file proves nothing.
 
 **MAY:**
 
 - Point `management.source` at upstream, a fork, or a mirror that
   vendors this layout, and pin `targetRevision` to a tag.
-- Install with an empty `access` mapping, and add capabilities later.
+- Install with an empty `access` mapping and add capabilities later,
+  which is an installation nobody can reach but which reconciles
+  correctly.
+- Adopt an existing recovery project by passing its id, where one was
+  made outside this path.
 - Create more than one installation. One manifest per folder.
+
+## Discussion
+
+An installation is a folder, and its manifest is one file. What
+bootstrap leaves behind is a plane that can apply that file; what this
+page adds is everything an instance later derives from it. Each step is
+a merge, because a merge is the privileged act — the only one that runs
+as the platform identity.
+
+**Why the credential comes first.** Every step after it is a merge, and
+a merge only means something to a plane that can read the repository.
+Until the App's values are in Secret Manager, the plane reconciles from
+nothing while reporting healthy, which is the first of the two states
+that pass every check.
+
+**Why the two repositories are separate.** The source holds the XRD and
+the composition — what an `XManagementPlane` means — and may be public,
+forked or mirrored, with `targetRevision` pinned by anyone who reviews
+what they run. The manifests hold one file per installation and are
+private, because a manifest is identifiers: the organisation, the
+folder, the billing account, the project ids. Nothing in it is secret
+and nothing in it wants indexing either. The cost is that a composition
+change and the manifest change it needs land in different repositories,
+which is why a new XRD field is added optional and defaulted rather
+than required.
+
+**Why the environment is a second file.** An `EnvironmentConfig` is
+cluster-scoped, so nothing composes it — a namespaced composite may not
+compose a cluster-scoped kind — and Argo applies it from the same
+directory like everything else. It holds what is true of the whole
+installation and carries no naming or ordering consequence: the billing
+account qualifies, and so does Argo's own address, since an instance
+grants Argo access to its project and needs the full email, which
+combines a composite field with an environment one. A region does not
+qualify, because it is baked into names, and an installation-wide
+default would silently want to rebuild every instance's subnet and
+cluster when edited.
+
+**Why the order is what it is.** The credential first, or nothing
+lands. The environment before any instance, because resolution is
+`Required` and a missing config is a composite that says so rather than
+a project that comes up unbilled. The domain prepared before the zone
+is composed and delegated after it, because a delegation to a zone that
+does not answer is an outage.
+
+**What has no primitive yet.** Step 4 is hand-edited YAML in the
+private repository, where step 2 has a recipe. The
+renderer that produces a first manifest mints ids and writes the whole
+file, so it cannot be used to add a block to a manifest that already
+exists — which is what step 4 does. Until something can, the guard
+against a second render losing what was hand-added is that the file is
+committed and the renderer refuses.
 
 ## References
 
-- [queenswood-bootstrap](queenswood-bootstrap.md) — building
-  the plane that reads the manifest.
+- [queenswood-bootstrap](queenswood-bootstrap.md) — building the plane
+  that reads the manifest.
+- [queenswood-instance](queenswood-instance.md) — adding an instance to
+  what this leaves.
 - [argocd-github](argocd-github.md) — the App that reaches a private
   repository, and how it is rotated.
-- [cloud-account](cloud-account.md) — the organisation, access groups and
-  billing account, none of which has an API.
-- [cloud-naming](cloud-naming.md) — the installation code, and what every
-  name derives from it.
+- [cloud-dns](cloud-dns.md) — proving the domain, and moving a
+  registrar once.
+- [cloud-account](cloud-account.md) — the organisation, the access
+  groups and the billing account, none of which has an API.
+- [cloud-naming](cloud-naming.md) — the code, and what every name
+  derives from it.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as an installation, and why foundations are not deleted.
-- [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the access
+- [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the
   capabilities and who holds them.
-- `infra/platform/crossplane-xrds/xmanagementplane-xrd.yml` — the
-  fields above, as a schema.
-- `justfiles/gcp-boot.just` — `queenswood-installation-manifest` renders a first
-  manifest and `gcp-boot-mgmt-apply` applies a committed one.
-- `justfiles/gcp.just` — `gcp-github-app-secret` stores the App's three
-  values, and `gcp-secret-version` puts any other one into the entry
-  its composite made.
+- `infra/platform/crossplane-xrds/xmanagementplane-xrd.yml` — every
+  field named above, as a schema.
