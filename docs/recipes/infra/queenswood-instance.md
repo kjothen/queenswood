@@ -12,9 +12,9 @@ omits.
 
 ## Problem
 
-**You** have an installation whose plane is reconciling it, and you
-want a second environment on it — its own project, cluster, database
-and hostname — built without touching the one already running.
+**You** want to add an instance to an installation. The plane takes as
+many as you declare, so this is the same act whether it is the first or
+the fifth.
 
 ## Solution
 
@@ -31,10 +31,10 @@ and hostname — built without touching the one already running.
   deliberately not a `Required` patch, so a wrong one composes green.
 - The domain verified and delegated, once for the installation — see
   [cloud-dns](cloud-dns.md). A Search Console Domain property covers
-  every subdomain, so a second instance under it needs no registrar act
-  and no verification act.
+  every subdomain, so an instance under it needs no registrar act and
+  no verification act.
 - Write access to the private manifests repository, and a merge.
-- Headroom on the plane. A second instance adds composites, managed
+- Headroom on the plane. Every instance adds composites, managed
   resources and Applications to it, `machineType` is immutable, and the
   pool being replaced is the one Crossplane runs on.
 - Google group memberships, by capability:
@@ -187,7 +187,7 @@ carried `state: down`. An already-stopped database cannot be created;
 an instance is built up and stopped afterwards.
 
 **The plane's own pods restarting while the instance builds.** The
-second instance's composites and Applications landed on a plane with no
+instance's composites and Applications landed on a plane with no
 headroom. The symptom is liveness kills rather than memory pressure,
 because pods with no requests read as uncommitted to the scheduler.
 
