@@ -58,9 +58,10 @@ leave again, per
 export CODE=qw01
 # the private manifests repository, wherever it is checked out
 export INSTALLATIONS_REPO=../installations
+# the environment letter, and what this instance is called in it
+export ENV_LETTER=n ENV_NAME=dev
 
-# the environment letter and the label, as arguments
-just gcp-instance-manifest n dev
+just gcp-instance-manifest "$ENV_LETTER" "$ENV_NAME"
 ```
 
 Six files: `<code>/<label>.unit.yml`, and `instance.yml`,
@@ -68,8 +69,9 @@ Six files: `<code>/<label>.unit.yml`, and `instance.yml`,
 under `<code>/units/<label>/`. It reports the project id it minted, the
 domain, the zone it will write records into, and the recovery project.
 
-The environment letter and the label are the arguments; everything else
-is read from the installation's own manifest and from the plane.
+Those two are the only arguments, and cloud-naming's `<env>` and
+`<label>`: every composed name carries them. Everything else is read
+from the installation's own manifest and from the plane.
 
 > [!WARNING]
 > Re-render as often as you like until the unit is applied: nothing
@@ -121,9 +123,9 @@ alias included, and the client is this environment's alone.
 ### 5. Write the three secret versions
 
 ```bash
-just gcp-secret-version "sec-$CODE-n-dev-google-oauth"
-just gcp-keycloak-admin-secret n dev
-just gcp-fdb-backup-key n dev
+just gcp-secret-version "sec-$CODE-$ENV_LETTER-$ENV_NAME-google-oauth"
+just gcp-keycloak-admin-secret "$ENV_LETTER" "$ENV_NAME"
+just gcp-fdb-backup-key "$ENV_LETTER" "$ENV_NAME"
 ```
 
 The first two entries are in the instance's project and the third is in
@@ -146,7 +148,7 @@ changed id produces a Job that runs.
 
 ```bash
 just argo-apps-status
-just gcp-instance-cluster-ctx n dev
+just gcp-instance-cluster-ctx "$ENV_LETTER" "$ENV_NAME"
 ```
 
 Every Application for the instance `Synced` and `Healthy`, then sign in
