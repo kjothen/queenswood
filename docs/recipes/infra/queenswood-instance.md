@@ -12,7 +12,7 @@ omits.
 
 ## Problem
 
-**You** want to add a Queenswood instance to an installation.
+You want to add a Queenswood instance to an installation.
 
 ## Solution
 
