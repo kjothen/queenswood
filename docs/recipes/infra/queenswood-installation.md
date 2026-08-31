@@ -153,8 +153,9 @@ goes on reading `True`.
 - Push the manifest before a plane takes over reading it from git.
 - Give Argo the credential for the manifests repository before
   expecting any later merge to reach the plane at all.
-- Supply `management.projectId` always, and `createFolder.folderId`
-  wherever the folder already exists.
+- Supply `management.projectId` always. The folder is
+  `XSubsidiary`'s, not this manifest's — see
+  [ADR-0027](../../adr/0027-the-folder-is-a-subsidiary.md).
 - Give `metadata.name` and `spec.code` the same string. Nothing
   enforces it, and the tooling assumes it.
 - State `region`, `regionCode`, `zone` and anything else immutable

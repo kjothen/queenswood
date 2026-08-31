@@ -27,7 +27,8 @@ and then to deploy the first one.
 - Either a folder id, written `folders/<folder-id>`, or a parent to
   create one under.
 - Where a platform team hands you a folder, steps 1 to 3 are theirs,
-  and you set `spec.createFolder.folderId` rather than creating one.
+  and it is `XSubsidiary` that adopts it — rendered by
+  `just queenswood-subsidiary-manifest`.
 - Steps 5 and 8 — write access to the manifests repository, and a
   merge.
 - The capability each step names. Ours is a Google group; yours may differ.
@@ -234,8 +235,8 @@ happen is the trap — see
 [argocd-upgrades](argocd-upgrades.md) for the way in.
 
 **A second installation refused under the same parent.** Display names
-must be unique among siblings, so a `spec.createFolder.displayName`
-fixed in a shared template refuses the second one. The folder id is the
+must be unique among siblings, so a display name fixed in a shared
+template refuses the second one. The folder id is the
 identifier; the display name labels the installation for people and
 nothing else.
 
@@ -333,7 +334,7 @@ each one creates a particular installation, and ends up holding
 `billing.user` on the billing account, and `orgpolicy.policyAdmin`
 where the organisation allows it — the last three from step 3.
 
-**What preflight can and cannot see.** `spec.createFolder.parent` takes
+**What preflight can and cannot see.** A subsidiary's `parent` takes
 `organizations/{id}` or `folders/{id}`, and step 1 checks
 `folders.create` on it, so which of the two you hold is what decides
 whether step 6 creates a folder or adopts one. What it cannot see is a

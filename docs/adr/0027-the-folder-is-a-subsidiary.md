@@ -143,10 +143,13 @@ keeps the answer, so none re-resolves while the managed resource is
 absent. That is a default, not a declaration, and it is the assumption
 the transfer rests on.
 
-**A schema cannot lose a field in one merge.** `createFolder` is inert
-but still declared, and the CRD prunes: removing it while a manifest
-still sets it strips the field from the object and leaves Argo diffing
-for ever. It goes in three merges across two repositories.
+**A schema cannot lose a field in one merge.** The CRD prunes, so
+removing a property while a manifest still sets it strips the field
+from the object and leaves Argo diffing for ever. `createFolder` came
+out in three, across two repositories: made optional, dropped from the
+manifest, then deleted — with the renderer and its template going in
+the last, since a template that emits a field the schema has lost
+produces exactly the same diff for the next installation.
 
 **One kind now spans two suppliers.** An `XSubsidiary` may be reconciled
 by our plane or by somebody else's, and only the second case has been

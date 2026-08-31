@@ -40,7 +40,7 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
     # same answer.
     #
     # Checked here rather than only on the branch that scopes a folder
-    # lookup: the value reaches createFolder.parent either way.
+    # lookup: the value is wanted either way.
     if [[ -z "{{ parent }}" ]]; then
       echo "no parent for the folder" >&2
       echo "export QW_PARENT, or pass it:" >&2
@@ -498,6 +498,72 @@ queenswood-recovery-backup-key env=ENV label=LABEL supersede="":
       | gcloud secrets versions add "$SECRET" --project="$PROJECT" --data-file=- \
         >/dev/null
     echo ">>> $SECRET now holds a key. It is the only copy, deliberately."
+
+# Print the subsidiary manifest, resolved. Takes the folder's parent.
+#
+# The folder and the capabilities bound on it, which is what a plane is
+# later built against. Separate from the plane's manifest because the
+# folder outlives it and may not be ours at all -- see ADR-0027. Pass a
+# folder to adopt one an organisation handed over.
+queenswood-subsidiary-manifest parent=PARENT name="" folder="":
+    #!/usr/bin/env zsh
+    set -e
+    # stdout carries the manifest and nothing else, so this can be
+    # redirected straight into a file; every message goes to stderr.
+    if [[ -z "{{ parent }}" ]]; then
+      echo "no parent for the folder" >&2
+      echo "export QW_PARENT, or pass it:" >&2
+      echo "  just queenswood-subsidiary-manifest organizations/<org-id>" >&2
+      exit 1
+    fi
+
+    # Deterministic, because the code is what tells one subsidiary from
+    # another. Pass a name where the folder is handed to you already
+    # named: it keeps whatever its organisation chose, and this is
+    # written rather than merely recorded.
+    NAME="{{ name }}"
+    if [[ -z "$NAME" ]]; then
+      NAME="fldr-{{ CODE }}"
+      echo ">>> naming the folder $NAME" >&2
+    fi
+
+    # Refuse to make a second subsidiary by accident. GCP allows the
+    # duplicate display name, so this is the only thing that would
+    # notice -- and with a deterministic name it is what catches a
+    # rebuild that meant to adopt.
+    if [[ -z "{{ folder }}" ]]; then
+      case "{{ parent }}" in
+        organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
+        folders/*)       SCOPE="--folder=${${:-{{ parent }}}#folders/}" ;;
+        *) echo "parent must be organizations/<id> or folders/<id>" >&2; exit 1 ;;
+      esac
+      EXISTING=$(gcloud resource-manager folders list $SCOPE \
+                   --filter="displayName=$NAME" \
+                   --format='value(name)' 2>/dev/null | head -1 || true)
+      if [[ -n "$EXISTING" ]]; then
+        echo "a folder named $NAME already exists under {{ parent }}: folders/$EXISTING" >&2
+        echo "adopt it:  just queenswood-subsidiary-manifest {{ parent }} $NAME folders/$EXISTING" >&2
+        echo "or choose a different name" >&2
+        exit 1
+      fi
+    fi
+
+    # Set only when the folder already exists. A pre-set external name
+    # turns a first-run create into a failed observe.
+    ADOPT=""
+    if [[ -n "{{ folder }}" ]]; then
+      case "{{ folder }}" in
+        folders/*) ADOPT="folderId: \"{{ folder }}\"" ;;
+        *)         ADOPT="folderId: \"folders/{{ folder }}\"" ;;
+      esac
+    fi
+
+    CODE="{{ CODE }}" PARENT="{{ parent }}" NAME="$NAME" ADOPT="$ADOPT" \
+    DOMAIN="$(just _gcp-domain)" \
+    PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
+    CLUSTER_ADMIN_GROUP="{{ CLUSTER_ADMIN_GROUP }}" \
+    python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
+      infra/platform/templates/subsidiary.yml.tmpl
 
 # Render the installation's environment, beside its manifest.
 queenswood-environment-manifest recovery="" billing="":

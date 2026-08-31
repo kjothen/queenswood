@@ -1,0 +1,29 @@
+# The subsidiary: a folder in the organisation, and the capabilities
+# bound inside it. Rendered by `just queenswood-subsidiary-manifest` and
+# committed at the top of the installation's directory, beside the
+# plane's manifest -- the Application that syncs it does not recurse.
+#
+# This is the handover. Composed where the folder is ours, and adopted
+# where an organisation hands one over, leaving the same object either
+# way for the plane to be built against. See ADR-0027.
+apiVersion: platform.repldriven.com/v1alpha1
+kind: XSubsidiary
+metadata:
+  name: ${CODE}
+  namespace: crossplane-system
+spec:
+  code: "${CODE}"
+  # Stated in both modes. The provider holds Update, so either left to
+  # a default is one it would write onto a folder somebody else owns.
+  parent: "${PARENT}"
+  displayName: "${NAME}"
+  ${ADOPT}
+  # Only the capabilities that bind on the folder. platformAdmin binds
+  # on the platform service account and secretsAdmin on the management
+  # project, and both stay with XManagementPlane.
+  #
+  # The names are ours and the principals are the organisation's. One
+  # that hands you a folder may name its groups nothing like these.
+  access:
+    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${DOMAIN}"]
+    clusterAdmin: ["group:${CLUSTER_ADMIN_GROUP}@${DOMAIN}"]
