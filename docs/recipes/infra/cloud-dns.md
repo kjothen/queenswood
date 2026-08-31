@@ -4,7 +4,8 @@
 
 ## Problem
 
-[cloud-account](cloud-account.md) leaves you with an organisation, and
+[gcp-secure-foundation](gcp-secure-foundation.md) leaves you with an
+organisation, and
 it got there through the domain: Cloud Identity verifies one before it
 gives you anything. So by the time there is somewhere to build, the
 domain already carries a `google-site-verification` record placed
@@ -43,11 +44,7 @@ composition, not here.
   is administered with, not a personal one. Steps 1 and 2 are done as
   it, in a browser. It is a Google account rather than a GCP role, and
   no group confers it.
-- Google group memberships, by capability:
-  - Step 2 — `grp-gcp-<code>-platform-viewer@`, which is what
-    `just gcp-platform-sa` reads the management project to answer.
-    Not `platform-admin@`: the identity is granted ownership here,
-    never impersonated.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ### The order, and why it is this order
 
@@ -114,6 +111,9 @@ model of its own, granting people the right to edit DNS and move the
 registration. Neither grants ownership in Google's sense.
 
 ### 2. Add the automation identity as an owner
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 The zone is created by a service account rather than by you, and a
 service account is never a verified owner by default. Print its address:
@@ -269,7 +269,8 @@ composed one.
 
 ## References
 
-- [cloud-account](cloud-account.md) — domain verification at signup, and
+- [gcp-secure-foundation](gcp-secure-foundation.md) — domain verification
+  at signup, and
   why the directory work has no API.
 - [cloud-naming](cloud-naming.md) — the `dz-` prefix and the
   environment letter.

@@ -21,40 +21,18 @@ You want to add a Queenswood instance to an installation.
 - A running Queenswood installation — see
   [queenswood-installation](queenswood-installation.md).
 - The installation's recovery project, named in its `EnvironmentConfig`
-  as `recoveryProjectId`. Absent, the instance composes neither a
-  backups bucket nor a backup key entry, and
-  `just queenswood-recovery-backup-key` refuses.
-- `argoServiceAccount` in that same `EnvironmentConfig`, correct. It is
-  deliberately not a `Required` patch, so a wrong one composes green.
+  as `recoveryProjectId`.
+- `argoServiceAccount` in that same `EnvironmentConfig`, correct.
 - The domain verified and delegated, once for the installation — see
-  [cloud-dns](cloud-dns.md). A Search Console Domain property covers
-  every subdomain, so an instance under it needs no registrar act and
-  no verification act.
+  [cloud-dns](cloud-dns.md).
 - Write access to the private manifests repository, and a merge.
-- Headroom on the plane. Every instance adds composites, managed
-  resources and Applications to it, `machineType` is immutable, and the
-  pool being replaced is the one Crossplane runs on.
-- Google group memberships, by capability:
-  - Steps 1 to 3 — write access to the manifests repository, and
-    `grp-gcp-<code>-platform-viewer@` to read what the plane does with
-    it.
-  - Step 4 — `grp-gcp-<code>-platform-admin@`, which the instance's own
-    `access` mapping grants `roles/oauthconfig.editor` on the new
-    project.
-  - Step 5 — `grp-gcp-<code>-secrets-admin@`, the instance's own rather
-    than the installation's: the installation's binds on the management
-    project and writes nothing here.
-
-No step needs `grp-gcp-<code>-cluster-admin@`. It is what `kubectl`
-against the new cluster takes, with
-`just gcp-instance-cluster-ctx <env> <label>` to reach it, and that is
-debugging rather than any part of standing an instance up.
-
-Those are break-glass groups and normally empty: join for the act and
-leave again, per
-[ADR-0023](../../adr/0023-installation-naming-and-access.md).
+- Headroom on the plane.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ### 1. Render the instance unit
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 Exports follow the [cloud-naming](cloud-naming.md)'s `<code>`, `<env>` and
 `<label>` convention, which every composed name is built from —
@@ -120,6 +98,9 @@ answer.
 
 ### 4. Create the OAuth client
 
+**As the installation's platform admin.** Ours is
+`grp-gcp-<code>-platform-admin@` — join for this step, then leave.
+
 In the new project, in the console, as
 [google-sign-in](google-sign-in.md) has it: the consent screen first,
 then a Web application client. No API creates one with a chosen
@@ -128,6 +109,10 @@ redirect URI. The redirect URI is
 alias included, and the client is this environment's alone.
 
 ### 5. Write the secrets
+
+**As the instance's own secrets admin**, not the installation's. Ours
+is `grp-gcp-<code>-<env>-secrets-admin@` — join for this step, then
+leave.
 
 ```bash
 just queenswood-instance-google-secret
@@ -138,6 +123,8 @@ just queenswood-recovery-backup-key
 Each names the entry it wrote and the version it added.
 
 ### 6. Merge the Applications
+
+**As the installation's platform viewer again.**
 
 Put the client id from step 4 into the unit's `values.yml` as
 `keycloak.googleClientId`, then commit and merge every remaining file
@@ -306,6 +293,18 @@ explicitly, because two composites have to spell one name and only one
 of them makes it. What the instance owns is its project and everything
 in it, which is why `down` stops an environment rather than emptying
 one.
+
+Two of those are supplied by absence as much as by presence. Without
+`recoveryProjectId` the instance composes neither a backups bucket nor
+a backup key entry, and `just queenswood-recovery-backup-key` refuses.
+The domain needs no act here at all: a Search Console Domain property
+covers every subdomain, so an instance under one is neither verified
+nor delegated again.
+
+No step needs a cluster admin either. That capability is what `kubectl`
+against the new cluster takes, with
+`just gcp-instance-cluster-ctx <env> <label>` to reach it, and that is
+debugging rather than any part of standing an instance up.
 
 ## References
 

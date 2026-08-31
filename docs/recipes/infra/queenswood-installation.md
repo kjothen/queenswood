@@ -22,28 +22,24 @@ You have a plane, and want an installation that can serve instances.
   manifest.
 - Owner of the GitHub organisation holding the private manifests
   repository, for step 1 and nothing else.
-- A domain you can prove ownership of, for steps 3 to 5. Proving it is
-  [cloud-dns](cloud-dns.md) and moving its delegation is
-  [cloud-dns-delegation](cloud-dns-delegation.md); between them they
-  are the only browser work here.
-- Google group memberships, by capability:
-  - Every step — `grp-gcp-<code>-platform-viewer@` to read what the
-    plane does with each merge.
-  - Step 1 — `grp-gcp-<code>-secrets-admin@`, for the one write.
-
-`QW_CODE` is [cloud-naming](cloud-naming.md)'s `<code>`, which every
-composed name derives from, and `QW_INSTALLATIONS_REPO` is where the
-manifest this page edits is checked out. Both are stated once here and
-carried through every step below.
+- A domain you can prove ownership of, for steps 3 to 5 — see
+  [cloud-dns](cloud-dns.md) and
+  [cloud-dns-delegation](cloud-dns-delegation.md).
+- Write access to the manifests repository, and a merge, for steps 2
+  and 4.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
-# the installation code, e.g.
+# the installation code, cloud-naming's <code>, e.g.
 export QW_CODE=qw01
 # the private manifests repository, wherever it is checked out
 export QW_INSTALLATIONS_REPO=../installations
 ```
 
 ### 1. Give Argo the credential for the private repository
+
+**As the installation's secrets admin.** Ours is
+`grp-gcp-<code>-secrets-admin@` — join for this step, then leave.
 
 The plane reconciles from a repository it cannot yet read, and
 [argocd-github](argocd-github.md) is the whole of that: it names the
@@ -54,6 +50,9 @@ together in the one entry the composite made for them.
 Come back when the `installation` Application reports `Synced`.
 
 ### 2. Render the installation's environment
+
+**As the installation's platform viewer, from here on.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
 just queenswood-environment-manifest
@@ -251,7 +250,8 @@ committed and the renderer refuses.
   repository, and how it is rotated.
 - [cloud-dns](cloud-dns.md) — proving the domain, and moving a
   registrar once.
-- [cloud-account](cloud-account.md) — the organisation, the access
+- [gcp-secure-foundation](gcp-secure-foundation.md) — the organisation,
+  the access
   groups and the billing account, none of which has an API.
 - [cloud-naming](cloud-naming.md) — the code, and what every name
   derives from it.

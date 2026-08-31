@@ -123,7 +123,7 @@ Organization Administrator at all — break-glass is a super admin adding
 a member, and an empty group is never a lockout.
 
 What the groups are and how they come to exist is
-[cloud-account](../recipes/infra/cloud-account.md).
+[gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md).
 
 The groups are not one per tier of seniority but one per capability that
 must be separable. Organization Administrator and Folder Administrator
@@ -147,9 +147,8 @@ a compliance argument later demands one, not a re-architecture.
 
 ### Foundations are observed and liened; only what rebuilds is deleted
 
-The tier model in
-[cloud-deployment](../recipes/infra/cloud-deployment.md) extends up to the
-projects themselves:
+Tiering by what is expensive to rebuild extends up to the projects
+themselves:
 
 - Bootstrap project, management project, instance projects, DNS zones and
   backup buckets carry `managementPolicies` without `Delete` — v2

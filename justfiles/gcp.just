@@ -176,7 +176,7 @@ _gcp-org-id org="":
     if [[ "$COUNT" -eq 0 ]]; then
       echo "no organization visible to $(gcloud config get-value account 2>/dev/null)" >&2
       echo "an organization comes from Cloud Identity, not from gcloud --" >&2
-      echo "see docs/recipes/infra/cloud-account.md" >&2
+      echo "see docs/recipes/infra/gcp-secure-foundation.md" >&2
       exit 1
     fi
     if [[ "$COUNT" -ne 1 ]]; then
@@ -232,7 +232,7 @@ gcp-policy-status org="" folder="":
         echo "reading these needs orgpolicy.policyViewer, carried by" >&2
         echo "{{ SECURITY_REVIEWER_GROUP }} -- which is populated, so" >&2
         echo "this should need no break-glass. If it does, that binding" >&2
-        echo "has not been applied: run gcp-groups-bind." >&2
+        echo "has not been applied: run gcp-groups-bind-org." >&2
         echo >&2
         echo "The fallback is impersonating the seed identity," >&2
         echo "which needs grp-gcp-{{ CODE }}-platform-admin and grants" >&2
@@ -401,8 +401,51 @@ gcp-scan org="" framework="cis_5.0_gcp":
       --mutelist-file infra/security/prowler-mutelist.yaml
 
 
-# Bind the access groups' roles at the organisation (as a super admin).
+# The organisation-scoped role bindings, keyed by capability. Group names
+# stay here, being derived from CODE.
+ROLES_FILE := "infra/access/organisation-roles.json"
+
+# Print the access capabilities, their groups, and the roles each holds.
+gcp-roles scope="": (_gcp-roles scope)
+
+_gcp-roles scope="":
+    #!/usr/bin/env zsh
+    set -e
+    if [[ -n "{{ scope }}" && "{{ scope }}" != "org" \
+          && "{{ scope }}" != "installation" ]]; then
+      echo "scope must be org or installation, not '{{ scope }}'" >&2
+      exit 1
+    fi
+
+    if ! OUT=$(jq -r --arg scope "{{ scope }}" '
+          .capabilities[]
+          | select($scope == "" or .scope == $scope)
+          | "\(.key)\t\(.scope)\t\(.membership)\t\(.grants)",
+            ( .roles[]? | "  \(.role)\n    \(.why)" ),
+            ( select((.roles | length) == 0)
+              | "  bound below the organisation\n    \(.boundElsewhere)" ),
+            ""' "{{ ROLES_FILE }}"); then
+      echo "cannot read {{ ROLES_FILE }}" >&2
+      exit 1
+    fi
+    printf '%s\n' "$OUT"
+
+# Bind the organisation's access groups (as a super admin).
+gcp-groups-bind-org org="":
+    just _gcp-groups-bind org "{{ org }}"
+
+# Bind an installation's access groups (as a super admin).
+gcp-groups-bind-installation org="":
+    just _gcp-groups-bind installation "{{ org }}"
+
+# Bind every access group, the organisation's then an installation's.
 gcp-groups-bind org="":
+    just gcp-groups-bind-org "{{ org }}"
+    just gcp-groups-bind-installation "{{ org }}"
+
+# Split by scope: binding a group before its recipe has created it
+# fails, and the two sets are created by two different recipes.
+_gcp-groups-bind scope org="":
     #!/usr/bin/env zsh
     set -e
     # The groups themselves are made in the Admin console, not here.
@@ -412,35 +455,50 @@ gcp-groups-bind org="":
     ORG=$(just _gcp-org-id "{{ org }}")
     DOMAIN=$(just _gcp-domain "{{ org }}")
 
-    # cloudasset.viewer beside securityReviewer, because a scanner
-    # enumerates before it reads: without it, auditing the organisation
-    # means naming every project by hand, which is wrong the moment an
-    # instance creates one. It reads the asset inventory -- what exists
-    # -- rather than the resources themselves, so it is a smaller grant
-    # than the roles/viewer a scanner also wants, and that one is still
-    # an open question rather than an omission.
-    #
-    # browser on the platform-viewer group is the one place an
-    # installation group is bound at the organisation. Hierarchy metadata
-    # only, and the tooling cannot reach a folder without first resolving
-    # the organisation that holds it. organizationViewer would add
-    # nothing: its one permission is already in browser. Where the
-    # organisation is not ours, this is whatever it grants its own people.
+    # Captured before it is read, so a jq failure is a failure rather
+    # than an empty set of bindings reported as success. A capability
+    # with no roles is emitted with an empty role field: it is bound
+    # below the organisation, and saying so is the point.
+    if ! SPECS_RAW=$(jq -r --arg scope "{{ scope }}" '
+          .capabilities[]
+          | select(.scope == $scope)
+          | .key as $key
+          | if (.roles | length) == 0
+            then "\($key)\t"
+            else .roles[] | "\($key)\t\(.role)"
+            end' "{{ ROLES_FILE }}"); then
+      echo "cannot read {{ ROLES_FILE }}" >&2
+      exit 1
+    fi
+
+    if [[ -z "$SPECS_RAW" ]]; then
+      echo "no capabilities at scope '{{ scope }}' in {{ ROLES_FILE }}" >&2
+      exit 1
+    fi
+
+    # The file keys by capability; the group answering one is named from
+    # CODE, which cloud-naming governs and this justfile already holds.
+    group_for() {
+      case "$1" in
+        orgAdmin)         printf '%s' "{{ ORG_ADMIN_GROUP }}" ;;
+        folderAdmin)      printf '%s' "{{ FOLDER_ADMIN_GROUP }}" ;;
+        billingAdmin)     printf '%s' "{{ BILLING_ADMIN_GROUP }}" ;;
+        securityReviewer) printf '%s' "{{ SECURITY_REVIEWER_GROUP }}" ;;
+        platformViewer)   printf '%s' "{{ PLATFORM_VIEWER_GROUP }}" ;;
+        platformAdmin)    printf '%s' "{{ PLATFORM_ADMIN_GROUP }}" ;;
+        clusterAdmin)     printf '%s' "{{ CLUSTER_ADMIN_GROUP }}" ;;
+        secretsAdmin)     printf '%s' "{{ SECRETS_ADMIN_GROUP }}" ;;
+        *) return 1 ;;
+      esac
+    }
+
     MISSING=0
-    for spec in \
-      "{{ ORG_ADMIN_GROUP }}:roles/resourcemanager.organizationAdmin" \
-      "{{ ORG_ADMIN_GROUP }}:roles/orgpolicy.policyAdmin" \
-      "{{ FOLDER_ADMIN_GROUP }}:roles/resourcemanager.folderAdmin" \
-      "{{ SECURITY_REVIEWER_GROUP }}:roles/iam.securityReviewer" \
-      "{{ SECURITY_REVIEWER_GROUP }}:roles/cloudasset.viewer" \
-      "{{ SECURITY_REVIEWER_GROUP }}:roles/orgpolicy.policyViewer" \
-      "{{ BILLING_ADMIN_GROUP }}:" \
-      "{{ PLATFORM_VIEWER_GROUP }}:roles/browser" \
-      "{{ PLATFORM_ADMIN_GROUP }}:" \
-      "{{ CLUSTER_ADMIN_GROUP }}:" \
-      "{{ SECRETS_ADMIN_GROUP }}:" ; do
-      NAME="${spec%%:*}"
-      ROLE="${spec#*:}"
+    while IFS=$'\t' read -r KEY ROLE; do
+      if ! NAME=$(group_for "$KEY"); then
+        echo "{{ ROLES_FILE }} names capability '$KEY', which no group answers" >&2
+        MISSING=1
+        continue
+      fi
       EMAIL="${NAME}@${DOMAIN}"
 
       if [[ -z "$ROLE" ]]; then
@@ -474,19 +532,22 @@ gcp-groups-bind org="":
         printf '%s\n' "$ERR" | head -2 | sed 's/^/    /' >&2
         MISSING=1
       fi
-    done
+    done <<< "$SPECS_RAW"
 
     if [[ "$MISSING" -ne 0 ]]; then
       exit 1
     fi
 
+    # Which capabilities carry anybody is a property of the file, so the
+    # summary reads it rather than restating it.
+    POPULATED=$(jq -r --arg scope "{{ scope }}" '
+      [ .capabilities[]
+        | select(.scope == $scope and .membership == "populated")
+        | .key ] | join(", ")' "{{ ROLES_FILE }}")
+
     echo
-    echo ">>> bound. Only {{ SECURITY_REVIEWER_GROUP }} and"
-    echo ">>> {{ PLATFORM_VIEWER_GROUP }} carry anyone: the rest"
-    echo ">>> are break-glass, joined for a task and left."
-    echo ">>> billing: as an administrator of the billing account, run"
-    echo ">>>   gcloud billing accounts add-iam-policy-binding <account-id> \\"
-    echo ">>>     --member=group:{{ BILLING_ADMIN_GROUP }}@${DOMAIN} --role=roles/billing.admin"
+    echo ">>> bound. Only $POPULATED carries anyone: the rest are"
+    echo ">>> break-glass, joined for a task and left."
 
 # =========================================================================
 # Acting as the seed identity

@@ -277,8 +277,46 @@ Recipes sit one level deeper than everything else under `docs/`
 `../../adr/...` and there is no shallower spelling of it. A
 recipe reaching another chapter is `../<chapter>/...`, and
 anything outside `docs/` reaching in is `../recipes/<chapter>/...`.
-Three or more means the link is leaving `docs/` for a tree that
-should have been under it.
+Three or more means the doc is reaching for a file that is not
+prose, which is item 5 rather than a longer climb.
+
+**5. Reach a non-markdown file with a repo-root link, never a
+climb.** A doc naming a file it does not live beside — a chart's
+values, a composition, a roles table, a hook script — links it
+from the repository root:
+
+```
+;; Bad — a climb out of docs/, and dead in a local editor
+[organisation-roles.json](../../../infra/access/organisation-roles.json)
+
+;; Bad — a path the reader has to go and find
+The roles are declared in `infra/access/organisation-roles.json`.
+
+;; OK — repo-root, one spelling from anywhere under docs/
+The roles are declared in
+[organisation-roles.json](/infra/access/organisation-roles.json).
+```
+
+GitHub resolves a leading `/` against the repository root rather
+than the site root, so one spelling works from any depth and
+never needs adjusting when a doc moves. Markdown is the
+exception and stays relative: `docs/` is a self-contained tree
+that is navigated rather than pointed at, and a relative link
+between two docs works in every editor as well as on GitHub.
+
+Two things stay in backticks. A **generic filename** — "a
+project's `deps.edn`", "the brick's `system/core.clj`" — names a
+shape rather than one file, and linking it sends the reader to
+an arbitrary instance of it. A **path carrying a placeholder** —
+`infra/platform/crossplane-xrds/<parent>-composition.yml` — has
+no file to resolve to. Link the path where it names one real
+file, and only then.
+
+Link text is the file's name, not the whole path, and not the
+name in backticks — item 3 applies here as everywhere. A deep
+path as link text overruns 80 columns, and a link is the one
+thing that cannot be wrapped to fit. Where the prose needs to
+say which of two files it means, it says so around the link.
 
 ### A procedure says whether it has been run
 
@@ -517,6 +555,11 @@ without naming the operation.
   TDD links: `[ID](path) — Title`.
 - Keep relative links inside `docs/` to two levels at most,
   which is what a recipe reaching an ADR costs.
+- Link a non-markdown file from the repository root, with the file's
+  name as the link text — `[values.yaml](/infra/helm/…/values.yaml)` —
+  where the path names one real file. GitHub resolves a leading `/`
+  against the repository root, so one spelling works from any depth,
+  and a whole path as link text would not fit in 80 columns.
 - Replace `;` inside mermaid labels, notes, and arrow text
   with `,`, `—`, `.`, or `<br/>`.
 
@@ -534,6 +577,11 @@ without naming the operation.
 - Use inline code as an entire link text.
 - Use relative links that climb three levels or more
   (`../../../`).
+- Use a repo-root link for a markdown file. Between docs the link
+  is relative, which works in an editor as well as on GitHub.
+- Link a generic filename (`deps.edn`) or a path carrying a
+  placeholder. Both stay in backticks: one names a shape rather
+  than a file, the other resolves to nothing.
 - Describe `mono`, Queenswood, or their components as
   "battle-tested", "production-proven", or similar maturity
   claims.

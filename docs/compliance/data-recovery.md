@@ -56,9 +56,9 @@ every regime that states it.
 - **FoundationDB** — [fdb-recovery](../recipes/infra/fdb-recovery.md): the
   recovery scenarios, which restore mode each takes, and the measured
   RPO of each.
-- **Keycloak** —
-  [recovery-procedures](../recipes/infra/recovery-procedures.md), whose
-  FoundationDB half is superseded and whose Keycloak half is not.
+- **Keycloak** — [fdb-recovery](../recipes/infra/fdb-recovery.md),
+  which covers it alongside FoundationDB, because neither recovers
+  usefully without the other.
 
 ### Automated backups, at a frequency set by criticality
 
@@ -188,8 +188,6 @@ belong here and not in a recipe. Each is currently absent:
 
 - [fdb-recovery](../recipes/infra/fdb-recovery.md) — the FoundationDB
   recovery scenarios and procedures
-- [recovery-procedures](../recipes/infra/recovery-procedures.md) — Keycloak
-  recovery
 - [external-secrets](../recipes/infra/external-secrets.md) — where the backup
   encryption key lives, and why it is never rotated
 - [ADR-0026](../adr/0026-recovering-data-and-the-states-that-do-it.md)

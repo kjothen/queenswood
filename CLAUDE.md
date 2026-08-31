@@ -129,15 +129,10 @@ topic.
 - **Deployment** — Helm chart, kind dev loop, per-service
   Docker images. See
   [deployment.md](docs/recipes/infra/deployment.md).
-- **Cloud deployment (previous generation)** — the GHCR-published
-  charts, the `QUEENSWOOD_ENV` model and the up/down runbook that
-  `cloud.just` still runs. Superseded by the installation model; read
-  it for what the old path does, never for what to do now. See
-  [cloud-deployment.md](docs/recipes/infra/cloud-deployment.md).
 - **Rebuilding an instance's cluster** — the runbook for a planned
   cluster rebuild: why a ForceNew field reports `Synced` and does
   nothing, the order, and what it leaves standing. See
-  [cluster-rebuild.md](docs/recipes/infra/cluster-rebuild.md).
+  [cluster-rebuild](docs/recipes/infra/queenswood-instance-cluster-rebuild.md).
 - **Recovering FoundationDB** — the scenario matrix, restore mode
   against destination state, RPO per scenario, why scale-to-zero is not
   a recovery scenario, and the CIS and DORA controls each open item
@@ -146,10 +141,6 @@ topic.
   body requires and which recipe addresses it, gaps included. Recipes
   themselves carry no regulation; the citation lives here. See
   [compliance/readme.md](docs/compliance/readme.md).
-- **Recovery (previous generation's environment model)** — how
-  FoundationDB and Keycloak restore, which has not changed, wrapped in
-  a `QUEENSWOOD_ENV` and `pass` model that has. See
-  [recovery-procedures.md](docs/recipes/infra/recovery-procedures.md).
 - **Infrastructure** — GCP via Crossplane on a kind management
   plane; Argo CD wires the bootstrap chain; the installation's
   composites drive everything else. See
@@ -180,13 +171,15 @@ topic.
   account to a bank serving traffic, in order, and what each leaves for
   the next.
   See [up-and-running](docs/recipes/infra/queenswood-up-and-running.md).
-- **The organisation's access groups** — four groups outliving every
-  installation, why they have no owner, and why creating them cannot be
-  scripted. See [cloud-groups.md](docs/recipes/infra/cloud-groups.md).
-- **An installation's access groups** — the four coded to it, created
-  before the manifest that names them, since IAM rejects a binding to a
-  principal that does not exist. See
-  [queenswood-groups.md](docs/recipes/infra/queenswood-groups.md).
+- **An organisation's secure foundation** — Cloud Identity, the
+  organisation, a billing account, and capabilities nobody holds by
+  default; skipped entirely in an established organisation. See
+  [gcp-secure-foundation](docs/recipes/infra/gcp-secure-foundation.md).
+- **An installation's secure foundation** — the capabilities its
+  manifest names, answered by groups coded to it and created before the
+  manifest, since IAM rejects a binding to a principal that does not
+  exist. See
+  [secure-foundation](docs/recipes/infra/queenswood-secure-foundation.md).
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See

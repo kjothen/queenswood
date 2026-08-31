@@ -263,8 +263,9 @@ verification, the registrar's delegation, an OAuth client with a chosen
 redirect URI. These are not kinds nobody has written yet — they cannot
 be in the catalogue, and somebody will eventually go looking for the
 abstraction that cannot exist. The manual half lives in the
-`cloud-account`, `cloud-dns` and `google-sign-in` recipes and is as
-much a part of building an installation as anything composed. What is
+`gcp-secure-foundation`, `cloud-dns` and `google-sign-in` recipes and
+is as much a part of building an installation as anything composed.
+What is
 excluded is only the thing itself: the OAuth client cannot be composed,
 but the Secret Manager entry holding its secret is an ordinary managed
 resource and belongs in the catalogue like any other.
@@ -400,57 +401,81 @@ See [crossplane-providers](../../../docs/recipes/infra/crossplane-providers.md).
 
 ## Do it in order, and each recipe leaves what the next reads
 
-An organisation, its groups, an installation's groups, the plane, the
-installation, then an instance. Choose the installation's code before
-the groups are named and never change it, since every name derives from
-it, and create groups before the manifest that names them, since IAM
-rejects a binding to a principal that does not exist. Stopping after
-the installation is valid — that is one with no instance on it, and
-what a platform team hands over — and the organisation's own half is
-done once however many installations follow. The first three are a
-browser and have no API at all; from the plane onwards everything is a
-file in a repository, which is where the work stops being performed and
-starts being recorded.
+An organisation's foundation, an installation's, the installation's
+plane, the installation in service, then an instance. Two paths through
+it: from nothing, all five in order; from an organisation that manages
+its own groups, start at the plane, since the first two are its to do
+however it does them.
+Choose the installation's code before the plane and never change it,
+since every name derives from it and nothing else on the second path
+chooses one, and answer every one of an installation's capabilities
+before the manifest that names them, since IAM rejects a binding to a
+principal that does not exist. Stopping after the installation is
+valid — that is one with no instance on it, and what a platform team
+hands over — and the organisation's own foundation is done once however
+many installations follow. The first two are a browser and have no API
+at all; from the plane onwards everything is a file in a repository,
+which is where the work stops being performed and starts being
+recorded.
 See [queenswood-up-and-running](../../../docs/recipes/infra/queenswood-up-and-running.md).
 
-## Groups are made in a directory, and bound from a shell
-
-Create every access group without an owner or a manager, since both are
-members, and set Restricted before Only invited users or the join rule
-is discarded. Bind from no active project. Never script the creation:
-every Cloud Identity write attributes quota to a project and at
-foundation time none exists, which is also why
-`gcloud identity groups describe` answers that a group plainly present
-does not exist. The organisation's four outlive every installation and
-are bound at the organisation; an installation's four are coded to it,
-created before the manifest that names them, and only `platform-viewer`
-is bound at the organisation, taking Browser there because tooling
-cannot reach a folder without resolving the organisation above it. The
-rest is folder and project scoped and reaches them through the
-manifest. An installation may be stood up with no groups at all and an
-empty `access` mapping, which reconciles correctly and which nobody can
-reach, and a capability may be answered by a user or a `principalSet://`
-rather than a group.
-Commands: `just gcp-groups-bind`.
-See [cloud-groups](../../../docs/recipes/infra/cloud-groups.md) and
-[queenswood-groups](../../../docs/recipes/infra/queenswood-groups.md).
-
-## Humans hold groups, and a break-glass group stays empty
+## A foundation produces capabilities, not groups
 
 Set recovery email and phone on the super admin, and 2-step
 verification: it has no mailbox and no one above it, and a second super
 admin, unused, means one lost device is not the end of the
-organisation. Bind groups where humans hold access and principals
-directly where automation does. Keep one direct human administrator on
-the billing account, which may be an existing one reused rather than
-created. Revoke the super admin's local credentials, and its direct
-organisation binding, once the group carries the role. Never leave
-anybody standing in a break-glass group — `grp-gcp-org-admin@`,
-`grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
+organisation. Read the subscription in the Admin console rather than
+trusting the sign-up confirmation, since Cloud Identity Free and a
+Workspace trial confirm identically and the trial expires taking the
+organisation with it. Create every access group without an owner or a
+manager, since both are members, and set Restricted before Only invited
+users or the join rule is discarded. Bind from no active project, the
+organisation's groups and an installation's separately, since each
+fails before its own groups exist. Never script the creation: every
+Cloud Identity write attributes quota to a project and at foundation
+time none exists, which is also why `gcloud identity groups describe`
+answers that a group plainly present does not exist.
+
+Bind groups where humans hold access and principals directly where
+automation does. Create the billing account as a user on your own
+domain rather than as the super admin, never in a private window since
+3-D Secure needs an ordinary one, and never sign up in a browser
+already signed in to a Google account. Keep one direct human
+administrator on the billing account, which may be an existing one
+reused rather than created, and revoke the super admin's local
+credentials and its direct organisation binding together once the group
+carries the role — either one left standing still reaches super admin.
+Never leave anybody standing in a break-glass group —
+`grp-gcp-org-admin@`, `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
 `grp-gcp-<code>-platform-admin@`, `grp-gcp-<code>-cluster-admin@`,
-`grp-gcp-<code>-secrets-admin@`. The groups themselves are the section
-above.
-See [cloud-account](../../../docs/recipes/infra/cloud-account.md).
+`grp-gcp-<code>-secrets-admin@`.
+
+Create a group as a super admin, in the directory, and join
+`grp-gcp-org-admin@` for the bind alone, leaving again — binding at the
+organisation is the one act in either recipe that is not a directory
+act. The organisation's capabilities outlive every installation and are
+bound at the organisation; an installation's are coded to it, created
+before the manifest that names them, and only `platform-viewer` is bound at
+the organisation, taking Browser there because tooling cannot reach a
+folder without resolving the organisation above it. The rest is folder
+and project scoped and reaches them through the manifest. Put the
+people who operate an installation in `platform-viewer` and nothing
+else, on accounts in your own domain, never with a direct organisation
+binding. What either recipe produces is capabilities rather than
+groups: an established organisation answers the same capabilities its own
+way, so skip the organisation's foundation entirely and read the
+installation's rather than follow it. An installation may be stood up
+with no groups at all and an empty `access` mapping, which reconciles
+correctly and which nobody can reach, and a capability may be answered
+by a user or a `principalSet://` rather than a group. Declare an
+organisation-scoped role in `infra/access/organisation-roles.json`,
+never in the recipe that binds it, and read what a capability grants
+and why with `just gcp-roles` — everything folder or project scoped is
+in the compositions under `infra/platform/crossplane-xrds/`.
+Commands: `just gcp-roles`, `just gcp-groups-bind-org`,
+`just gcp-groups-bind-installation`, `just gcp-groups-bind`.
+See [gcp-secure-foundation](../../../docs/recipes/infra/gcp-secure-foundation.md) and
+[queenswood-secure-foundation](../../../docs/recipes/infra/queenswood-secure-foundation.md).
 
 ## An automation identity is granted, never inherited
 
@@ -834,7 +859,8 @@ composite reports `Synced` while nothing happens, so read
 recovery, being a target rather than a mode, and a test environment may
 restore in place.
 See [fdb-recovery](../../../docs/recipes/infra/fdb-recovery.md),
-[cluster-rebuild](../../../docs/recipes/infra/cluster-rebuild.md) and
+[cluster-rebuild](../../../docs/recipes/infra/queenswood-instance-cluster-rebuild.md)
+and
 [ADR-0026](../../../docs/adr/0026-recovering-data-and-the-states-that-do-it.md).
 
 ## A muted finding is a decision, recorded

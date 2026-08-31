@@ -1,0 +1,113 @@
+{
+  "note": [
+    "Roles bound at ORGANISATION scope, and nothing else. `just gcp-roles`",
+    "prints this readably; `just gcp-groups-bind-org` and",
+    "`just gcp-groups-bind-installation` are what apply it.",
+    "",
+    "Which principal answers a capability is not here: that is the",
+    "installation manifest's `access` mapping, and the principals in it",
+    "belong to whoever owns the directory. Nor is anything folder or",
+    "project scoped, which lives beside what it applies to, in",
+    "infra/platform/crossplane-xrds/xmanagementplane-composition.yml and",
+    "xqueenswoodinstance-composition.yml.",
+    "",
+    "`scope` is which recipe binds it. `org` outlives every installation;",
+    "`installation` is coded to one and expires with it. A capability with",
+    "no roles is bound below the organisation and appears here so that the",
+    "set is complete rather than only the part one command performs."
+  ],
+  "capabilities": [
+    {
+      "key": "orgAdmin",
+      "scope": "org",
+      "membership": "break-glass",
+      "grants": "Grants and revokes IAM across the organisation.",
+      "roles": [
+        {
+          "role": "roles/resourcemanager.organizationAdmin",
+          "why": "Sets the organisation's IAM policy, which is what every other binding here is written into. Nothing below it can."
+        },
+        {
+          "role": "roles/orgpolicy.policyAdmin",
+          "why": "Org policy is organisation-only and cannot be granted at the scope it acts on, so it travels with organisation administration rather than with folders."
+        }
+      ]
+    },
+    {
+      "key": "folderAdmin",
+      "scope": "org",
+      "membership": "break-glass",
+      "grants": "Creates, moves and deletes folders.",
+      "roles": [
+        {
+          "role": "roles/resourcemanager.folderAdmin",
+          "why": "Held by a person for the length of a task. The seed identity gets folderCreator and folderIamAdmin instead, deliberately never this, so automation cannot delete a folder."
+        }
+      ]
+    },
+    {
+      "key": "billingAdmin",
+      "scope": "org",
+      "membership": "break-glass",
+      "grants": "Administers the billing account: linking projects, budgets and payment.",
+      "roles": [],
+      "boundElsewhere": "On the billing account, whose IAM policy is not inside the organisation's hierarchy. Bound by hand once the account exists, alongside one named person held directly, because a billing account has no recovery path outside its own policy."
+    },
+    {
+      "key": "securityReviewer",
+      "scope": "org",
+      "membership": "populated",
+      "grants": "Reads IAM policy across the organisation and changes nothing.",
+      "roles": [
+        {
+          "role": "roles/iam.securityReviewer",
+          "why": "Reads policy everywhere in the organisation. Populated rather than break-glass: auditing who holds what must never require the power to change it."
+        },
+        {
+          "role": "roles/cloudasset.viewer",
+          "why": "A scanner enumerates before it reads. Without it, auditing means naming every project by hand, which is wrong the moment an instance creates one. It reads the asset inventory rather than the resources, so it is a smaller grant than the roles/viewer a scanner also wants -- and that one is still an open question rather than an omission."
+        },
+        {
+          "role": "roles/orgpolicy.policyViewer",
+          "why": "Reads the constraints in force. A benchmark scan reports against them, so a reviewer who cannot see them cannot tell a finding from a decision."
+        }
+      ]
+    },
+    {
+      "key": "platformViewer",
+      "scope": "installation",
+      "membership": "populated",
+      "grants": "Reads the installation and everything in it, and writes nothing.",
+      "roles": [
+        {
+          "role": "roles/browser",
+          "why": "The one place an installation capability is bound at the organisation. Hierarchy metadata only: tooling cannot reach a folder without first resolving the organisation holding it. organizationViewer would add nothing, its one permission already being in browser. Where the organisation is not ours, this is whatever it grants its own people."
+        }
+      ]
+    },
+    {
+      "key": "platformAdmin",
+      "scope": "installation",
+      "membership": "break-glass",
+      "grants": "Assumes the identity that runs the installation, which administers all of it.",
+      "roles": [],
+      "boundElsewhere": "On the platform service account, as serviceAccountTokenCreator, by the installation's composition. Assuming an automation identity is a write capability, so it is break-glass rather than standing."
+    },
+    {
+      "key": "clusterAdmin",
+      "scope": "installation",
+      "membership": "break-glass",
+      "grants": "Administers the installation's Kubernetes clusters directly.",
+      "roles": [],
+      "boundElsewhere": "container.admin on the folder, by the installation's composition. Acting on a cluster by hand bypasses whatever reconciles it, which is why it is held for a task and left."
+    },
+    {
+      "key": "secretsAdmin",
+      "scope": "installation",
+      "membership": "break-glass",
+      "grants": "Reads and manages the installation's secrets.",
+      "roles": [],
+      "boundElsewhere": "secretmanager.admin on the management project, by the installation's composition, and viewer plus secretVersionAdder on an instance's own project by the instance's. A capability bound on one project writes nothing in another."
+    }
+  ]
+}

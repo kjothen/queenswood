@@ -17,9 +17,7 @@ installation.
 ### Prerequisites
 
 - A management plane running in the installation's folder.
-- Google group memberships, by capability:
-  - Steps 1 and 2 — `platformViewer`, e.g.
-    `grp-gcp-<code>-platform-viewer@`.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
 # the installation code, e.g. qw01
@@ -27,6 +25,9 @@ export QW_CODE=qw01
 ```
 
 ### 1. Check Argo has the health checks
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
 just argo-health-checks "$QW_CODE-mgmt"

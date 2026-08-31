@@ -20,9 +20,7 @@ ready, or not what you declared.
 
 - A management plane running in the installation's folder.
 - Step 2 — the `crossplane` CLI, which the flake provides.
-- Google group memberships, by capability:
-  - Steps 1 to 4 — `platformViewer`, e.g.
-    `grp-gcp-<code>-platform-viewer@`.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
 # the installation code, e.g. qw01
@@ -30,6 +28,9 @@ export QW_CODE=qw01
 ```
 
 ### 1. Find what is not ready
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
 just crossplane-unready "$QW_CODE-mgmt"

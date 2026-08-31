@@ -75,10 +75,29 @@ report 'paren-adjacent-link' "$out"
 
 # 4. Cross-level relative links — `../../../`. Two levels is what a
 # recipe in docs/recipes/<chapter>/ costs to reach an ADR; three means
-# the link is leaving docs/.
+# the doc is reaching for a file outside docs/, which is a repo-root
+# link. PATTERN_MD rather than DOCS_MD: writing-docs shows the climb as
+# the Bad half of that pair.
 section 'Cross-level relative links — `../../../`'
-out=$(grep -nE '\]\(\.\./\.\./\.\./' "${DOCS_MD[@]}" 2>/dev/null)
+out=$(grep -nE '\]\(\.\./\.\./\.\./' "${PATTERN_MD[@]}" 2>/dev/null)
 report 'cross-level-link' "$out"
+
+# 4b. Repo-root links — [text](/path). GitHub resolves a leading `/`
+# against the repository root, which is how a doc reaches a file outside
+# docs/. Two ways to get it wrong: a target that does not exist, and a
+# markdown target (between docs the link is relative, which also works
+# in an editor).
+section 'Repo-root links that do not resolve'
+out=$(grep -noE '\]\(/[^)]+\)' "${PATTERN_MD[@]}" 2>/dev/null \
+        | sed 's/](\///; s/)$//' \
+        | while IFS=: read -r f n target; do
+            [ -e "$target" ] || echo "$f:$n: $target"
+          done)
+report 'repo-root-link-missing' "$out"
+
+section 'Repo-root links to markdown'
+out=$(grep -nE '\]\(/[^)]+\.md\)' "${PATTERN_MD[@]}" 2>/dev/null)
+report 'repo-root-link-markdown' "$out"
 
 # 5. Inline-code as the entire link text — [`...`](...).
 section 'Inline-code as entire link text'

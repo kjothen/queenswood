@@ -9,10 +9,17 @@ isn't (tone, register).
 
 Hard-wrap markdown at 80 columns under `docs/`. Use the canonical
 reference-list link pattern — `[ID](path) — Title`, link intact,
-title as trailing prose that may wrap — and only single-level
-relative links (`../adr/...`); never climb `../../`, never put `)`
-immediately after a link's closing paren, never wrap link text
-across lines, never use inline code as an entire link's text. Inside
+title as trailing prose that may wrap — and keep a relative link
+inside `docs/` to two levels at most (`../../adr/...`); never climb
+three, never put `)` immediately after a link's closing paren, never
+wrap link text across lines, never use inline code as an entire link's
+text. Reach a non-markdown file outside `docs/` with a repo-root link,
+whose text is the file's name — `[values.yaml](/infra/helm/…)` — since
+GitHub resolves a leading `/` against the repository root and a whole
+path as link text would not fit. Markdown stays relative, which works
+in an editor as well as on GitHub; a generic filename (`deps.edn`) and
+a path carrying a placeholder both stay in backticks, one naming a
+shape rather than a file and the other resolving to nothing. Inside
 mermaid labels, notes, and arrow text, replace `;` with `,`, `—`,
 `.`, or `<br/>` — mermaid treats `;` as a statement separator and
 GitHub fails to render the block. A mermaid line MAY exceed 80

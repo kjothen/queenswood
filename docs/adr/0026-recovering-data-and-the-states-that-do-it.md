@@ -207,9 +207,7 @@ costs.
 
 **Keycloak and FoundationDB recover to different points.** Restoring
 one and not the other leaves a user who exists in the realm with no
-party in the bank, and onboarding gives them a second one. The
-`recovery-procedures` recipe records this from the previous generation
-and it is unchanged.
+party in the bank, and onboarding gives them a second one.
 
 **The in-place path stays available and stays undocumented until
 someone writes it down.** It is what a test environment should use, and
@@ -222,8 +220,5 @@ at all.
   as a declared state, and why an instance's project is durable
 - [ADR-0024](0024-instances-are-their-own-composites.md) — the instance
   as its own composite, and what `down` leaves standing
-- [recovery-procedures](../recipes/infra/recovery-procedures.md) — the
-  previous generation's mechanics, accurate where they do not assume
-  `QUEENSWOOD_ENV`
 - [the plan](../plan/cloud-just-migration.md) — where the backup path
   was rebuilt

@@ -179,8 +179,7 @@ Two habits this week paid for, both cheap:
   to composites that no longer exist, and whole sections on
   `XPlatform`, `XQueenswoodApex` and workload delivery through
   `provider-helm`. Fixing it piecemeal leaves it half-true; it wants
-  one deliberate pass, at the end, together with
-  [cloud-deployment](../recipes/infra/cloud-deployment.md) and this plan.
+  one deliberate pass, at the end, together with this plan.
 - **Statements in this plan that nothing durable records.** "Workloads
   arrive through Argo, not Crossplane" was one and now lives in
   ADR-0024. Two more are still plan-only: what the Keycloak fold buys
@@ -189,7 +188,7 @@ Two habits this week paid for, both cheap:
   Test the rest the same way — grep `docs/adr docs/recipes docs/tdd`
   for each and rehome what only this file says.
 - **Six deployment-labelled docs with no rule section**:
-  `cloud-account`, `cloud-naming`, `security-scanning`, ADR-0023,
+  `gcp-secure-foundation`, `cloud-naming`, `security-scanning`, ADR-0023,
   ADR-0025 and ADR-0026. Authoring them would roughly double the
   longest rule file here, so it stays its own pass. `sync-rules-from-docs`
   also reports a structural error on ADR-0022 and ADR-0024 that is not
@@ -1324,7 +1323,8 @@ that rare, and is good discipline regardless.
 The test that decided this still governs what goes in *this* repository:
 **does exposure cost anything?** The code, the region, the folder
 display name and the access group addresses all fail it — the ADRs and
-[cloud-account](../recipes/infra/cloud-account.md) publish the naming
+[gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md)
+publish the naming
 convention in full, so a redacted worked example may stay here and be
 useful. The billing account id and the project-hierarchy identifiers
 pass it.
@@ -1827,8 +1827,7 @@ Continuity is what makes this better than moving the data. The backup
 stays continuous and lands natively in GCS, so the object layout,
 `fdbbackup expire`, the bucket's lifecycle rules and the restore path
 are all exactly what
-[recovery-procedures](../recipes/infra/recovery-procedures.md) already
-describes. The recovery point objective does not move, and restore
+[fdb-recovery](../recipes/infra/fdb-recovery.md) already describes. The recovery point objective does not move, and restore
 gains no step.
 
 The encryption key is unaffected: FDB encrypts what it writes, the key
@@ -1857,8 +1856,8 @@ if MinIO is wanted for something else.
 
 **`fdbdr` to a second cluster.** Continuous replication is disaster
 recovery, not point-in-time restore, and
-[recovery-procedures](../recipes/infra/recovery-procedures.md) is built on
-restoring to a recorded version. A second cluster running continuously
+[fdb-recovery](../recipes/infra/fdb-recovery.md) is built on restoring
+to a recorded version. A second cluster running continuously
 also contradicts the disposable tier's whole reason for existing. It
 answers a different question, and could sit alongside a backup rather
 than replace one.
@@ -2196,7 +2195,8 @@ the secret out of Secret Manager, so what is left of either is
 named for what it acts on rather than for Keycloak.
 
 **Never migrates.** The directory work in
-[cloud-account](../recipes/infra/cloud-account.md) — the organisation, the
+[gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md) — the
+organisation, the
 billing account, domain verification, the access groups — because Cloud
 Identity has no API reachable before a project exists. `gcp-oauth-client`
 stays a console step for the same reason, and only its capture changes.
@@ -2237,10 +2237,8 @@ stays a console step for the same reason, and only its capture changes.
   what a deployment builds, and the two identities that build it.
 - [cloud-naming](../recipes/infra/cloud-naming.md) — the inventory every new
   resource takes its name from.
-- [cloud-deployment](../recipes/infra/cloud-deployment.md) — the tier model
-  and the up/down runbook this replaces.
-- [recovery-procedures](../recipes/infra/recovery-procedures.md) — what a
-  restore actually does, which is what the durable tier exists for.
+- [fdb-recovery](../recipes/infra/fdb-recovery.md) — what a restore
+  actually does, which is what the durable tier exists for.
 - [GitOps Principles v1.0.0](https://opengitops.dev/) — the four
   principles, published by the GitOps Working Group.
 - [Argo CD best practices](https://argo-cd.readthedocs.io/en/stable/user-guide/best_practices/)

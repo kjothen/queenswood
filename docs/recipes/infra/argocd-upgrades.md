@@ -18,10 +18,7 @@ resource request, or any other chart value.
 
 - A management plane running in the installation's folder.
 - Step 1 — write access to this repository.
-- Google group memberships, by capability:
-  - Steps 2, 3, 4 and 6 — `platformViewer`, e.g.
-    `grp-gcp-<code>-platform-viewer@`.
-  - Step 5 — `clusterAdmin`, e.g. `grp-gcp-<code>-cluster-admin@`.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
 # the installation code, e.g. qw01
@@ -83,6 +80,9 @@ just check-versions
 Merge before going further.
 
 ### 2. Wait for the plane to render it
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 The plane does not upgrade the release, but it does compose the object
 describing it — with every patch applied. Wait until that object
@@ -154,6 +154,9 @@ merge that drift into the composition, and start again.
 
 ### 5. Upgrade
 
+**As the installation's cluster admin.** Ours is
+`grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
+
 ```bash
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
@@ -162,6 +165,8 @@ helm --kube-context "$QW_CODE-mgmt" upgrade argocd argo/argo-cd \
 ```
 
 ### 6. Verify, in this order
+
+**As the installation's platform viewer again.**
 
 ```bash
 # the bootstrap Application still exists
@@ -200,6 +205,13 @@ helm --kube-context "$QW_CODE-mgmt" history argocd -n argocd
 helm --kube-context "$QW_CODE-mgmt" rollback argocd <revision> -n argocd
 ```
 
+**A `helm upgrade` refused with `invalid ownership metadata`.** A
+resource in the release was applied by hand — during an incident, say —
+and Helm will not adopt one it did not create. Annotate it back into
+the release with `meta.helm.sh/release-name` and
+`meta.helm.sh/release-namespace` rather than deleting it, since what
+gets deleted may be carrying state.
+
 ## Rules
 
 **MUST:**
@@ -233,6 +245,11 @@ helm --kube-context "$QW_CODE-mgmt" rollback argocd <revision> -n argocd
   Nothing detects it.
 
 ## Discussion
+
+`provider-helm` reconciles on spec drift alone, so what makes it
+reinstall is the `Release`'s own fields changing — a chart `version`
+bump does it, even patch-level, and editing what the chart renders does
+not. That is why a version is the thing pinned and compared here.
 
 **Why the values file goes to a temporary directory.** `$WORK` keeps it
 out of a repository. It carries the management project's id, and a
@@ -300,7 +317,8 @@ enough to read the composed `Release`, the running values and every
 verification. The upgrade replaces Deployments, a StatefulSet, the CRDs
 and Helm's own release Secrets, which needs `roles/container.admin`. So
 it is joined for that one step and left again, the same shape
-[cluster-rebuild](cluster-rebuild.md) uses for its break-glass moments.
+[cluster-rebuild](queenswood-instance-cluster-rebuild.md) uses for its
+break-glass moments.
 
 **What the restart costs.** Every component is replaced, so for a minute
 or two nothing syncs: an Application mid-operation resumes on the other
