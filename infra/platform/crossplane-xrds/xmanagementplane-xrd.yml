@@ -33,7 +33,6 @@ spec:
               type: object
               required:
                 - code
-                - createFolder
               properties:
                 code:
                   type: string
@@ -520,11 +519,14 @@ spec:
                             type: array
                             items:
                               type: string
+                # Not read. XSubsidiary composes the folder and this
+                # kind is built against one, so nothing here is patched
+                # from. Optional now so a manifest may stop setting it;
+                # the properties go once none does, because removing
+                # them while one still declares them prunes the field
+                # from the object and leaves Argo diffing for ever.
                 createFolder:
                   type: object
-                  required:
-                    - parent
-                    - displayName
                   properties:
                     parent:
                       type: string
