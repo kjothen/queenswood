@@ -208,6 +208,42 @@ queenswood-recovery-backup-key`, `just crossplane-unready`, `just
 argo-apps-status`, `just gcp-instance-cluster-ctx`.
 See [queenswood-instance](../../../docs/recipes/infra/queenswood-instance.md).
 
+## A folder is a subsidiary, and the plane is built in one
+
+Compose the folder as its own kind — `XSubsidiary` in
+`platform.repldriven.com` — and never inside the plane's, which pairs
+something that must never be deleted with a cluster rebuilt routinely.
+Give it the folder, the org-policy exemptions expressed on it, and the
+folder-scoped half of `access`; leave the management project, the
+cluster, the identities and the project- and service-account-scoped
+bindings with `XManagementPlane`, which composes no folder and finds
+the one it sits in by naming `fldr-<code>` from its own `spec.code`.
+Only `platformViewer` and `clusterAdmin` bind on a folder.
+
+Make the XR the handover in either direction: composed where the folder
+is ours, and adopted with `folderId` where an organisation hands one
+over. State `parent` and `displayName` in both modes, since the
+provider holds `Update` and either left to a default is one it would
+write onto a folder somebody else owns, and never omit `folderId` when
+adopting — GCP permits two folders with one display name under a
+parent, so a second is composed and everything reports healthy. Prove
+an adoption by counting folders under the parent rather than by reading
+the composite. Where an organisation runs no Crossplane, nothing
+instantiates the kind and the XRD is the contract a folder must meet.
+
+Compose the bindings and take the principals as input; creating a group
+stays a directory act, because Groups Admin is not scopable to a name
+prefix and an identity that could mint
+`grp-gcp-<code>-platform-viewer@` could add itself to
+`grp-gcp-org-admin@`. Withhold `Delete` in its own merge before moving
+a live resource between the two kinds, or the transfer revokes what it
+was meant to move, and expect a window: the two composites sit in two
+repositories behind two Applications, so the parent releases and the
+child adopts by external name. Never remove a field from an XRD while a
+manifest still sets it — the schema prunes, and Argo then diffs for
+ever.
+See [ADR-0027](../../../docs/adr/0027-the-folder-is-a-subsidiary.md).
+
 ## A composite builds what an instance is, Argo installs what runs there
 
 The plane is the only thing that reconciles anything, the durable home,
