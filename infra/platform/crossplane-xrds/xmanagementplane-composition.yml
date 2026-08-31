@@ -2606,12 +2606,21 @@ spec:
               # With Delete, unlike everything the step above composes:
               # a principal dropped from the access mapping has to lose
               # the binding in GCP, not just the resource naming it.
+              #
+              # Except on the folder, until XSubsidiary takes those over.
+              # Dropping them from this composition with Delete carried
+              # would revoke them in GCP, and the child cannot create
+              # its own until the parent has released them -- so for the
+              # length of the transfer they orphan rather than go. See
+              # docs/plan/subsidiary-split.md.
               managementPolicies:
                 - Observe
                 - Create
                 - Update
                 - LateInitialize
+            {{- if ne $capability.kind "FolderIAMMember" }}
                 - Delete
+            {{- end }}
               providerConfigRef:
                 kind: ClusterProviderConfig
                 name: default
