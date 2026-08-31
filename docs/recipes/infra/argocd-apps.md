@@ -20,8 +20,7 @@ XRD, an installation's manifest.
 ### Prerequisites
 
 - A management plane running in the installation's folder.
-- Google group memberships, by capability:
-  - `platformViewer`, e.g. `grp-gcp-<code>-platform-viewer@`.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 The `just` recipe reads the installation code from the justfile. The
 `kubectl` commands under Failures take it from the shell:
@@ -32,6 +31,9 @@ export QW_CODE=qw01
 ```
 
 ### Check a merged change landed
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 Merge it first. Then:
 

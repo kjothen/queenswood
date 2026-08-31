@@ -118,8 +118,8 @@ report, which is what the next reader will assume.
 
 ## References
 
-- [cloud-account](cloud-account.md) — the organisation's groups, and
-  which of them are populated rather than break-glass.
+- [gcp-secure-foundation](gcp-secure-foundation.md) — the organisation's
+  groups, and which of them are populated rather than break-glass.
 - [gcp-iam](gcp-iam.md) — why reading organisation policy needs a role
   nobody holds by default, and the two generations of constraint id.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the access

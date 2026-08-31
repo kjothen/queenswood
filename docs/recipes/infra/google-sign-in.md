@@ -240,10 +240,11 @@ Sign in. A failure is legible if you know which half produced it:
 
 ## References
 
-- [cloud-account](cloud-account.md) — the other console work with no
+- [gcp-secure-foundation](gcp-secure-foundation.md) — the other console
+  work with no
   API behind it.
-- [recovery-procedures](recovery-procedures.md) — why a realm keeps
-  what it was first imported with, and what that costs on a restore.
+- [fdb-recovery](fdb-recovery.md) — why a realm keeps what it was
+  first imported with, and what that costs on a restore.
 - [deployment](deployment.md) — the console client's own redirect
   list, which is reconciled rather than manual.
 - [argocd-apps](argocd-apps.md) — why an operator's CRDs need server-side apply,

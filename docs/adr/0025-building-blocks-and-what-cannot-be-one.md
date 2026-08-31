@@ -39,7 +39,7 @@ That boundary matters more than the catalogue does, because "the only
 way to build cloud infrastructure" is true of one half and false of the
 other, and somebody will eventually go looking for the abstraction that
 cannot exist. The manual half lives in recipes —
-[cloud-account](../recipes/infra/cloud-account.md),
+[gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md),
 [cloud-dns](../recipes/infra/cloud-dns.md),
 [google-sign-in](../recipes/infra/google-sign-in.md) — and is as much a
 part of building an installation as anything composed.
@@ -71,7 +71,7 @@ still composes about twenty of them directly.
   is its own composite.
 - [crossplane-design](../recipes/infra/crossplane-design.md) — how a
   kind is designed, which this no longer covers.
-- [cloud-account](../recipes/infra/cloud-account.md),
+- [gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md),
   [cloud-dns](../recipes/infra/cloud-dns.md),
   [google-sign-in](../recipes/infra/google-sign-in.md) — the manual
   half.

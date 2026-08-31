@@ -26,10 +26,7 @@ reads.
 - A management plane running in the installation's folder.
 - Step 1 — write access to the manifests repository.
 - Steps 3 and 4 — an owner of the GitHub organisation.
-- Google group memberships, by capability:
-  - Steps 2 and 6 — `platformViewer`, e.g.
-    `grp-gcp-<code>-platform-viewer@`.
-  - Step 5 — `secretsAdmin`, e.g. `grp-gcp-<code>-secrets-admin@`.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
 # the installation code, e.g. qw01
@@ -51,6 +48,9 @@ spec:
 **Merge before going further.**
 
 ### 2. Wait for the plane to compose the container
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
 kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
@@ -97,6 +97,9 @@ export INSTALL_ID=<installation-id>
 
 ### 5. Store all three values together
 
+**As the installation's secrets admin.** Ours is
+`grp-gcp-<code>-secrets-admin@` — join for this step, then leave.
+
 ```bash
 just gcp-github-app-secret "$PEM" "$APP_ID" "$INSTALL_ID"
 ```
@@ -107,6 +110,8 @@ just gcp-github-app-secret "$PEM" "$APP_ID" "$INSTALL_ID"
 > nothing else needs it again — a rotation generates a new one.
 
 ### 6. Check Argo has it
+
+**As the installation's platform viewer again.**
 
 ```bash
 kubectl --context "$QW_CODE-mgmt" -n argocd get externalsecret \

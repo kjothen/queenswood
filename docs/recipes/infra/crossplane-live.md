@@ -24,11 +24,7 @@ destroys.
 - A management plane running in the installation's folder.
 - Every branch — write access to this repository, and a merge to
   `main`.
-- Google group memberships, by capability:
-  - Reading, throughout — `platformViewer`, e.g.
-    `grp-gcp-<code>-platform-viewer@`.
-  - Deleting a managed resource, in 2b — `clusterAdmin`, e.g.
-    `grp-gcp-<code>-cluster-admin@`.
+- The capability each branch names. Ours is a Google group; yours may differ.
 
 ```bash
 # the installation code, e.g. qw01
@@ -36,6 +32,9 @@ export QW_CODE=qw01
 ```
 
 ### 1. Determine the type of change
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 **These apply on their own, and no branch below is involved.**
 
@@ -51,6 +50,15 @@ export QW_CODE=qw01
 Which of the three a field falls into is a question about ownership,
 and `just crossplane-owners` answers it —
 [crossplane-debug](crossplane-debug.md) is where that is read.
+
+**This one does nothing, and says it worked.**
+
+- **A field the provider writes once, at create.** A write-only field —
+  `google_sql_user`'s password is the worked example — cannot be read
+  back, so upjet observes no drift and has nothing to reconcile. The
+  managed resource reports `Synced: True` for ever, and the value in
+  the cloud stays whatever it was created with. Set it out of band, or
+  destroy and rebuild the resource.
 
 **These destroy and recreate something.** What each costs is the
 resource's `managementPolicies`, so read those before starting rather
@@ -121,6 +129,9 @@ than after.
    ```
 
 ### 2b. Change an identity field
+
+**As the installation's cluster admin.** Ours is
+`grp-gcp-<code>-cluster-admin@` — join for this branch, then leave.
 
 Some fields are the resource's identity, and upjet declines to replace
 a resource rather than performing the replacement. The value moves only
@@ -216,6 +227,14 @@ same cloud resource by external name — so the field is what it always
 was, and the refusal returns on the next reconcile. Grant `Delete` for
 the duration, or destroy the cloud resource by hand.
 
+**A merged value that reached every Secret and not the cloud.** The
+field is write-only, so `Synced: True` means "no diff detected" rather
+than "the value is what you think it is" — and nothing has told the
+cloud. A password is the case that bites: an open session survives a
+change, so the workload keeps running and fails at whatever moment it
+next restarts. Compare against the cloud rather than against the
+manifest, and set it explicitly.
+
 **A rename that deleted a cluster.** Renaming a composite's slot has a
 blast radius of its grandchildren. The composite in the renamed slot is
 deleted and rebuilt, and each resource it composed goes or stays on its
@@ -266,6 +285,9 @@ See [crossplane-debug](crossplane-debug.md).
   `just crossplane-conditions` before treating a change as applied. A
   refusal reports there, and the composite above goes on reading
   `Synced`.
+- Prove a write-only field against the cloud, never against `Synced`.
+  The provider cannot read one back, so it reports no drift whether the
+  value took or not.
 - Destroy and rebuild the cloud resource to change an identity field,
   granting `Delete` for the duration where the policy withholds it.
   Nothing else moves the value.
@@ -334,6 +356,8 @@ somewhere this repository can look.
 
 ## References
 
+- [ADR-0023](../../adr/0023-installation-naming-and-access.md) — what a
+  capability is, and how an organisation answers one.
 - [crossplane-design](crossplane-design.md) — how much one kind covers,
   and what may be deleted.
 - [crossplane-debug](crossplane-debug.md) — what in an installation

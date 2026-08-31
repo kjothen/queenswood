@@ -18,10 +18,7 @@ what its own pods may take, or any other chart value.
 
 - A management plane running in the installation's folder.
 - Step 1 — write access to this repository.
-- Google group memberships, by capability:
-  - Steps 2, 3, 4 and 6 — `platformViewer`, e.g.
-    `grp-gcp-<code>-platform-viewer@`.
-  - Step 5 — `clusterAdmin`, e.g. `grp-gcp-<code>-cluster-admin@`.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
 # the installation code, e.g. qw01
@@ -83,6 +80,9 @@ Merge before going further.
 
 ### 2. Wait for the plane to render it
 
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
+
 ```bash
 kubectl --context "$QW_CODE-mgmt" -n crossplane-system get "$REL" \
   -o jsonpath='{.spec.forProvider.chart.version}{"\n"}'
@@ -129,6 +129,9 @@ in Failures.
 
 ### 5. Upgrade
 
+**As the installation's cluster admin.** Ours is
+`grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
+
 Nothing else should be syncing. An Application mid-operation will
 outlive this, but a composite mid-reconcile resumes rather than
 continues.
@@ -140,6 +143,8 @@ helm --kube-context "$QW_CODE-mgmt" upgrade crossplane \
 ```
 
 ### 6. Verify, in this order
+
+**As the installation's platform viewer again.**
 
 ```bash
 # the core is up, and its init container applied the CRDs
@@ -229,6 +234,11 @@ helm --kube-context "$QW_CODE-mgmt" rollback crossplane <revision> \
   Nothing detects it.
 
 ## Discussion
+
+`provider-helm` reconciles on spec drift alone, so what makes it
+reinstall is the `Release`'s own fields changing — a chart `version`
+bump does it, even patch-level, and editing what the chart renders does
+not. That is why a version is the thing pinned and compared here.
 
 **Why merging is not enough.** A boot plane installs Crossplane, and the
 `Release` describing it carries `Observe` alone once the plane is

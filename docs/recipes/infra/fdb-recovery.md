@@ -16,12 +16,7 @@ that `fdb.restore` records where a cluster's data should come from
 rather than triggering a restore, so what happens depends on the state
 the cluster is already in.
 
-This recipe is the scenarios, their RPO, and what to set. It replaces
-the FoundationDB half of
-[recovery-procedures](recovery-procedures.md), which alongside
-[cloud-deployment](cloud-deployment.md) describes the `QUEENSWOOD_ENV`,
-`pass` and `gcp-up` / `gcp-down` generation this installation does not
-have.
+This recipe is the scenarios, their RPO, and what to set.
 
 ## Solution
 
@@ -310,6 +305,28 @@ stores will not recover to the same instant and cannot be made to; what
 matters is that the Keycloak restore preserves user ids, and that both
 points are chosen together rather than one taken as given.
 
+There is no separate restore step, because the operator's import
+creates a realm and never overwrites it: whichever definition arrives
+first wins permanently, so one Job chooses its source — the named
+export, or the chart's committed definitions — before it creates
+anything. Three things fail that Job rather than being worked around,
+each because the quiet version is the expensive one. A named export it
+cannot fetch never falls back to the committed definitions, since
+falling back is precisely the silent duplication. A restore arriving at
+a realm that already exists stops, because the operator cannot import
+over it and a skip leaves user ids that no longer match FDB. And the
+user ids and federated identity links are checked over the admin REST
+API against the export just applied — the Google link is what makes a
+returning user resolve to the restored account rather than minting a
+new one.
+
+Bootstrap is gated behind that import, for a reason easy to miss. A
+rebuilt environment mints a fresh admin signing key and bootstrap
+registers its public half on the `queenswood-admin` client; a realm
+imported after that reverts the client to the key the export was taken
+with, while the pods hold the new private half, and `private_key_jwt`
+stops verifying.
+
 ### Requesting a restore
 
 `fdb.restore` is chart values only. It is not on the instance XRD, so
@@ -348,6 +365,9 @@ waits on.
   `snapshotPeriodSeconds`. The mutation log fills between full copies,
   so the window is the real answer.
 - Recover Keycloak alongside FoundationDB, preserving user ids.
+- Annotate a hand-applied chart resource back into its release rather
+  than deleting it. Deleting a `FoundationDBBackup` stops the backup
+  and tears down its agents.
 - Prove a restore with `fdbrestore status` and a key count, never with
   the Job's exit status and never with the `FoundationDBRestore`
   resource.
@@ -390,8 +410,6 @@ waits on.
   and retention as one number in days
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — off as a declared state, and why an instance's project is durable
-- [recovery-procedures](recovery-procedures.md) — the previous
-  generation's mechanics, and the Keycloak half this does not replace
 - [external-secrets](external-secrets.md) — where the backup
   encryption key lives, and why it is never rotated
 - [data-recovery](../../compliance/data-recovery.md) — the obligations

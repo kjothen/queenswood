@@ -4,7 +4,7 @@
 
 ## Status
 
-Not yet run. Every step below is derived from the compositions, the
+**Untested.** Every step below is derived from the compositions, the
 chart and the provider's own behaviour rather than from having done it,
 and the first person to follow it should correct it as they go. The
 timings in particular are unknown: this is the procedure that produces
@@ -12,76 +12,17 @@ this installation's first RTO measurement, and its first restore.
 
 ## Problem
 
-Some fields identify the composed `Cluster` rather than configure it —
-`zone`, `region`, `datapathProvider`, and anything else the provider
-treats as ForceNew. Changing one cannot be applied in place, and the
-provider refuses rather than performing it: the cluster carries on
-unchanged and the refusal lands in `LastAsyncOperation` on the managed
-resource, so `Synced` alone does not tell you it happened.
-
-So the change needs the cluster deleted and recomposed, which destroys
-the volumes under it and every record FoundationDB holds. Everything
-else the instance is made of survives — the project, the database, the
-address, the certificates, the DNS records, the secrets, and the
-backups.
-
-That makes this the `specific × new` cell of
-[fdb-recovery](fdb-recovery.md): a planned cluster rebuild, where the
-restore point is chosen rather than inherited.
+You need to destroy a Queenswood instance's cluster and rebuild it,
+restoring its data from backups.
 
 ## Solution
 
-### What this is and is not
+### Prerequisites
 
-It rebuilds the **cluster**, not the instance. The instance keeps its
-name, its project and everything addressable about it, so there is no
-second instance, no cutover, and no second name to invent.
-
-Rebuilding the *instance* is a different procedure — the project goes,
-so Cloud SQL goes, so Keycloak must be recovered alongside FoundationDB
-to points chosen together. Rebuilding the *installation* takes the
-recovery project and the backups with it. Neither is written down.
-
-### Who you need to be
-
-Assumed throughout, and the only two groups anybody stands in day to
-day:
-
-- **`grp-gcp-<code>-platform-viewer@`** — reads the installation.
-  `roles/browser`, `compute.viewer`, `container.viewer`,
-  `iam.serviceAccountViewer`, `logging.viewer` and `monitoring.viewer`
-  at the folder, plus a project custom role carrying
-  `container.pods.getLogs` — which `container.viewer` lacks and only
-  `container.developer` otherwise provides, along with exec and every
-  write.
-- **`grp-gcp-security-reviewer@`** — reads IAM policy across the
-  organisation and changes nothing. Organisation-scoped, so no
-  installation code in the name.
-
-Joined for one step and left:
-
-- **`grp-gcp-<code>-cluster-admin@`** — `roles/container.admin` at the
-  folder. Needed twice, and only twice: deleting the managed cluster,
-  and `kubectl exec` to verify the restore. `container.viewer` carries
-  neither delete nor exec, which is the point of it.
-
-Not needed, and worth saying so:
-
-- **`grp-gcp-<code>-platform-admin@`** — impersonates the identity that
-  builds a plane. Nothing here impersonates anything.
-- **`grp-gcp-<code>-secrets-admin@`** — nothing writes a secret
-  version. The backup key already exists, and writing a second one to
-  that entry would strand every backup taken under the first.
-
-One observed gap rather than a granted capability: the day-to-day
-capabilities list the backups bucket but cannot read an object out of
-it — `storage.objects.get` is denied. That is enough for every step
-here, since nothing needs an object's contents, but it is why
-`sop-fdb-describe` prints a command rather than running one.
-
-### Before starting
-
-Confirm the three things the rest depends on:
+- A restorable backup and a running instance, confirmed below.
+- Steps 3 and 4 — write access to the installations repository and to
+  this one, and a merge.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
 gcloud auth application-default login
@@ -90,13 +31,10 @@ kubectl --context <code>-<env>-<label> -n queenswood get pods
 ```
 
 The listing gives the current generation and the restorable span.
-`gcloud auth login` on its own does not refresh application-default
-credentials, and a `kubectl` call that asks to reauthenticate mid-way
-through this is worth avoiding.
 
 ### 1. Stop writing to it
 
-*No cloud capability — this is the bank's own workloads.*
+**No cloud capability.** These are the bank's own workloads.
 
 Not for consistency. A continuous backup is transactionally consistent
 at any version, which is what the mutation log is for, so the restore
@@ -136,7 +74,8 @@ mechanism, and nothing wraps them.
 
 ### 2. Take the restore point
 
-*`platform-viewer`.*
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 Let the mutation log catch up, then name the moment:
 
@@ -151,7 +90,7 @@ wrote them.
 
 ### 3. Set the restore, and open a new generation
 
-*Write access to the installations repository — no cloud capability.*
+**No cloud capability.** Write access to the installations repository.
 
 In the instance's values, in the same merge:
 
@@ -167,7 +106,7 @@ with the dead cluster's higher numbers.
 
 ### 4. Merge the change that forces the rebuild
 
-*Write access to this repository — no cloud capability.*
+**No cloud capability.** Write access to this repository.
 
 The manifest or values edit that started this — the new `zone`,
 `region` or `datapathProvider`. Merging it changes nothing yet, by
@@ -175,9 +114,17 @@ design.
 
 ### 5. Delete the managed cluster
 
-*`cluster-admin`, joined for this step.*
+**As the installation's cluster admin.** Ours is
+`grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
 
-Break-glass, and the point of no return:
+Break-glass, and the point of no return.
+
+Delete the workloads holding volumes before the cluster goes. The GKE
+CSI driver only runs `DeleteDisk` while the cluster is alive, and
+Crossplane has to still be reconciling to clear namespaced finalizers,
+so a cluster destroyed with PVCs still bound leaves its persistent
+disks behind as orphans — which cost, count against the regional disk
+quota, and are not what the next bring-up adopts.
 
 ```bash
 kubectl --context <code>-mgmt -n crossplane-system \
@@ -190,7 +137,8 @@ cluster.
 
 ### 5b. Expect the node pool's first create to fail
 
-*`cluster-admin`.*
+**As the installation's cluster admin.** Ours is
+`grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
 
 `Can only set pod_ipv4_cidr_block if create_pod_range is true`, on the
 `NodePool`, repeating every reconcile while the cluster sits there with
@@ -231,7 +179,8 @@ one nothing may ask for at create.
 
 ### 6. Wait for Argo to find the new cluster
 
-*`platform-viewer`.*
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 The composite writes Argo's cluster registration from the cluster's own
 reported endpoint and certificate authority, so there is a window where
@@ -242,7 +191,7 @@ rather than a fault.
 
 ### 7. Let the bring-up restore
 
-*Nothing. Argo and the chart do this unattended.*
+**No capability at all.** Argo and the chart do this unattended.
 
 Nothing further is needed. The restore Job renders because
 `fdb.restore` is set, the migrator's `wait-for-restore` initContainer
@@ -252,7 +201,8 @@ taking its do-nothing branch.
 
 ### 8. Verify the restore, not the Job
 
-*`cluster-admin` again — `exec` is not a viewer capability.*
+**As the installation's cluster admin.** Ours is
+`grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
 
 ```bash
 kubectl --context <code>-<env>-<label> -n queenswood exec -it \
@@ -277,6 +227,35 @@ This procedure exists partly to produce numbers nothing else can:
   like a right one.
 - **Anything here that was wrong**, which is likely, since nobody has
   run it.
+
+## Discussion
+
+We destroy and rebuild because some fields identify the composed
+`Cluster` rather than configure it — `zone`, `region`,
+`datapathProvider`, and anything else the provider treats as ForceNew.
+Changing one cannot be applied in place, and the provider refuses
+rather than performing it: the cluster carries on unchanged and the
+refusal lands in `LastAsyncOperation` on the managed resource, so
+`Synced` alone never says it happened. The only way the value moves is
+for the cluster to go and be recomposed, which takes the volumes under
+it and every record FoundationDB holds — hence the restore.
+
+**What this rebuilds, and what it does not.** The cluster, not the
+instance. The instance keeps its name, its project and everything
+addressable about it, so there is no second instance, no cutover and no
+second name to invent, and everything else it is made of survives: the
+project, the database, the address, the certificates, the DNS records,
+the secrets and the backups. Rebuilding the *instance* is a different
+procedure — the project goes, so Cloud SQL goes, so Keycloak must be
+recovered alongside FoundationDB to points chosen together. Rebuilding
+the *installation* takes the recovery project and the backups with it.
+Neither is written down.
+
+**Why the restore point is chosen rather than inherited.** This is the
+`specific × new` cell of [fdb-recovery](fdb-recovery.md): the moment to
+come back to is known, because you picked it, which is what makes
+stopping writes first worth the trouble and what rules out restoring to
+latest.
 
 ## Rules
 

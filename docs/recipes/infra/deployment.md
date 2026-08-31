@@ -142,11 +142,10 @@ which mints fresh user ids; FDB references the Keycloak subject, so
 records written against the old ids are orphaned and the bank duplicates
 itself on the next login. That is safe only where FDB is being rebuilt
 in the same act, and silently wrong otherwise — see
-[recovery-procedures](recovery-procedures.md), where the same hazard is
-what makes the realm import choose its source before it creates
-anything. Where FDB survives, the realm has to survive with it: restore
-from the export rather than resetting, and reset the credential in
-place.
+[fdb-recovery](fdb-recovery.md), where the same hazard is what makes
+the realm import choose its source before it creates anything. Where
+FDB survives, the realm has to survive with it: restore from the export
+rather than resetting, and reset the credential in place.
 
 Where both are going, the reset goes through Postgres rather than the
 Cloud SQL API. The database resource withholds `Delete` deliberately and
@@ -172,6 +171,12 @@ just docker-build-all dev
 ```
 
 `bake` targets are declared in `infra/docker/bake.hcl`.
+
+Images published to `ghcr.io/repldriven/queenswood` have to be **public**
+packages. Pods pull with no `imagePullSecret`, so a package left private
+after its first publish surfaces as `ImagePullBackOff` on every service
+at once rather than as anything about permissions. Visibility is set per
+package, in its own settings on GitHub.
 
 `docker-warm-cache` copies the host `~/.m2` into the
 BuildKit cache mount the build reads. The two are unrelated:

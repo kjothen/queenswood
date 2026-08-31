@@ -21,9 +21,7 @@ documentation.
 
 - A management plane running in the installation's folder, with the
   provider for the kind installed on it.
-- Google group memberships, by capability:
-  - Every step — `platformViewer`, e.g.
-    `grp-gcp-<code>-platform-viewer@`.
+- The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
 # the installation code, e.g. qw01
@@ -31,6 +29,9 @@ export QW_CODE=qw01
 ```
 
 ### 1. Find the kind, in the namespaced group
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
 # the kind, as the CRD spells it, e.g.
