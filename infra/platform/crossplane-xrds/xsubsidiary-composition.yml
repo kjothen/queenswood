@@ -1,0 +1,166 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xsubsidiary.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.repldriven.com/v1alpha1
+    kind: XSubsidiary
+  mode: Pipeline
+  pipeline:
+    - step: resources
+      functionRef:
+        name: function-patch-and-transform
+      input:
+        apiVersion: pt.fn.crossplane.io/v1beta1
+        kind: Resources
+        resources:
+          # ===================================================================
+          # The folder, and the only resource this kind composes itself.
+          # Delete is withheld in every mode: composed, it is the
+          # protected tier and holds every project; adopted, it is not
+          # ours to delete at all. Liens are applied separately and are
+          # the control that holds if this is edited.
+          # ===================================================================
+          - name: folder
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: Folder
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  displayName: queenswood
+                  parent: organizations/0
+                  # Stops the provider deleting the folder. Not a
+                  # person: a console delete goes through regardless,
+                  # which is what nobody holding folders.delete is for.
+                  deletionProtection: true
+            # A soft-deleted folder still reads as existing, so the
+            # provider reports this resource Ready for the whole 30-day
+            # window and goes on doing so. This check moves the composite
+            # to Ready: False. The managed resource itself still says
+            # True, so alerting belongs on composites rather than on MRs.
+            readinessChecks:
+              - type: MatchString
+                fieldPath: status.atProvider.lifecycleState
+                matchString: ACTIVE
+            patches:
+              # Named from the code rather than generated, so the
+              # bindings below can spell it and the Kubernetes name
+              # matches the GCP one.
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "fldr-%s"
+              # Adoption. Skipped when absent, so a subsidiary with no
+              # folderId composes one and a handover records the one it
+              # was given.
+              - fromFieldPath: spec.folderId
+                toFieldPath: metadata.annotations[crossplane.io/external-name]
+              - fromFieldPath: spec.parent
+                toFieldPath: spec.forProvider.parent
+              - fromFieldPath: spec.displayName
+                toFieldPath: spec.forProvider.displayName
+              # The numeric id lands in the external-name annotation
+              # before it appears anywhere in status.atProvider.
+              - type: ToCompositeFieldPath
+                fromFieldPath: metadata.annotations[crossplane.io/external-name]
+                toFieldPath: status.folderId
+
+    # =======================================================================
+    # What each capability may do inside the folder, and nothing about
+    # who holds it -- that is the access mapping, and the principals in
+    # it belong to whoever owns the directory.
+    #
+    # Only the two that bind on the folder. platformAdmin binds on the
+    # platform service account and secretsAdmin on the management
+    # project, neither of which exists until a plane is built here.
+    #
+    # A separate step because the resources vary: none for a capability
+    # the organisation does not provide, one per member per role where
+    # it does. Patch-and-transform composes a fixed set.
+    # =======================================================================
+    - step: access
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $code := $xr.spec.code }}
+            {{- $access := dig "access" dict $xr.spec }}
+            {{- $capabilities := list
+                  (dict "key" "platformViewer" "roles" (list
+                    "roles/browser"
+                    "roles/compute.viewer"
+                    "roles/container.viewer"
+                    "roles/iam.serviceAccountViewer"
+                    "roles/logging.viewer"
+                    "roles/monitoring.viewer"))
+                  (dict "key" "clusterAdmin" "roles" (list
+                    "roles/container.admin")) }}
+            {{- range $capability := $capabilities }}
+            {{- range $member := dig $capability.key list $access }}
+            {{- range $role := $capability.roles }}
+            {{- /* Hashed, not indexed: a member removed from the middle
+                   of the list would otherwise renumber the ones after
+                   it, and Crossplane would delete and recreate live
+                   bindings. */}}
+            {{- $slug := printf "%s-%s"
+                  ($role | splitList "/" | last | replace "." "-" | lower)
+                  (sha256sum $member | trunc 8) }}
+            {{- $resource := printf "access-%s-%s" (kebabcase $capability.key) $slug }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: FolderIAMMember
+            metadata:
+              name: {{ printf "%s-%s" $code $resource }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ $resource }}
+            spec:
+              # With Delete, unlike the folder above: a principal
+              # dropped from the access mapping has to lose the binding
+              # in GCP, not just the resource naming it.
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+                - Delete
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                role: {{ $role | quote }}
+                member: {{ $member | quote }}
+                folderRef:
+                  name: {{ printf "fldr-%s" $code | quote }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
+
+    # =======================================================================
+    # Readiness for whatever the template step composed. go-templating
+    # sets none at all, so without this the access bindings are never
+    # ready in the desired state and the composite sits at Creating
+    # however healthy GCP is.
+    # =======================================================================
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready
