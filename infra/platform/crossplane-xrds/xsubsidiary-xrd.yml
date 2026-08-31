@@ -1,0 +1,142 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xsubsidiaries.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XSubsidiary
+    plural: xsubsidiaries
+  defaultCompositionRef:
+    name: xsubsidiary.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            A folder in an organisation, and the capabilities bound
+            inside it. Nothing runs here: this is the boundary a
+            management plane is later built in, and the record of who
+            may read and administer what within it.
+
+            Google's resource-hierarchy guide calls this option 2,
+            "hierarchy based on regions or subsidiaries" -- a first
+            level of subsidiary folders beside a bootstrap folder, each
+            operating independently. That is the shape we use in our
+            own organisation.
+
+            It is not a requirement of the kind, which needs a folder
+            and nothing more. In the guide's best-practice hierarchy a
+            folder handed over under Development or Production works
+            identically, which is what parent taking folders/ as well
+            as organizations/ is for.
+
+            It composes the folder where none is given, and adopts one
+            where an organisation hands it over. Both leave the same
+            object behind, which is what the next recipe reads: the
+            handover is this XR rather than a folder id passed by hand.
+            See ADR-0022 and ADR-0023.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - parent
+                - displayName
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The four-character code every name inside this
+                    folder derives from, so nothing needs a lookup to
+                    place a resource and a second subsidiary cannot
+                    collide with the first. Chosen once and never
+                    changed. See ADR-0023.
+                parent:
+                  type: string
+                  pattern: '^(organizations|folders)/[0-9]+$'
+                  description: |
+                    Where the folder is nested. GCP checks
+                    resourcemanager.folders.create on this rather than
+                    on the organisation, so it may be either. Stated
+                    when adopting as well as when composing: the
+                    provider holds Update, so a parent left to a default
+                    is one it would write onto a folder somebody else
+                    owns.
+                displayName:
+                  type: string
+                  description: |
+                    Names the subsidiary for people -- the folder id is
+                    the identifier. fldr-<code> by convention, since
+                    display names must be unique among siblings and the
+                    code already makes them so. An adopted folder keeps
+                    whatever name its organisation chose, so state that
+                    name rather than ours: this is written, not merely
+                    recorded. gcloud resource-manager folders describe
+                    answers both this and the parent.
+                folderId:
+                  type: string
+                  pattern: '^folders/[0-9]+$'
+                  description: |
+                    An existing folder to adopt rather than create,
+                    which is how an organisation hands one over. Also
+                    what makes a rebuild safe: a fresh plane has no
+                    record of what the last one made and GCP permits two
+                    folders with the same display name under one parent,
+                    so without this a rebuild silently creates a second
+                    subsidiary.
+                access:
+                  type: object
+                  description: |
+                    Which principals hold which capability, for the two
+                    capabilities that bind on the folder. The capability
+                    names are ours; the principals are the
+                    organisation's to create and to name, and one that
+                    hands you a folder may name its groups nothing like
+                    ours. A capability it does not provide is left out
+                    and nothing is bound for it -- a subsidiary stands
+                    up with no human bindings at all, which nobody can
+                    reach but which reconciles correctly.
+
+                    platformAdmin and secretsAdmin are absent here on
+                    purpose: they bind on a service account and a
+                    project that a management plane composes, not on the
+                    folder. See ADR-0023.
+                  properties:
+                    platformViewer:
+                      type: array
+                      description: |
+                        Read inside the folder, assembled from
+                        predefined viewer roles -- never roles/viewer,
+                        which is primitive. The populated one:
+                        somebody's job rather than a capability they
+                        join for.
+                      items: &member
+                        type: string
+                        pattern: '^(user|group|serviceAccount|domain|principal|principalSet):'
+                        description: |
+                          A whole IAM member string, not a bare group
+                          address: a capability may be answered by a
+                          group, by a user in a small organisation, or
+                          by a principalSet from a federated directory.
+                    clusterAdmin:
+                      type: array
+                      description: |
+                        container.admin on the folder. Break-glass:
+                        acting on a cluster by hand bypasses whatever
+                        reconciles it.
+                      items: *member
+            status:
+              type: object
+              properties:
+                folderId:
+                  type: string
+                  description: |
+                    The folder, as folders/<id>, whether composed or
+                    adopted. What a management plane is built against,
+                    and the one thing that crosses the handover.

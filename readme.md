@@ -259,14 +259,11 @@ projects, the clusters and the workloads toward what that manifest
 says — so changing what exists means editing the manifest and merging
 it.
 
-Two recipes cover it, in order:
-
-- [Bootstrapping a management plane](docs/recipes/infra/queenswood-bootstrap.md)
-  — the management plane comes first, because a control plane running
-  another toolchain cannot apply the manifest at all.
-- [Installing Queenswood](docs/recipes/infra/queenswood-installation.md) —
-  the two repositories a plane reads, the manifest's fields, and who
-  holds which access capability.
+[Up and running, end to end](docs/recipes/infra/queenswood-up-and-running.md)
+is where to start: every recipe from an empty Google account to a bank
+serving traffic, in order, and what each leaves for the next. There are
+two paths through it — from nothing, or from an established
+organisation, where the first steps are somebody else's.
 
 <a href="docs/diagrams/infrastructure-diagram-light.svg">
   <picture>
