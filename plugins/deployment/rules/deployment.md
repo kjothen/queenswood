@@ -134,8 +134,8 @@ otherwise run as the platform identity. Push the manifest before a
 plane takes over reading it from git, and give Argo the credential for
 the manifests repository before expecting any later merge to reach the
 plane at all.
-Supply `management.projectId` always and `createFolder.folderId`
-wherever the folder already exists, give `metadata.name` and
+Supply `management.projectId` always — the folder is `XSubsidiary`'s
+rather than this manifest's — give `metadata.name` and
 `spec.code` the same string — nothing enforces it and the tooling
 assumes it — and state `region`, `regionCode`, `zone` and anything else
 immutable rather than leaving it to a default that may move. Render the

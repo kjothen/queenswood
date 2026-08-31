@@ -519,41 +519,6 @@ spec:
                             type: array
                             items:
                               type: string
-                # Not read. XSubsidiary composes the folder and this
-                # kind is built against one, so nothing here is patched
-                # from. Optional now so a manifest may stop setting it;
-                # the properties go once none does, because removing
-                # them while one still declares them prunes the field
-                # from the object and leaves Argo diffing for ever.
-                createFolder:
-                  type: object
-                  properties:
-                    parent:
-                      type: string
-                      pattern: '^(organizations|folders)/[0-9]+$'
-                      description: |
-                        Where the folder is nested. GCP checks
-                        resourcemanager.folders.create on this, not on
-                        the organisation, so it may be either.
-                    displayName:
-                      type: string
-                      description: |
-                        Names this installation for humans -- the
-                        folder id is the identifier, and a folder handed
-                        to you carries whatever name its organisation
-                        chose. fldr-<code> by convention: display names
-                        must be unique among siblings, and the code
-                        already makes them so.
-                    folderId:
-                      type: string
-                      pattern: '^folders/[0-9]+$'
-                      description: |
-                        An existing folder to adopt instead of creating
-                        one. A rebuilt control plane has no record of
-                        what the last one made, and GCP permits two
-                        folders with the same display name under one
-                        parent, so without this a rebuild silently
-                        creates a second installation.
             status:
               type: object
               properties:
