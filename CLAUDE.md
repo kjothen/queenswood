@@ -167,6 +167,11 @@ topic.
   for, why an instance is its own composite rather than a field on the
   plane's, the kind and the group, and what `down` leaves standing. See
   [ADR-0024](docs/adr/0024-instances-are-their-own-composites.md).
+- **The folder, and who hands it over** — why the folder is its own
+  composite rather than the plane's, how a handover is the same XR in
+  either direction, and why groups are bound here and created
+  elsewhere. See
+  [ADR-0027](docs/adr/0027-the-folder-is-a-subsidiary.md).
 - **Up and running, end to end** — every recipe from an empty Google
   account to a bank serving traffic, in order, and what each leaves for
   the next.
