@@ -74,71 +74,6 @@ spec:
           # from the manifest, so they carry Delete and a principal
           # removed from the access mapping loses what it named.
           # ===================================================================
-          # The folder is the installation. Everything but Delete: a
-          # folder holds every project, and reconciliation must never be
-          # able to take it. v2 namespaced MRs have no deletionPolicy, so
-          # managementPolicies is the only spelling. Liens are applied
-          # separately, and are the control that holds if this is edited.
-          # ===================================================================
-          - name: folder
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: Folder
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  displayName: queenswood
-                  parent: organizations/0
-                  # Stops the provider deleting the folder. Not a
-                  # person: a console delete goes through regardless,
-                  # which is what nobody holding folders.delete is for.
-                  # Already the default, stated because it matters.
-                  deletionProtection: true
-            # A soft-deleted folder still reads as existing, so the
-            # provider reports this resource Ready for the whole 30-day
-            # window and goes on doing so -- 22 minutes of deletion
-            # produced no condition change, no event and no log line.
-            # This check moves the composite to Ready: False. The managed
-            # resource itself still says True, so alerting belongs on
-            # composites rather than on MRs.
-            readinessChecks:
-              - type: MatchString
-                fieldPath: status.atProvider.lifecycleState
-                matchString: ACTIVE
-            patches:
-              # Named from the code rather than generated, so every
-              # reference below can spell it and the Kubernetes name
-              # matches the GCP one.
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "fldr-%s"
-              # Adoption. Skipped when absent, so a first run creates and
-              # a rebuild takes over what is already there.
-              - fromFieldPath: spec.createFolder.folderId
-                toFieldPath: metadata.annotations[crossplane.io/external-name]
-              - fromFieldPath: spec.createFolder.parent
-                toFieldPath: spec.forProvider.parent
-              - fromFieldPath: spec.createFolder.displayName
-                toFieldPath: spec.forProvider.displayName
-              # The numeric id lands in the external-name annotation
-              # before it appears anywhere in status.atProvider.
-              - type: ToCompositeFieldPath
-                fromFieldPath: metadata.annotations[crossplane.io/external-name]
-                toFieldPath: status.folderId
-          # ===================================================================
           # The management project, referenced to the folder rather than
           # patched from its id: folderIdRef resolves the composed
           # Folder by name, so Crossplane orders the two itself.
@@ -214,6 +149,13 @@ spec:
                     string:
                       type: Format
                       fmt: "fldr-%s"
+              # The folder this plane sits in, now that it does not
+              # compose one. Read off the project's resolved reference
+              # rather than a folder resource, so status.folderId keeps
+              # meaning what it always meant.
+              - type: ToCompositeFieldPath
+                fromFieldPath: spec.forProvider.folderId
+                toFieldPath: status.folderId
               - type: ToCompositeFieldPath
                 fromFieldPath: metadata.annotations[crossplane.io/external-name]
                 toFieldPath: status.managementProjectId
@@ -2565,17 +2507,8 @@ spec:
                    another action's operand, and the whole step fails
                    to parse. */}}
             {{- $capabilities := list
-                  (dict "key" "platformViewer" "kind" "FolderIAMMember" "roles" (list
-                    "roles/browser"
-                    "roles/compute.viewer"
-                    "roles/container.viewer"
-                    "roles/iam.serviceAccountViewer"
-                    "roles/logging.viewer"
-                    "roles/monitoring.viewer"))
                   (dict "key" "platformAdmin" "kind" "ServiceAccountIAMMember" "roles" (list
                     "roles/iam.serviceAccountTokenCreator"))
-                  (dict "key" "clusterAdmin" "kind" "FolderIAMMember" "roles" (list
-                    "roles/container.admin"))
                   (dict "key" "secretsAdmin" "kind" "ProjectIAMMember" "roles" (list
                     "roles/secretmanager.admin"))
                   (dict "key" "platformViewer" "kind" "ProjectIAMMember" "roles" (list
@@ -2606,31 +2539,19 @@ spec:
               # With Delete, unlike everything the step above composes:
               # a principal dropped from the access mapping has to lose
               # the binding in GCP, not just the resource naming it.
-              #
-              # Except on the folder, until XSubsidiary takes those over.
-              # Dropping them from this composition with Delete carried
-              # would revoke them in GCP, and the child cannot create
-              # its own until the parent has released them -- so for the
-              # length of the transfer they orphan rather than go. See
-              # docs/plan/subsidiary-split.md.
               managementPolicies:
                 - Observe
                 - Create
                 - Update
                 - LateInitialize
-            {{- if ne $capability.kind "FolderIAMMember" }}
                 - Delete
-            {{- end }}
               providerConfigRef:
                 kind: ClusterProviderConfig
                 name: default
               forProvider:
                 role: {{ $role | quote }}
                 member: {{ $member | quote }}
-            {{- if eq $capability.kind "FolderIAMMember" }}
-                folderRef:
-                  name: {{ printf "fldr-%s" $code | quote }}
-            {{- else if eq $capability.kind "ProjectIAMMember" }}
+            {{- if eq $capability.kind "ProjectIAMMember" }}
                 project: {{ $project | quote }}
             {{- else if eq $capability.kind "ServiceAccountIAMMember" }}
                 serviceAccountIdRef:
