@@ -19,7 +19,7 @@ than a person clicking.
 ### Prerequisites
 
 - An organisation and a billing account, from
-  [gcp-secure-foundation](gcp-secure-foundation.md).
+  [organisation-foundation](organisation-foundation.md).
 - Membership of the organisation's billing-admin and org-admin
   capabilities, joined for a step and left afterwards.
 
@@ -140,9 +140,9 @@ plane that succeeds it needs none of them.
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) — the organisation
+- [organisation-foundation](organisation-foundation.md) — the organisation
   and the billing account this grants against.
-- [queenswood-bootstrap](queenswood-bootstrap.md) — what impersonates
+- [management-plane-install](management-plane-install.md) — what impersonates
   it, and the plane it builds.
 - [gcp-iam](gcp-iam.md) — why a granted identity is not an inherited
   one.

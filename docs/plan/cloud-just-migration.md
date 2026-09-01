@@ -188,7 +188,7 @@ Two habits this week paid for, both cheap:
   Test the rest the same way — grep `docs/adr docs/recipes docs/tdd`
   for each and rehome what only this file says.
 - **Six deployment-labelled docs with no rule section**:
-  `gcp-secure-foundation`, `cloud-naming`, `security-scanning`, ADR-0023,
+  `organisation-foundation`, `cloud-naming`, `security-scanning`, ADR-0023,
   ADR-0025 and ADR-0026. Authoring them would roughly double the
   longest rule file here, so it stays its own pass. `sync-rules-from-docs`
   also reports a structural error on ADR-0022 and ADR-0024 that is not
@@ -540,7 +540,7 @@ what says who satisfies it.
   container, and what goes inside may never be in git.
 
 They divide by how often each is paid, which is what the two paths in
-[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md) are
+[management-plane-install](../recipes/infra/management-plane-install.md) are
 really distinguishing:
 
 - **Once per organisation** — the organisation, the billing account, the
@@ -597,7 +597,7 @@ Each leaves the composite Ready and every managed resource green.
   `_gcp-allow-sa-keys` reads the effective policy and does nothing where
   it is already off, so the ban holds wherever a folder is handed over
   and
-  [queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md)
+  [management-plane-install](../recipes/infra/management-plane-install.md)
   is imprecise about where it comes from rather than wrong about it
   holding. The default network has no such default: `cloud.just` set it
   at the organisation, and a folder elsewhere gets a default VPC in
@@ -1048,7 +1048,7 @@ GCP provider configuration has, reached the same way.
 **The credential itself is two human acts**, and they are the last two
 in the chain. The GitHub App is created by a person in a UI, because
 GitHub has no API that creates one — see
-[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md) —
+[management-plane-install](../recipes/infra/management-plane-install.md) —
 and `gcp-github-app-secret` writes its three values into Secret Manager
 as one JSON entry, run by a person holding `secretsAdmin`. The
 identifiers travel with the key rather than through a second channel, so
@@ -1265,7 +1265,7 @@ the cluster, and points outward. The only thing able to act on GCP is
 the management cluster.
 
 That is stronger than the rule
-[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md)
+[management-plane-install](../recipes/infra/management-plane-install.md)
 states today. "A merge is the privileged action, so merged state applies
 and a `pull_request` trigger gets no cloud identity" exists because the
 alternative was push-based CI holding one. Pull-based and data-only
@@ -1282,7 +1282,7 @@ requiring review is the control that belongs there, a merge being what
 reaches production.
 
 This is a seam the design already has rather than a new one.
-[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md)
+[management-plane-install](../recipes/infra/management-plane-install.md)
 says the manifest lives "in whichever repository the applier reconciles
 from", allowing that it is not this one, and
 [ADR-0023](../adr/0023-installation-naming-and-access.md) assumes
@@ -1324,7 +1324,7 @@ that rare, and is good discipline regardless.
 The test that decided this still governs what goes in *this* repository:
 **does exposure cost anything?** The code, the region, the folder
 display name and the access group addresses all fail it — the ADRs and
-[gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md)
+[organisation-foundation](../recipes/infra/organisation-foundation.md)
 publish the naming
 convention in full, so a redacted worked example may stay here and be
 useful. The billing account id and the project-hierarchy identifiers
@@ -2196,7 +2196,7 @@ the secret out of Secret Manager, so what is left of either is
 named for what it acts on rather than for Keycloak.
 
 **Never migrates.** The directory work in
-[gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md) — the
+[organisation-foundation](../recipes/infra/organisation-foundation.md) — the
 organisation, the
 billing account, domain verification, the access groups — because Cloud
 Identity has no API reachable before a project exists. `gcp-oauth-client`
@@ -2234,7 +2234,7 @@ stays a console step for the same reason, and only its capture changes.
   installation code, the naming scheme and the four capabilities.
 - [ADR-0016](../adr/0016-crossplane-over-terraform.md) — why
   infrastructure is declared rather than scripted.
-- [queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md) —
+- [management-plane-install](../recipes/infra/management-plane-install.md) —
   what a deployment builds, and the two identities that build it.
 - [cloud-naming](../recipes/practices/cloud-naming.md) — the inventory every new
   resource takes its name from.

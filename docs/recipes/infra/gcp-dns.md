@@ -4,7 +4,7 @@
 
 ## Problem
 
-[gcp-secure-foundation](gcp-secure-foundation.md) leaves you with an
+[organisation-foundation](organisation-foundation.md) leaves you with an
 organisation, and
 it got there through the domain: Cloud Identity verifies one before it
 gives you anything. So by the time there is somewhere to build, the
@@ -219,7 +219,7 @@ than one resolver.
 
 Move the delegation once the zone exists — that is
 [gcp-dns-delegation](gcp-dns-delegation.md), and it cannot start
-before [queenswood-installation](queenswood-installation.md) has
+before [management-plane-install](management-plane-install.md) has
 composed one.
 
 ## Rules
@@ -269,14 +269,14 @@ composed one.
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) — domain verification
+- [organisation-foundation](organisation-foundation.md) — domain verification
   at signup, and
   why the directory work has no API.
 - [cloud-naming](../practices/cloud-naming.md) — the `dz-` prefix and the
   environment letter.
 - [crossplane-design](crossplane-design.md) — what composes the zone
   and its records.
-- [queenswood-installation](queenswood-installation.md) — the manifest
+- [management-plane-install](management-plane-install.md) — the manifest
   the domain is named in.
 - [gcp-dns-delegation](gcp-dns-delegation.md) — moving the
   registrar, once the zone answers.

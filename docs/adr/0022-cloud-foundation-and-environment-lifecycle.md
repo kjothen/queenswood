@@ -90,7 +90,7 @@ what forces the management plane to hold its own service account rather
 than borrowing this one.
 
 The runbook for both paths is
-[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md).
+[management-plane-install](../recipes/infra/management-plane-install.md).
 
 Its rights are folder-scoped once the folder exists, but creating the
 folder is not: `resourcemanager.folders.create` is checked on the
@@ -123,7 +123,7 @@ Organization Administrator at all — break-glass is a super admin adding
 a member, and an empty group is never a lockout.
 
 What the groups are and how they come to exist is
-[gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md).
+[organisation-foundation](../recipes/infra/organisation-foundation.md).
 
 The groups are not one per tier of seniority but one per capability that
 must be separable. Organization Administrator and Folder Administrator

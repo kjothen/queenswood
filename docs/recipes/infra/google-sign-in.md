@@ -240,7 +240,7 @@ Sign in. A failure is legible if you know which half produced it:
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) — the other console
+- [organisation-foundation](organisation-foundation.md) — the other console
   work with no
   API behind it.
 - [fdb-recovery](fdb-recovery.md) — why a realm keeps what it was

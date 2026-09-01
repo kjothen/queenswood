@@ -123,7 +123,7 @@ gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
 `just gcp-org-setup`, `just gcp-policy-status`, `just
 gcp-boot-cluster-down`, `just gcp-boot-seed-close`, `just
 gcp-boot-seed-open`.
-See [queenswood-bootstrap](../../../docs/recipes/infra/queenswood-bootstrap.md).
+See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
 
 ## The identity that builds installations is opened and closed
 
@@ -183,7 +183,7 @@ manifest per folder allows
 more than one installation.
 Commands: `just queenswood-environment-manifest`, `just
 queenswood-dns-manifest-snippet`.
-See [queenswood-installation](../../../docs/recipes/infra/queenswood-installation.md).
+See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
 
 ## An instance is a unit, and its secrets are written while it builds
 
@@ -349,7 +349,7 @@ verification, the registrar's delegation, an OAuth client with a chosen
 redirect URI. These are not kinds nobody has written yet — they cannot
 be in the catalogue, and somebody will eventually go looking for the
 abstraction that cannot exist. The manual half lives in the
-`gcp-secure-foundation`, `gcp-dns` and `google-sign-in` recipes and
+`organisation-foundation`, `gcp-dns` and `google-sign-in` recipes and
 is as much a part of building an installation as anything composed.
 What is
 excluded is only the thing itself: the OAuth client cannot be composed,
@@ -503,7 +503,7 @@ many installations follow. The first two are a browser and have no API
 at all; from the plane onwards everything is a file in a repository,
 which is where the work stops being performed and starts being
 recorded.
-See [queenswood-up-and-running](../../../docs/recipes/infra/queenswood-up-and-running.md).
+See [up-and-running](../../../docs/recipes/infra/up-and-running.md).
 
 ## A foundation produces capabilities, not groups
 
@@ -560,8 +560,8 @@ and why with `just gcp-roles` — everything folder or project scoped is
 in the compositions under `infra/platform/crossplane-xrds/`.
 Commands: `just gcp-roles`, `just gcp-groups-bind-org`,
 `just gcp-groups-bind-installation`, `just gcp-groups-bind`.
-See [gcp-secure-foundation](../../../docs/recipes/infra/gcp-secure-foundation.md) and
-[queenswood-secure-foundation](../../../docs/recipes/infra/queenswood-secure-foundation.md).
+See [organisation-foundation](../../../docs/recipes/infra/organisation-foundation.md) and
+[contract-install](../../../docs/recipes/infra/contract-install.md).
 
 ## An automation identity is granted, never inherited
 

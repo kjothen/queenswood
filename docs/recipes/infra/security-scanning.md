@@ -118,7 +118,7 @@ report, which is what the next reader will assume.
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) — the organisation's
+- [organisation-foundation](organisation-foundation.md) — the organisation's
   groups, and which of them are populated rather than break-glass.
 - [gcp-iam](gcp-iam.md) — why reading organisation policy needs a role
   nobody holds by default, and the two generations of constraint id.

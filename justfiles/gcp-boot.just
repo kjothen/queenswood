@@ -2,7 +2,7 @@
 # and the management project, and the identity it runs as.
 #
 # Split out of gcp.just because these twelve are one procedure, written
-# up in docs/recipes/infra/queenswood-bootstrap.md. Helpers and shared
+# up in docs/recipes/infra/management-plane-install.md. Helpers and shared
 # variables stay in gcp.just -- justfile imports share one namespace.
 
 # Check the organisation, billing and rights held before bootstrapping.

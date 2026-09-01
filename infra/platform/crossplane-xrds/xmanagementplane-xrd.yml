@@ -52,7 +52,7 @@ spec:
 
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
-                # are built; see docs/recipes/infra/queenswood-bootstrap.md.
+                # are built; see docs/recipes/infra/management-plane-install.md.
                 billingAccountId:
                   type: string
                   description: |

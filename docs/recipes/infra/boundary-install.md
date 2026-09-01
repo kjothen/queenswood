@@ -21,7 +21,7 @@ creating that folder or were handed one.
 - The installation's code, chosen and never changed, from
   [cloud-naming](../practices/cloud-naming.md).
 - Its contract committed:
-  [queenswood-secure-foundation](queenswood-secure-foundation.md) for
+  [contract-install](contract-install.md) for
   the principals, and `environment.yml` beside it naming them.
 - In that file, either a `folder.parent` and `folder.displayName`, or a
   `folder.folderId`.
@@ -42,7 +42,7 @@ grep -A3 '^  folder:' "$QW_INSTALLATIONS_REPO/$QW_CODE/environment.yml"
 
 Either a `folderId`, or a `parent` and a `displayName`. Neither means
 the contract is unfinished: go back to
-[queenswood-secure-foundation](queenswood-secure-foundation.md).
+[contract-install](contract-install.md).
 
 ### 2. Render the manifest
 
@@ -64,7 +64,7 @@ cat "$QW_INSTALLATIONS_REPO/$QW_CODE/subsidiary.yml"
 
 On a first installation, nothing: `just gcp-boot-cluster-up` and `just
 gcp-boot-mgmt-apply` do it, in
-[queenswood-bootstrap](queenswood-bootstrap.md).
+[management-plane-install](management-plane-install.md).
 
 Against a management plane already running, merge. Argo applies it from
 the installation's directory.
@@ -154,11 +154,11 @@ empty `parent` moves it. See
 
 ## References
 
-- [queenswood-secure-foundation](queenswood-secure-foundation.md) — the
+- [contract-install](contract-install.md) — the
   contract, and the principals it names.
-- [queenswood-bootstrap](queenswood-bootstrap.md) — what applies this
+- [management-plane-install](management-plane-install.md) — what applies this
   on a first installation, and the plane built inside it afterwards.
-- [queenswood-up-and-running](queenswood-up-and-running.md) — where
+- [up-and-running](up-and-running.md) — where
   this sits in the order.
 - [ADR-0027](../../adr/0027-the-folder-is-a-subsidiary.md) — the folder
   as its own kind, and the handover in either direction.

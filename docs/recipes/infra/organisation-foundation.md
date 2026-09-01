@@ -24,7 +24,7 @@ capabilities, each held by nobody until somebody joins for a task.
 > In an established Google Cloud organisation, this recipe is not yours.
 > Those capabilities are already held some other way, by people who are
 > not you, and your directory is not yours to add groups to. Go to
-> [queenswood-secure-foundation](queenswood-secure-foundation.md), which
+> [contract-install](contract-install.md), which
 > is where an installation's own capabilities are named, and answer each
 > with whatever your organisation gives you.
 
@@ -302,14 +302,14 @@ which is why one half is a recipe and the other is a browser.
 
 ## References
 
-- [queenswood-secure-foundation](queenswood-secure-foundation.md) — an
+- [contract-install](contract-install.md) — an
   installation's own capabilities, which come next.
 - [cloud-naming](../practices/cloud-naming.md) — the code every
   installation name is
   built from.
-- [queenswood-bootstrap](queenswood-bootstrap.md) — the management plane
+- [management-plane-install](management-plane-install.md) — the management plane
   this leaves you ready to build.
-- [queenswood-up-and-running](queenswood-up-and-running.md) — every
+- [up-and-running](up-and-running.md) — every
   recipe from here to a bank serving traffic, in order.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) —
   read-only or break-glass, and no third category.

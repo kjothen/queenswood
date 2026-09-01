@@ -24,7 +24,7 @@ occupies, reconciling that installation from git.
 - The boundary this plane is built inside, from
   [boundary-install](boundary-install.md).
 - The installation's contract, from
-  [queenswood-secure-foundation](queenswood-secure-foundation.md).
+  [contract-install](contract-install.md).
 - Steps 2 and 5 — write access to the manifests repository, and a
   merge.
 - The capability each step names. Ours is a Google group; yours may differ.
@@ -116,7 +116,7 @@ cluster created in step 3. No recipe does the move yet.
 
 After it, the management cluster reconciles its own project and folder,
 and every later change is a merge. The manifest driving them is
-[queenswood-installation](queenswood-installation.md).
+[management-plane-install](management-plane-install.md).
 
 ### 6. Delete the boot cluster
 
@@ -145,6 +145,46 @@ just gcp-boot-seed-impersonate-revoke
 
 `just gcp-boot-seed-impersonate-status` then reports no impersonation.
 Run it as soon as the throwaway plane is gone.
+
+### 8. Give Argo the credential for the private repository
+
+**As the installation's secrets admin.** Ours is
+`grp-gcp-<code>-secrets-admin@` — join for this step, then leave.
+
+[argocd-github](argocd-github.md) is the whole of this: it names the
+repository in the manifest, creates a GitHub App, installs it on that
+repository, and stores the App ID, Installation ID and private key in
+the entry the composite made for them.
+
+Come back when the `installation` Application reports `Synced`.
+
+### 9. Compose the zone
+
+Prepare the domain first with [gcp-dns](gcp-dns.md), and come back when
+`just dns-carried <domain>` names a verification token.
+
+```bash
+just queenswood-dns-manifest-snippet <domain>
+```
+
+Paste it into `spec` in `<code>/installation.yml`, and merge.
+
+```bash
+just queenswood-zone-nameservers
+```
+
+Four names, which nothing is delegated to yet. Move the delegation with
+[gcp-dns-delegation](gcp-dns-delegation.md).
+
+### 10. Check it can take an instance
+
+```bash
+just crossplane-unready
+```
+
+A header line with nothing under it. The installation now carries
+everything an instance derives from it: the folder, the billing
+account, Argo's identity, the recovery project and the zone.
 
 ## Failures
 
@@ -386,12 +426,12 @@ seed project.
   impersonates, and closing it afterwards.
 - [boundary-install](boundary-install.md) — the folder this plane is
   built inside.
-- [gcp-secure-foundation](gcp-secure-foundation.md) — the browser-only
+- [organisation-foundation](organisation-foundation.md) — the browser-only
   half, before any
   of this.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — what a
   capability is, and how an organisation answers one.
-- [queenswood-installation](queenswood-installation.md) — the manifest
+- [management-plane-install](management-plane-install.md) — the manifest
   this plane then reads.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md) —
   the folder as the installation, and what protects a foundation.

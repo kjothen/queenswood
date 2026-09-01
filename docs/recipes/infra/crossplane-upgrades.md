@@ -294,7 +294,7 @@ nothing standing that can fix it except a fresh boot plane.
 **When to rebuild instead.** A rebuild through a boot plane installs
 from the composition and leaves no divergence. Worth it for a major, or
 where the core and the packages need to move together — see
-[queenswood-bootstrap](queenswood-bootstrap.md).
+[management-plane-install](management-plane-install.md).
 
 **What this does not cover.** The provider and function packages
 themselves, which are ordinary merges in
@@ -311,5 +311,5 @@ needs any of this.
   what it installs
 - [crossplane-providers](crossplane-providers.md) — the packages, and
   what late-initialisation owns
-- [queenswood-bootstrap](queenswood-bootstrap.md) — building a
+- [management-plane-install](management-plane-install.md) — building a
   plane, and the rebuild path

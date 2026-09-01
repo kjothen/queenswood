@@ -60,7 +60,7 @@ it, `gcp-boot-mgmt-apply` fails with `no matches for kind`, which stops
 the whole pipeline rather than one resource — and only on the next
 bootstrap, which is rare enough that it will not be the person who made
 the change. See
-[queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md).
+[management-plane-install](../recipes/infra/management-plane-install.md).
 
 What the plane must keep is what only it has: the folder and its
 bindings, the management project, Crossplane and Argo as `Release`s,

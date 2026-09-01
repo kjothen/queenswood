@@ -33,7 +33,7 @@ does it, so start at step 2. You need the domain and the repository
 above, and from whoever runs the organisation:
 
 - An IAM member string per capability the contract names — read
-  [queenswood-secure-foundation](queenswood-secure-foundation.md) for
+  [contract-install](contract-install.md) for
   what to ask for.
 - Either a parent to create a folder under, or the id of a folder they
   hand you, written `folders/<folder-id>`.
@@ -50,7 +50,7 @@ what each leaves for the next, and none of it is repeated here.
 
 ### 1. The organisation
 
-[gcp-secure-foundation](gcp-secure-foundation.md), then
+[organisation-foundation](organisation-foundation.md), then
 [gcp-bootstrap](gcp-bootstrap.md). Cloud Identity,
 the domain verified against it, the organisation, a billing account,
 the capabilities nobody holds by default, and the seed identity that
@@ -65,7 +65,7 @@ in as, and an identity that can create a folder.
 
 ### 2. The contract
 
-[queenswood-secure-foundation](queenswood-secure-foundation.md) for the
+[contract-install](contract-install.md) for the
 principals, then `just queenswood-environment-manifest` for the file
 that names them: who holds which capability, which folder this
 installation is, what pays for it, and where its manifests live.
@@ -84,12 +84,12 @@ bound on it.
 
 ### 4. The management plane
 
-[queenswood-bootstrap](queenswood-bootstrap.md). A throwaway control
+[management-plane-install](management-plane-install.md). A throwaway control
 plane raises the management project and the cluster
 inside the boundary, the composite pivots onto the cluster it built,
 and the throwaway one is discarded.
 
-[queenswood-installation](queenswood-installation.md) carries the rest
+[management-plane-install](management-plane-install.md) carries the rest
 of it — the Argo credential, the recovery project, the zone and its
 delegation — and still reads as a sixth step it is not.
 
@@ -163,13 +163,13 @@ produced them.
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) and
+- [organisation-foundation](organisation-foundation.md) and
   [gcp-bootstrap](gcp-bootstrap.md) — step 1.
-- [queenswood-secure-foundation](queenswood-secure-foundation.md) —
+- [contract-install](contract-install.md) —
   step 2, and what to ask an organisation for.
 - [boundary-install](boundary-install.md) — step 3.
-- [queenswood-bootstrap](queenswood-bootstrap.md) — step 4.
-- [queenswood-installation](queenswood-installation.md) — the rest of
+- [management-plane-install](management-plane-install.md) — step 4.
+- [management-plane-install](management-plane-install.md) — the rest of
   step 4, still written as though it followed one.
 - [instance-deploy](instance-deploy.md) — step 5.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)

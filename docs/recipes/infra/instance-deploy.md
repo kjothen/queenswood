@@ -19,7 +19,7 @@ You want to add a Queenswood instance to an installation.
 ### Prerequisites
 
 - A running Queenswood installation — see
-  [queenswood-installation](queenswood-installation.md).
+  [management-plane-install](management-plane-install.md).
 - The installation's recovery project, named in its `EnvironmentConfig`
   as `recoveryProjectId`.
 - `argoServiceAccount` in that same `EnvironmentConfig`, correct.
@@ -309,9 +309,9 @@ debugging rather than any part of standing an instance up.
 
 ## References
 
-- [queenswood-bootstrap](queenswood-bootstrap.md) — building the plane
+- [management-plane-install](management-plane-install.md) — building the plane
   this runs on.
-- [queenswood-installation](queenswood-installation.md) — the manifest
+- [management-plane-install](management-plane-install.md) — the manifest
   the plane reads, and changing it by merge.
 - [google-sign-in](google-sign-in.md) — the console acts and the Admin
   API call behind step 4.

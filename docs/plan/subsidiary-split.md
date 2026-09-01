@@ -96,7 +96,7 @@ a name prefix — an identity that could mint
 would put an escalation path into the one identity the whole bootstrap
 impersonates.
 
-[organisation-foundation](../recipes/infra/gcp-secure-foundation.md)
+[organisation-foundation](../recipes/infra/organisation-foundation.md)
 currently gives a different reason — that a Cloud Identity write needs
 a quota project and none exists. That is true when it is written and
 false by the time a subsidiary is created, since `prj-b-seed` exists by
@@ -407,7 +407,7 @@ the ADR settles both or neither.
    `Delete` withheld in a merge of its own, then the transfer. No
    binding left GCP at any point. `createFolder` came out of the XRD,
    the manifest and the renderer after it.
-3. **`queenswood-bootstrap` no longer describes what happens.** Its
+3. **`management-plane-install` no longer describes what happens.** Its
    step 5 renders an installation manifest with no folder and step 6
    says the apply reports one. Nothing renders or applies a
    `subsidiary.yml`. A second installation following it would get a
