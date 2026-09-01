@@ -172,6 +172,10 @@ topic.
   either direction, and why groups are bound here and created
   elsewhere. See
   [ADR-0027](docs/adr/0027-the-folder-is-a-subsidiary.md).
+- **Declaring the boundary** — the contract agreed before anything is
+  built, which folder this installation is as a field rather than a
+  path, and why the manifest carries only the code. See
+  [boundary-install.md](docs/recipes/infra/boundary-install.md).
 - **Up and running, end to end** — every recipe from an empty Google
   account to a bank serving traffic, in order, and what each leaves for
   the next.
