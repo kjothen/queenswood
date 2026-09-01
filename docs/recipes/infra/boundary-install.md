@@ -4,9 +4,9 @@
 
 ## Status
 
-**Untested as written.** The composite has been applied, and never from
-this recipe: `qw01`'s folder was created by an earlier shape of the
-bootstrap and adopted afterwards.
+**Untested as written.** `qw01`'s manifest was written by hand, and its
+folder created by an earlier shape of the bootstrap and adopted
+afterwards.
 
 ## Problem
 
@@ -60,24 +60,6 @@ directory rather than inside it.
 cat "$QW_INSTALLATIONS_REPO/$QW_CODE/subsidiary.yml"
 ```
 
-### 4. Apply it
-
-On a first installation, nothing: `just gcp-boot-cluster-up` and `just
-gcp-boot-mgmt-apply` do it, in
-[management-plane-install](management-plane-install.md).
-
-Against a management plane already running, merge. Argo applies it from
-the installation's directory.
-
-### 5. Read back what it built
-
-```bash
-kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
-  get xsubsidiary "$QW_CODE" -o yaml
-```
-
-`status.folderId` carries the folder, composed or adopted.
-
 ## Failures
 
 **`Unsynced resources: folder`, while the folder reports `Synced`.**
@@ -122,6 +104,13 @@ a composite that reports healthy.
 Commands: `just queenswood-subsidiary-manifest`.
 
 ## Discussion
+
+Nothing here applies the manifest. On a first installation the boot
+cluster does, in [management-plane-install](management-plane-install.md),
+which loads the XRD and applies this file before the plane's — the plane
+composes its project inside a folder this makes. Against a plane already
+running, Argo applies it from the installation's directory like
+everything else.
 
 The folder is what an installation is, so this is the whole handover:
 one kind, two suppliers, and the same object left behind either way.
