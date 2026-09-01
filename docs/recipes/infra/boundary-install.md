@@ -22,12 +22,9 @@ creating that folder or were handed one.
   [cloud-naming](../practices/cloud-naming.md).
 - Its contract committed:
   [queenswood-secure-foundation](queenswood-secure-foundation.md) for
-  the principals, and `environment.yml` beside it naming them. This
-  recipe reads `access` and `folder` from that file and composes
-  nothing without them.
-- Either a parent to create a folder under, or the id of one handed to
-  you. Which of the two is a field in the contract, not a different
-  procedure.
+  the principals, and `environment.yml` beside it naming them.
+- In that file, either a `folder.parent` and `folder.displayName`, or a
+  `folder.folderId`.
 - Write access to the manifests repository, and a merge.
 
 ```bash
@@ -37,18 +34,14 @@ export QW_CODE=qw01
 export QW_INSTALLATIONS_REPO=../installations
 ```
 
-### 1. Check what the contract says about the folder
+### 1. Read the folder block from the contract
 
 ```bash
 grep -A3 '^  folder:' "$QW_INSTALLATIONS_REPO/$QW_CODE/environment.yml"
 ```
 
-Either a `folderId`, which adopts, or a `parent` and a `displayName`,
-which compose. Not both: where `folderId` is set the other two are
-ignored, and the composite reads the folder's name and place back from
-GCP rather than asserting them.
-
-Where neither is there, the contract is not finished — go back to
+Either a `folderId`, or a `parent` and a `displayName`. Neither means
+the contract is unfinished: go back to
 [queenswood-secure-foundation](queenswood-secure-foundation.md).
 
 ### 2. Render the manifest
@@ -58,12 +51,8 @@ just queenswood-subsidiary-manifest \
   > "$QW_INSTALLATIONS_REPO/$QW_CODE/subsidiary.yml"
 ```
 
-One key under `spec`: the code. Everything else about the folder is in
-the contract, so this is the object rather than the description of it.
-
-Committed at the top of the installation's directory, beside the
-contract — the Application that syncs them does not recurse, and a
-manifest filed in a subdirectory is never applied at all.
+One key under `spec`, the code, at the top of the installation's
+directory rather than inside it.
 
 ### 3. Read it, then commit it
 
@@ -71,19 +60,14 @@ manifest filed in a subdirectory is never applied at all.
 cat "$QW_INSTALLATIONS_REPO/$QW_CODE/subsidiary.yml"
 ```
 
-Nothing here is generated and nothing is consumed permanently, so this
-file may be re-rendered freely. That is not true of the contract beside
-it, which carries the folder id.
-
 ### 4. Apply it
 
-Nothing to do here on a first installation: `just gcp-boot-cluster-up`
-loads the XRD and `just gcp-boot-mgmt-apply` applies this manifest
-before the plane's, in
+On a first installation, nothing: `just gcp-boot-cluster-up` and `just
+gcp-boot-mgmt-apply` do it, in
 [queenswood-bootstrap](queenswood-bootstrap.md).
 
-Where a management plane is already running, merge instead. Argo
-applies it from the installation's directory like everything else.
+Against a management plane already running, merge. Argo applies it from
+the installation's directory.
 
 ### 5. Read back what it built
 
@@ -92,8 +76,7 @@ kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
   get xsubsidiary "$QW_CODE" -o yaml
 ```
 
-`status.folderId` carries the folder, composed or adopted. Everything
-after this is named and bound against it.
+`status.folderId` carries the folder, composed or adopted.
 
 ## Failures
 
@@ -149,6 +132,18 @@ what it is for. It is the XR: applying it is what instantiates the
 kind, and everything the kind needs is stated once in the contract
 where the plane and every instance read it too. A folder handed over
 changes one field in one file rather than a manifest and a procedure.
+Nothing in it is generated, so it may be re-rendered freely — which the
+contract beside it may not, since that one carries the folder id.
+
+It sits at the top of the installation's directory because the
+Application that syncs it does not recurse: a manifest filed in a
+subdirectory is never applied at all, and nothing reports that.
+
+The two modes are exclusive by precedence rather than by refusal. Where
+`folderId` is set the other two are ignored, so stating all three is
+inert rather than an error — the better failure, since the contract is
+read by three composites and rejecting it would stop the plane and
+every instance rather than this alone.
 
 An adopted folder is observed and never written. `folderId` withholds
 `Create` and `Update` from the composed `Folder`, so the provider

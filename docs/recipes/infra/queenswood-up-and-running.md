@@ -70,26 +70,16 @@ in as, and an identity that can create a folder.
 
 [queenswood-secure-foundation](queenswood-secure-foundation.md) for the
 principals, then `just queenswood-environment-manifest` for the file
-that names them. Between them they settle what an organisation provides
-and what we build: who holds which capability, which folder this
+that names them: who holds which capability, which folder this
 installation is, what pays for it, and where its manifests live.
-
-The principals first and the file second, because IAM rejects a binding
-to a principal that does not exist — and before step 3 rather than
-before step 4, because the boundary reads two of the four keys.
 
 Leaves: `environment.yml` committed, naming principals that exist.
 
 ### 3. The boundary
 
 [boundary-install](boundary-install.md). The folder that the
-installation is, and the capabilities bound inside it, declared by a
-manifest carrying the code and built from the contract's `folder`
-block: composed where the folder is ours, adopted where an organisation
-hands one over.
-
-Composed or adopted it leaves the same object, which is what makes this
-a seam rather than a branch inside a later step.
+installation is, and the capabilities bound inside it: composed where
+the folder is ours, adopted where an organisation hands one over.
 
 Leaves: `subsidiary.yml` committed, and — once step 4 raises something
 able to apply it — a folder with `platformViewer` and `clusterAdmin`
@@ -103,13 +93,9 @@ throwaway control plane raises the management project and the cluster
 inside the boundary, the composite pivots onto the cluster it built,
 and the throwaway one is discarded.
 
-Bringing it into service is part of this and not a step after it:
-[queenswood-installation](queenswood-installation.md) still carries
-that half — the Argo credential, the recovery project, the zone and its
-delegation — and reads as a sixth step it is not. The credential in
-particular belongs to the boot, since without it the plane reconciles
-nothing while reporting healthy, which is an incomplete boot rather
-than a later stage.
+[queenswood-installation](queenswood-installation.md) carries the rest
+of it — the Argo credential, the recovery project, the zone and its
+delegation — and still reads as a sixth step it is not.
 
 Leaves: a management plane reconciling the installation from git, and
 an installation an instance can derive everything from.
