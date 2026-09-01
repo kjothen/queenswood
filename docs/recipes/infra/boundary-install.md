@@ -105,18 +105,11 @@ Commands: `just queenswood-subsidiary-manifest`.
 
 ## Discussion
 
-Nothing here applies the manifest. On a first installation the boot
-cluster does, in [management-plane-install](management-plane-install.md),
-which loads the XRD and applies this file before the plane's — the plane
-composes its project inside a folder this makes. Against a plane already
-running, Argo applies it from the installation's directory like
-everything else.
-
 The folder is what an installation is, so this is the whole handover:
 one kind, two suppliers, and the same object left behind either way.
-That is why it is a step rather than a branch inside the bootstrap,
-where it used to be — a page that says "steps 1 to 3 are theirs, and
-read this one differently" is a page nobody follows twice the same way.
+Composing one and adopting one differ by a field rather than by a
+procedure, which is what lets a folder somebody else made be declared
+here at all.
 
 The manifest carries the code alone, which looks thin until you notice
 what it is for. It is the XR: applying it is what instantiates the
