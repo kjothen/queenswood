@@ -132,7 +132,7 @@ topic.
 - **Rebuilding an instance's cluster** — the runbook for a planned
   cluster rebuild: why a ForceNew field reports `Synced` and does
   nothing, the order, and what it leaves standing. See
-  [cluster-rebuild](docs/recipes/infra/queenswood-instance-cluster-rebuild.md).
+  [instance-rebuild-cluster](docs/recipes/infra/instance-rebuild-cluster.md).
 - **Recovering FoundationDB** — the scenario matrix, restore mode
   against destination state, RPO per scenario, why scale-to-zero is not
   a recovery scenario, and the CIS and DORA controls each open item
@@ -192,7 +192,7 @@ topic.
 - **Adding an instance to an installation** — the unit's two places,
   why the secrets are written while the composite builds, and why
   `down` is not a starting state. See
-  [queenswood-instance.md](docs/recipes/infra/queenswood-instance.md).
+  [instance-deploy.md](docs/recipes/infra/instance-deploy.md).
 - **Upgrading or reconfiguring Argo CD** — the steps for a plane whose
   own Argo is `Observe`, the `extraObjects` a values file must carry,
   and why a merged change does not reach it. See

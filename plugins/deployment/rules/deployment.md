@@ -206,7 +206,7 @@ queenswood-instance-keycloak-admin`, `just
 queenswood-instance-google-secret`, `just
 queenswood-recovery-backup-key`, `just crossplane-unready`, `just
 argo-apps-status`, `just gcp-instance-cluster-ctx`.
-See [queenswood-instance](../../../docs/recipes/infra/queenswood-instance.md).
+See [instance-deploy](../../../docs/recipes/infra/instance-deploy.md).
 
 ## A folder is a subsidiary, and the plane is built in one
 
@@ -895,7 +895,7 @@ composite reports `Synced` while nothing happens, so read
 recovery, being a target rather than a mode, and a test environment may
 restore in place.
 See [fdb-recovery](../../../docs/recipes/infra/fdb-recovery.md),
-[cluster-rebuild](../../../docs/recipes/infra/queenswood-instance-cluster-rebuild.md)
+[instance-rebuild-cluster](../../../docs/recipes/infra/instance-rebuild-cluster.md)
 and
 [ADR-0026](../../../docs/adr/0026-recovering-data-and-the-states-that-do-it.md).
 

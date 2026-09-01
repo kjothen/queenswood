@@ -115,7 +115,7 @@ A header line with nothing under it. The installation now carries
 everything an instance derives from it: the folder, the billing
 account, Argo's identity, the recovery project and the zone.
 
-Adding one is [queenswood-instance](queenswood-instance.md).
+Adding one is [instance-deploy](instance-deploy.md).
 
 ## Failures
 
@@ -245,7 +245,7 @@ committed and the renderer refuses.
 
 - [queenswood-bootstrap](queenswood-bootstrap.md) — building the plane
   that reads the manifest.
-- [queenswood-instance](queenswood-instance.md) — adding an instance to
+- [instance-deploy](instance-deploy.md) — adding an instance to
   what this leaves.
 - [argocd-github](argocd-github.md) — the App that reaches a private
   repository, and how it is rotated.

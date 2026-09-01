@@ -317,7 +317,7 @@ enough to read the composed `Release`, the running values and every
 verification. The upgrade replaces Deployments, a StatefulSet, the CRDs
 and Helm's own release Secrets, which needs `roles/container.admin`. So
 it is joined for that one step and left again, the same shape
-[cluster-rebuild](queenswood-instance-cluster-rebuild.md) uses for its
+[instance-rebuild-cluster](instance-rebuild-cluster.md) uses for its
 break-glass moments.
 
 **What the restart costs.** Every component is replaced, so for a minute

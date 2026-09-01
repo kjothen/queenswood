@@ -85,7 +85,7 @@ Leaves: an installation an instance can derive everything from.
 
 ### 5. An instance
 
-[queenswood-instance](queenswood-instance.md). A unit: the project,
+[instance-deploy](instance-deploy.md). A unit: the project,
 network, cluster, database and names one environment answers on, and
 then the bank on top of it.
 
@@ -146,7 +146,7 @@ installation and the instance cannot tell which path produced them.
   step 2.
 - [queenswood-bootstrap](queenswood-bootstrap.md) — step 3.
 - [queenswood-installation](queenswood-installation.md) — step 4.
-- [queenswood-instance](queenswood-instance.md) — step 5.
+- [instance-deploy](instance-deploy.md) — step 5.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as an installation.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the

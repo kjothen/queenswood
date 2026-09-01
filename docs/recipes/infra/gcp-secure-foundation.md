@@ -288,7 +288,8 @@ somebody asks before joining a break-glass group and the one an auditor
 asks afterwards — so it is worth being able to read without running
 anything, and worth a diff when it changes. Group *names* stay in the
 justfile because they are derived from the installation code and
-[cloud-naming](../practices/cloud-naming.md) governs them. Each role carries its own
+[cloud-naming](../practices/cloud-naming.md) governs them. Each role
+carries its own
 reason in the file rather than in a comment beside it, which is what
 lets `just gcp-roles` print the reason along with the role: a grant
 nobody has justified is a grant nobody has decided.
@@ -303,7 +304,8 @@ which is why one half is a recipe and the other is a browser.
 
 - [queenswood-secure-foundation](queenswood-secure-foundation.md) — an
   installation's own capabilities, which come next.
-- [cloud-naming](../practices/cloud-naming.md) — the code every installation name is
+- [cloud-naming](../practices/cloud-naming.md) — the code every
+  installation name is
   built from.
 - [queenswood-bootstrap](queenswood-bootstrap.md) — the management plane
   this leaves you ready to build.

@@ -5,7 +5,7 @@
 # Here rather than in gcp.just because these write files and touch no
 # cloud resource -- they read GCP to discover what the plane already
 # built, and change nothing in it. See
-# docs/recipes/infra/queenswood-instance.md.
+# docs/recipes/infra/instance-deploy.md.
 # =========================================================================
 
 # The instance these recipes act on, and the folder's parent for a first

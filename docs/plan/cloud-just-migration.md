@@ -696,7 +696,8 @@ For most resources this is harmless, because the external name defaults
 to `metadata.name`, and the composition pins those deterministically:
 `vpc-qw01-c-mgmt`, `gke-qw01-c-mgmt`, `np-qw01-c-mgmt`. The provider
 observes, finds the object, and adopts it. This is the second reason for
-[cloud-naming](../recipes/practices/cloud-naming.md)'s rule that Kubernetes names
+[cloud-naming](../recipes/practices/cloud-naming.md)'s rule that
+Kubernetes names
 are the same names — the recipe gives the cross-reference reason, and
 re-adoption is the one that bites at a pivot.
 

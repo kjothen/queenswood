@@ -34,8 +34,9 @@ You want to add a Queenswood instance to an installation.
 **As the installation's platform viewer.** Ours is
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
-Exports follow the [cloud-naming](../practices/cloud-naming.md)'s `<code>`, `<env>` and
-`<label>` convention, which every composed name is built from —
+Exports follow [cloud-naming](../practices/cloud-naming.md)'s `<code>`,
+`<env>` and `<label>` convention, which every composed name is built
+from —
 they are stated once here and carried through every step below.
 Everything else the render needs is read from the installation's
 own manifest and from the running management plane.
