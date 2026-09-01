@@ -339,11 +339,30 @@ removing it.
 manifestRepoURL      static config
 billingAccountId     an account that pre-exists
 access               who holds which capability
-folder facts         folderId, or parent and displayName
 ```
 
-All authored, none generated, and `access` stated once for the plane,
-the subsidiary and every instance rather than in each.
+All authored, none generated, and each read by more than one composite
+— which is what the file is for, and what tells it from a manifest. A
+value with a single reader belongs to its reader, which is why
+`recoveryProjectId` went the other way.
+
+`access` is the same argument from the other side: one mapping, written
+three times today, with the subsidiary, the plane and every instance
+each binding the subset it can. Stated here, a new instance restates
+none of it. Each composite still carries `spec.access` as a
+per-capability override, so an instance may name a different
+`secretsAdmin` without the file changing for anyone else.
+
+The folder facts stay in `subsidiary.yml`. `folderId` has one reader —
+nothing else needs it, since the plane and the instance resolve the
+folder by the composed object's Kubernetes name, `fldr-<code>`, which
+is derived from `spec.code` in both the composed and the adopted mode.
+That reference works only while an `XSubsidiary` exists on the cluster,
+though, and ADR-0027 contemplates it not existing — *"where an
+organisation runs no Crossplane, nothing instantiates the kind"*. So
+there is a gap there, and it is a different question from this one: not
+a repeated value to hoist, but a missing escape hatch for a folder we
+did not compose.
 
 ## Open: does `subsidiary-install` survive
 
@@ -387,7 +406,21 @@ the ADR settles both or neither.
    independent of the rest and worth doing on its own merits. Four
    merges across two repositories, inside out — see the section above.
 5. `access` into `environment.yml`, once 4 has emptied that file of
-   generated values, leaving `billingAccountId` and `manifestRepoURL`.
+   generated values. Four merges, the same way round:
+   the environment carries the mapping while nothing reads it; the three
+   compositions read it in preference to their own field, which changes
+   nothing while the manifests still set theirs; the manifests shed it;
+   and the bootstrap learns to apply the file. That last one is not
+   optional — `gcp-boot-mgmt-apply` applies `installation.yml` and
+   nothing else, and `environment.yml` reaches a cluster only through
+   Argo, which is not running until the plane is up. Without it a fresh
+   installation has no bindings at all until the first sync,
+   `clusterAdmin` included, which is how a person reaches the cluster
+   once the seed impersonation is revoked.
+   `XSubsidiary` needs an environment step of its own, resolving
+   `Optional`: it is applied by the boot cluster before any
+   `EnvironmentConfig` exists, and `Required` would fail the pipeline,
+   which on that kind means no folder.
 6. The recipe renames, consequential on 1 and blocked only on whether
    `subsidiary-install` survives.
 

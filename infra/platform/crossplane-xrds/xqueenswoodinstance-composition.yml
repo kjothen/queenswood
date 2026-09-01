@@ -1468,7 +1468,14 @@ spec:
             {{- $xr := .observed.composite.resource }}
             {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
             {{- $project := $xr.spec.projectId }}
-            {{- $viewers := dig "access" "platformViewer" (list) $xr.spec }}
+            {{- /* The installation's mapping, overridden per capability by
+                   this manifest's own field where it names one. Stated
+                   once for the subsidiary, the plane and every instance,
+                   because it is one mapping and each binds the subset it
+                   can. */}}
+            {{- $envAccess := dig "access" dict (index .context "apiextensions.crossplane.io/environment" | default dict) }}
+            {{- $ownAccess := dig "access" dict $xr.spec }}
+            {{- $viewers := dig "platformViewer" (dig "platformViewer" (list) $envAccess) $ownAccess }}
             {{- range $i, $member := $viewers }}
             ---
             apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -1498,7 +1505,7 @@ spec:
                    Crossplane rebuilds live bindings it only renamed.
                    The loop above predates this and keeps its names
                    rather than rebuilding what it has. */}}
-            {{- range $member := dig "access" "platformAdmin" (list) $xr.spec }}
+            {{- range $member := dig "platformAdmin" (dig "platformAdmin" (list) $envAccess) $ownAccess }}
             {{- $slug := sha256sum $member | trunc 8 }}
             ---
             # Creating the OAuth client Google sign-in runs on, which
@@ -1531,7 +1538,7 @@ spec:
                 role: roles/oauthconfig.editor
                 member: {{ $member | quote }}
             {{- end }}
-            {{- range $member := dig "access" "secretsAdmin" (list) $xr.spec }}
+            {{- range $member := dig "secretsAdmin" (dig "secretsAdmin" (list) $envAccess) $ownAccess }}
             {{- $slug := sha256sum $member | trunc 8 }}
             {{- range $role := (list "roles/secretmanager.viewer" "roles/secretmanager.secretVersionAdder") }}
             {{- $roleSlug := sha256sum $role | trunc 6 }}
