@@ -19,7 +19,7 @@ the registrar that sold it.
   [queenswood-installation](queenswood-installation.md), and this
   recipe cannot begin without it, because every step below queries the
   nameservers Cloud DNS assigned it.
-- The domain prepared by [cloud-dns](cloud-dns.md): verified, its
+- The domain prepared by [gcp-dns](gcp-dns.md): verified, its
   automation identity an owner, inventoried, and unsigned if it was
   signed.
 - An account at the registrar that can change nameservers.
@@ -131,6 +131,6 @@ holding either one are wrong.
 
 ## References
 
-- [cloud-dns](cloud-dns.md) — preparing the domain, which comes first.
+- [gcp-dns](gcp-dns.md) — preparing the domain, which comes first.
 - [queenswood-installation](queenswood-installation.md) — composing the
   zone this delegates to.

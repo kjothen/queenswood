@@ -218,7 +218,7 @@ single clean answer proves nothing. Take several, spaced, across more
 than one resolver.
 
 Move the delegation once the zone exists — that is
-[cloud-dns-delegation](cloud-dns-delegation.md), and it cannot start
+[gcp-dns-delegation](gcp-dns-delegation.md), and it cannot start
 before [queenswood-installation](queenswood-installation.md) has
 composed one.
 
@@ -272,11 +272,11 @@ composed one.
 - [gcp-secure-foundation](gcp-secure-foundation.md) — domain verification
   at signup, and
   why the directory work has no API.
-- [cloud-naming](cloud-naming.md) — the `dz-` prefix and the
+- [cloud-naming](../practices/cloud-naming.md) — the `dz-` prefix and the
   environment letter.
 - [crossplane-design](crossplane-design.md) — what composes the zone
   and its records.
 - [queenswood-installation](queenswood-installation.md) — the manifest
   the domain is named in.
-- [cloud-dns-delegation](cloud-dns-delegation.md) — moving the
+- [gcp-dns-delegation](gcp-dns-delegation.md) — moving the
   registrar, once the zone answers.

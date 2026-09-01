@@ -299,7 +299,7 @@ verification, the registrar's delegation, an OAuth client with a chosen
 redirect URI. These are not kinds nobody has written yet — they cannot
 be in the catalogue, and somebody will eventually go looking for the
 abstraction that cannot exist. The manual half lives in the
-`gcp-secure-foundation`, `cloud-dns` and `google-sign-in` recipes and
+`gcp-secure-foundation`, `gcp-dns` and `google-sign-in` recipes and
 is as much a part of building an installation as anything composed.
 What is
 excluded is only the thing itself: the OAuth client cannot be composed,
@@ -636,7 +636,7 @@ delegating a subdomain per environment. Moving the delegation itself is
 the section below.
 Commands: `just gcp-platform-sa`, `just dns-records`, `just
 dns-carried`.
-See [cloud-dns](../../../docs/recipes/infra/cloud-dns.md).
+See [gcp-dns](../../../docs/recipes/infra/gcp-dns.md).
 
 ## A delegation moves only once the new zone answers
 
@@ -654,7 +654,7 @@ there — they are the way back — and never re-enable DNSSEC at the
 registrar afterwards. Set a CAA record naming the issuing CA. Done in
 this order the propagation window is a no-op, since both authorities
 answer the same and no resolver holding either one is wrong.
-See [cloud-dns-delegation](../../../docs/recipes/infra/cloud-dns-delegation.md).
+See [gcp-dns-delegation](../../../docs/recipes/infra/gcp-dns-delegation.md).
 
 ## A parent Application holds only kinds that already exist
 
@@ -789,7 +789,7 @@ comment it is detection only, since the text is public the moment it is
 posted. A name may take a qualifier where it would otherwise collide,
 most often a region, and a folder or project handed to us already named
 keeps the name its supplier chose.
-See [cloud-naming](../../../docs/recipes/infra/cloud-naming.md).
+See [cloud-naming](../../../docs/recipes/practices/cloud-naming.md).
 
 ## An installation has a code, and humans are read-only or break-glass
 
@@ -854,7 +854,7 @@ afterwards. A public resolver or nameserver, and loopback, may be
 named: they identify nobody, and a delegation cannot be documented
 without them. Where a real value genuinely belongs, mark the line
 `cloud-id-ok`, which makes it deliberate rather than missed.
-See [cloud-identifiers](../../../docs/recipes/infra/cloud-identifiers.md).
+See [cloud-identifiers](../../../docs/recipes/practices/cloud-identifiers.md).
 
 ## A restore is proven by a key count, and a destructive state is self-limiting
 

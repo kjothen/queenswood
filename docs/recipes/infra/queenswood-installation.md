@@ -23,8 +23,8 @@ You have a plane, and want an installation that can serve instances.
 - Owner of the GitHub organisation holding the private manifests
   repository, for step 1 and nothing else.
 - A domain you can prove ownership of, for steps 3 to 5 — see
-  [cloud-dns](cloud-dns.md) and
-  [cloud-dns-delegation](cloud-dns-delegation.md).
+  [gcp-dns](gcp-dns.md) and
+  [gcp-dns-delegation](gcp-dns-delegation.md).
 - Write access to the manifests repository, and a merge, for steps 2
   and 4.
 - The capability each step names. Ours is a Google group; yours may differ.
@@ -76,7 +76,7 @@ just crossplane-conditions "xmanagementplane/$QW_CODE"
 
 ### 3. Prepare the domain
 
-[cloud-dns](cloud-dns.md) is the whole of this: it verifies the domain,
+[gcp-dns](gcp-dns.md) is the whole of this: it verifies the domain,
 adds the automation identity as an owner of the property, inventories
 what the registrar serves, and unsigns the domain where it is signed.
 
@@ -99,7 +99,7 @@ its records into this one zone.
 
 ### 5. Move the delegation
 
-[cloud-dns-delegation](cloud-dns-delegation.md) is the whole of this:
+[gcp-dns-delegation](gcp-dns-delegation.md) is the whole of this:
 it diffs the two authorities, replaces all four nameservers at the
 registrar, and checks the delegation at the registry.
 
@@ -249,12 +249,12 @@ committed and the renderer refuses.
   what this leaves.
 - [argocd-github](argocd-github.md) — the App that reaches a private
   repository, and how it is rotated.
-- [cloud-dns](cloud-dns.md) — proving the domain, and moving a
+- [gcp-dns](gcp-dns.md) — proving the domain, and moving a
   registrar once.
 - [gcp-secure-foundation](gcp-secure-foundation.md) — the organisation,
   the access
   groups and the billing account, none of which has an API.
-- [cloud-naming](cloud-naming.md) — the code, and what every name
+- [cloud-naming](../practices/cloud-naming.md) — the code, and what every name
   derives from it.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as an installation, and why foundations are not deleted.

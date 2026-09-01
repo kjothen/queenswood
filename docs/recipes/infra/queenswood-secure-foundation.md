@@ -29,7 +29,7 @@ to [queenswood-bootstrap](queenswood-bootstrap.md).
   [gcp-secure-foundation](gcp-secure-foundation.md), or an established
   one.
 - The installation's four-character code, chosen now — see
-  [cloud-naming](cloud-naming.md).
+  [cloud-naming](../practices/cloud-naming.md).
 - An address on your own domain for each person who will operate the
   installation, or the means to make one.
 - The capability each step names. Ours is a Google group; yours may differ.
@@ -187,6 +187,6 @@ to set before anything depends on not having it.
   the domain these accounts are on, and its own capabilities.
 - [queenswood-bootstrap](queenswood-bootstrap.md) — what needs these to
   exist.
-- [cloud-naming](cloud-naming.md) — the code they are named for.
+- [cloud-naming](../practices/cloud-naming.md) — the code they are named for.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the
   capabilities and who holds them.

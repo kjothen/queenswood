@@ -480,14 +480,14 @@ spec:
                     rather than holding a zone of its own -- the zone
                     outlives every instance, and a rebuilt one draws a
                     new nameserver set the registrar does not follow.
-                    See docs/recipes/infra/cloud-dns.md.
+                    See docs/recipes/infra/gcp-dns.md.
                   properties:
                     domain:
                       type: string
                       description: |
                         The apex, without a trailing dot. Names the
                         zone as dz-<code>-c-<domain>, dots becoming
-                        hyphens; see docs/recipes/infra/cloud-naming.md.
+                        hyphens; see docs/recipes/practices/cloud-naming.md.
                     records:
                       type: array
                       description: |

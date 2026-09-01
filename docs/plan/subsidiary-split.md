@@ -199,10 +199,14 @@ are theirs"*. After the split it is a line between two recipes, and
 `up-and-running`'s two paths become "start at 1" or "start at 4" with
 no recipe that is read rather than followed.
 
-Alongside: `cloud-*` becomes `gcp-*`, since `gcp-iam` and `cloud-dns`
-name the same kind of thing under two prefixes; and `cloud-naming` and
-`cloud-identifiers` move to `practices/`, being writing conventions
-rather than infrastructure procedures.
+**Done, ahead of the rest.** `cloud-dns` and `cloud-dns-delegation`
+became `gcp-dns` and `gcp-dns-delegation`, since `gcp-iam` and the two
+of them named the same kind of thing under two prefixes; and
+`cloud-naming` and `cloud-identifiers` moved to `practices/`, being
+writing conventions rather than infrastructure procedures. Both keep
+their names and their `deployment` label there — which plugin a naming
+convention belongs to is a separate question from which directory the
+file sits in, and moving the file settles only the second.
 
 ## A generated value is read, not transcribed
 
@@ -383,8 +387,8 @@ Its four parts may each belong somewhere else once the layers separate:
   of the whole subsidiary, so it may belong to `XSubsidiary`.
 - **The recovery project** is folder-tier and durable, so likewise.
 - **The zone and its delegation** are a browser and a registrar, and
-  [gcp-dns](../recipes/infra/cloud-dns.md) and
-  [gcp-dns-delegation](../recipes/infra/cloud-dns-delegation.md)
+  [gcp-dns](../recipes/infra/gcp-dns.md) and
+  [gcp-dns-delegation](../recipes/infra/gcp-dns-delegation.md)
   already own most of them.
 
 If all four move, the recipe dissolves rather than being renamed.
