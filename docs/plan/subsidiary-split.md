@@ -204,6 +204,106 @@ name the same kind of thing under two prefixes; and `cloud-naming` and
 `cloud-identifiers` move to `practices/`, being writing conventions
 rather than infrastructure procedures.
 
+## A generated value is read, not transcribed
+
+The plane composes things an instance must name: the Argo service
+account it grants `container.admin` to on its own project, and the
+recovery project whose suffix its backups bucket borrows.
+
+> The plane's own comment on that identity says the instance grants it
+> `container.developer` — *"it reaches Kubernetes objects inside a
+> cluster and cannot create or delete the cluster itself"* — and the
+> instance binds `container.admin`. One of the two is wrong, and the
+> comment is the one making the least-privilege argument. Worth
+> settling separately from any of this. Both reach
+the instance today by being written into `environment.yml` — rendered
+by a recipe that discovers them from live GCP, and committed.
+
+That is the wrong direction. A plane that creates a resource and then
+requires somebody to transcribe its identity into a file, so that
+another composite can be told about it, produces authoring mistakes
+rather than preventing them. The value already exists on the plane; the
+instance should read it.
+
+### What already works, and where it stops
+
+Anything an instance *targets* goes by reference to a deterministic
+Kubernetes name, and needs no file: `folderIdRef` to `fldr-<code>`,
+`projectRef`, `serviceAccountIdRef`, `managedZoneRef`. That is the
+mechanism ADR-0024 settled on for the folder.
+
+It stops at two places:
+
+- **A `member` string.** `ProjectIAMMember.forProvider` is `condition,
+  member, project, projectRef, projectSelector, role` — read off the
+  live CRD. `member` has no `Ref` and no `Selector`, because it may be
+  a user, a group, a domain or a `principalSet://`, none of which is a
+  Crossplane object.
+- **A resource name.** The backups bucket is
+  `bkt-<name>-backups-<suffix>`, where the suffix is split off the
+  recovery project's id so that a rebuilt project does not rename the
+  bucket. A name is a string, not a reference.
+
+### The preferred fix
+
+Install `function-extra-resources` and let the instance fetch what the
+plane composed, by the same deterministic name it would reference:
+
+```yaml
+- step: extra
+  functionRef:
+    name: function-extra-resources
+  input:
+    spec:
+      extraResources:
+        - into: argoSA
+          apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+          kind: ServiceAccount
+          type: Reference
+          ref:
+            name: sa-<code>-c-argo
+```
+
+The instance already runs `function-go-templating`, so it spells the
+member from what it read. The same fetch answers the recovery project.
+`argoServiceAccount` and `recoveryProjectId` then leave
+`environment.yml` entirely, which is what leaves that file holding only
+facts somebody authored.
+
+The composite may carry the Kubernetes name as a defaulted field, for
+an installation that has to override it. Unlikely to be wanted: the
+name is derived from the code, which is the thing that makes it
+findable at all.
+
+### What it costs
+
+- A fifth function on the plane, and one more thing
+  [crossplane-upgrades](../recipes/infra/crossplane-upgrades.md) checks
+  is healthy afterwards.
+- A different failure. The environment patch is deliberately not
+  `Required` — *"a merge here before the key exists there would fail
+  every instance rather than this one binding"* — and an extra resource
+  that cannot be found may fail the whole pipeline step. The soft
+  failure was chosen; whatever replaces it has to be chosen too.
+- A line ADR-0024 drew. It says an instance finds the folder *"never by
+  referring to the plane's composite, so neither composite knows about
+  the other"*. Reading a resource the plane composed, by name, is the
+  same distinction that already makes `folderIdRef` acceptable — but it
+  is the ADR's line, and it should be drawn deliberately rather than
+  crossed quietly.
+
+### What `environment.yml` is left holding
+
+```
+manifestRepoURL      static config
+billingAccountId     an account that pre-exists
+access               who holds which capability
+folder facts         folderId, or parent and displayName
+```
+
+All authored, none generated, and `access` stated once for the plane,
+the subsidiary and every instance rather than in each.
+
 ## Open: does `subsidiary-install` survive
 
 Its four parts may each belong somewhere else once the layers separate:
@@ -225,18 +325,30 @@ the ADR settles both or neither.
 
 ## Ordering
 
-0. **Done** — `XSubsidiary`'s XRD and Composition, loaded but composing
-   nothing. Safe ahead of the rest, and it makes the schema reviewable
-   before anything depends on it.
-1. The ADR, superseding ADR-0022's folder-is-an-installation decision
-   and recording the split, the word, and where groups are created.
-2. Extract the folder from `XManagementPlane`, which is a live transfer
-   between composites — [crossplane-live](../recipes/infra/crossplane-live.md)
-   is what that costs, and its two-merge order is not optional here:
-   the folder withholds `Delete` already, but the slot named `folder`
-   and the managed resource named `fldr-<code>` move together.
-3. The recipe renames, which are cheap and entirely consequential on
-   step 1.
+0. **Done** — `XSubsidiary`'s XRD and Composition.
+1. **Done** —
+   [ADR-0027](../adr/0027-the-folder-is-a-subsidiary.md), superseding
+   ADR-0022's folder-is-an-installation decision.
+2. **Done** — the folder extracted from `XManagementPlane` and adopted
+   by `XSubsidiary`, in the order
+   [crossplane-live](../recipes/infra/crossplane-live.md) requires:
+   `Delete` withheld in a merge of its own, then the transfer. No
+   binding left GCP at any point. `createFolder` came out of the XRD,
+   the manifest and the renderer after it.
+3. **`queenswood-bootstrap` no longer describes what happens.** Its
+   step 5 renders an installation manifest with no folder and step 6
+   says the apply reports one. Nothing renders or applies a
+   `subsidiary.yml`. A second installation following it would get a
+   plane with nowhere to put its projects. The fix is two commands in
+   step 5, one sentence in step 6, and `gcp-boot-mgmt-apply` reading
+   two files — no new step.
+4. `function-extra-resources`, independent of the rest and worth doing
+   on its own merits: it is what stops a generated value being
+   transcribed by hand.
+5. `access` into `environment.yml`, once 4 has emptied that file of
+   generated values.
+6. The recipe renames, consequential on 1 and blocked only on whether
+   `subsidiary-install` survives.
 
 ## References
 
