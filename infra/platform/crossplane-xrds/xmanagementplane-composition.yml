@@ -2065,6 +2065,17 @@ spec:
               kind: ServiceAccount
               metadata:
                 namespace: crossplane-system
+                labels:
+                  # Published for an instance to find, rather than
+                  # descriptive. An instance binds this account on its
+                  # own project and needs the member string GCP minted
+                  # here, which cannot travel as a reference. No
+                  # installation in the value: a plane serves one, so
+                  # this account is a singleton on the cluster and the
+                  # label alone identifies it. The value is this
+                  # resource's composition slot name, so the consumer's
+                  # selector and the producer are one grep.
+                  platform.repldriven.com/component: argo-identity
               spec:
                 managementPolicies:
                   - Observe
@@ -2394,6 +2405,13 @@ spec:
             metadata:
               name: {{ printf "prj-%s-c-recovery" $code }}
               namespace: crossplane-system
+              labels:
+                # Published for an instance to find, as the Argo
+                # identity is. An instance puts its backups bucket in
+                # this project and borrows the bucket's suffix from the
+                # id. A singleton on the plane, so the slot name alone
+                # tells it from the other project composed here.
+                platform.repldriven.com/component: recovery-project
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: recovery-project
                 {{- with dig "adopt" "" $recovery }}
