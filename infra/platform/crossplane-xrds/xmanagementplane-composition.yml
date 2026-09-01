@@ -2386,7 +2386,14 @@ spec:
             {{- $code := $xr.spec.code }}
             {{- $env := index .context "apiextensions.crossplane.io/environment" | default dict }}
             {{- $recovery := dig "recovery" dict $xr.spec }}
-            {{- $project := dig "projectId" (dig "recoveryProjectId" "" $env) $recovery }}
+            {{- /* This manifest's own field, and nowhere else. The plane
+                   is the only thing that reads it -- it is what says
+                   which project to compose -- so it is authored here
+                   beside management.projectId, the other id minted once
+                   and then permanent. An instance reads the id off the
+                   Project this composes rather than from a second copy
+                   of it. */}}
+            {{- $project := dig "projectId" "" $recovery }}
             {{- if $project }}
             ---
             apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -2572,8 +2579,7 @@ spec:
                    neither carries versions.access -- so whoever writes
                    a backup key here cannot read one back, which is the
                    shape an instance's own entries already take. */}}
-            {{- $recoveryEnv := index .context "apiextensions.crossplane.io/environment" | default dict }}
-            {{- $recoveryProject := dig "recovery" "projectId" (dig "recoveryProjectId" "" $recoveryEnv) $xr.spec }}
+            {{- $recoveryProject := dig "recovery" "projectId" "" $xr.spec }}
             {{- if $recoveryProject }}
             {{- range $member := dig "secretsAdmin" list $access }}
             {{- range $role := (list "roles/secretmanager.viewer" "roles/secretmanager.secretVersionAdder") }}

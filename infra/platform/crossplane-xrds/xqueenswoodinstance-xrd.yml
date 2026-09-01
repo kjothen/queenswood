@@ -537,18 +537,16 @@ spec:
                     so one instance's identity is granted on its own
                     backups and reaches no other's.
 
-                    Normally left absent: the project is named once for
-                    the installation, in its EnvironmentConfig as
-                    `recoveryProjectId`, and every instance reads the
-                    same answer. This is the override, for an instance
-                    keeping its backups somewhere else, and it follows
-                    billingAccountId's shape rather than inventing a
-                    second one.
+                    Normally left absent: the id is read off the
+                    Project the plane composed, found by the label it
+                    publishes, so nothing has to be told what the
+                    plane already knows. This is the override, for an
+                    instance keeping its backups somewhere else.
 
-                    Supplied rather than discovered either way. Two
-                    composites cannot read each other's status, and the
-                    id is not derivable -- it carries a suffix chosen
-                    when the plane's manifest was minted.
+                    The composite is never read -- only a resource it
+                    labelled, which is the distinction this XRD already
+                    draws for the folder. What the label finds is a
+                    singleton, because a plane serves one installation.
 
                     Named in neither place composes no bucket, which is
                     an instance keeping nothing.

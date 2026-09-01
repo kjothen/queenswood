@@ -746,89 +746,6 @@ spec:
               - fromFieldPath: spec.ingress.subdomains
                 toFieldPath: spec.subdomains
           # ===================================================================
-          # What Argo may do here. Granted by the instance rather than
-          # by the plane, so Argo's reach grows one environment at a
-          # time and every grant sits where that environment is
-          # declared.
-          #
-          # container.admin rather than container.developer, and the
-          # reason is not ambition. container.developer reaches
-          # ordinary Kubernetes objects -- Deployments, Services,
-          # Secrets, CRDs all applied under it -- and cannot create
-          # Roles, RoleBindings, ClusterRoles or ClusterRoleBindings.
-          # Any chart shipping an operator ships RBAC, so a GitOps
-          # deployer that cannot write RBAC cannot deploy one at all.
-          # The FoundationDB operator is what proved it: every RBAC
-          # object failed, its service account was left with no
-          # permissions, and it crash-looped while everything around it
-          # applied cleanly.
-          #
-          # The cost is honest: this also lets Argo create and delete
-          # clusters in this project. The narrower shape is
-          # container.clusterViewer here plus a Kubernetes
-          # ClusterRoleBinding on the cluster itself, which moves the
-          # authority into RBAC where it is reviewable in git -- and
-          # needs something able to write RBAC on an instance cluster
-          # before it can be built, which is the machinery this defers.
-          # Worth doing before a production instance; not worth
-          # blocking the first deployment on.
-          #
-          # The account is spelled rather than referenced. It belongs to
-          # the plane's composite, and neither composite reaches into
-          # the other -- the address is derivable from the code and the
-          # management project, which the installation's shared config
-          # carries.
-          # ===================================================================
-          - name: instance-argo-role-container-developer
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/container.admin
-            patches:
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.env
-                    - fromFieldPath: spec.label
-                  strategy: string
-                  string:
-                    fmt: "%s-%s-%s-argo-container-admin"
-                toFieldPath: metadata.name
-              - &instance-project
-                fromFieldPath: spec.projectId
-                toFieldPath: spec.forProvider.project
-              # From the installation's shared config rather than
-              # combined here: the address needs the code, which is on
-              # this composite, and the management project, which is
-              # not -- and a combine cannot mix the two sources. So the
-              # whole address is one shared fact, which is what that
-              # file is for.
-              #
-              # Not Required. The config lives in the other repository,
-              # so a merge here before the key exists there would fail
-              # every instance rather than this one binding.
-              - type: FromEnvironmentFieldPath
-                fromFieldPath: argoServiceAccount
-                toFieldPath: spec.forProvider.member
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "serviceAccount:%s"
-          # ===================================================================
           # How Argo reaches this cluster. Argo registers an external
           # cluster as a Secret in its own namespace, and everything in
           # it is either public or a name: the API endpoint, the
@@ -1002,7 +919,8 @@ spec:
                   string:
                     fmt: "%s-%s-%s-rl-pod-log-reader"
                 toFieldPath: metadata.name
-              - *instance-project
+              - fromFieldPath: spec.projectId
+                toFieldPath: spec.forProvider.project
     # =======================================================================
     # What this project may be asked to do. A project is created bare --
     # nothing is enabled by default -- so each of these stands between the
@@ -1088,6 +1006,28 @@ spec:
     - step: recovery
       functionRef:
         name: function-go-templating
+      # What the plane composed that this step has to name. Fetched by
+      # Crossplane before the step runs -- no function requests it, and
+      # nothing here is templated, because the resource is a singleton the plane labels.
+      #
+      # By label, not by name. The annotation carrying exactly this
+      # value is on every composed resource already, but the match is
+      # `name` or `labels` and never an annotation, so the plane
+      # publishes the slot name as a label for this to select on. A
+      # label is the contract; a name would couple this composite to
+      # the plane's naming scheme.
+      #
+      # No installation in the selector. A plane serves one, so what it
+      # composes here is a singleton, and matching the whole cluster is
+      # matching the one.
+      requirements:
+        requiredResources:
+          - requirementName: recoveryProject
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: Project
+            namespace: crossplane-system
+            matchLabels:
+              platform.repldriven.com/component: recovery-project
       input:
         apiVersion: gotemplating.fn.crossplane.io/v1beta1
         kind: GoTemplate
@@ -1097,14 +1037,23 @@ spec:
             {{- $xr := .observed.composite.resource }}
             {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
             {{- $recovery := dig "recovery" dict $xr.spec }}
-            {{- $env := index .context "apiextensions.crossplane.io/environment" | default dict }}
-            {{- /* The installation's EnvironmentConfig, then this
-                   instance's field if it names one -- the same
-                   environment-then-override ordering billingAccountId
-                   uses above, so the project is stated once for the
-                   installation and every instance reads the same
-                   answer. */}}
-            {{- $project := dig "projectId" (dig "recoveryProjectId" "" $env) $recovery }}
+
+            {{- /* The project the plane composed, then this instance's
+                   field if it names another. Read off that Project
+                   rather than out of the installation's
+                   EnvironmentConfig: the id is authored once, where the
+                   plane is told which project to create, and a second
+                   copy for this composite to read is a second thing
+                   that can disagree with it.
+                   forProvider rather than atProvider, because the
+                   bucket below is named after it: the spec field is set
+                   the moment the plane composes the project, where the
+                   observed one is absent until it has reconciled, and a
+                   name that comes and goes is a backup nobody can find
+                   under the name they recorded. */}}
+            {{- $found := first (dig "recoveryProject" "items" (list) (.extraResources | default dict)) }}
+            {{- $composed := dig "resource" "spec" "forProvider" "projectId" "" ($found | default dict) }}
+            {{- $project := dig "projectId" $composed $recovery }}
             {{- if $project }}
             {{- /* The suffix is the recovery project's rather than this
                    instance's. A bucket named for a project that may be
@@ -1410,6 +1359,102 @@ spec:
               backupsBucket: {{ $bucket | quote }}
               fdbBackupKeySecret: {{ $key | quote }}
               backupServiceAccount: {{ printf "sa-%s-backup@%s.iam.gserviceaccount.com" $name $xr.spec.projectId | quote }}
+            {{- end }}
+    # =======================================================================
+    # What Argo may do here. Granted by the instance rather than by the
+    # plane, so Argo's reach grows one environment at a time and every
+    # grant sits where that environment is declared.
+    #
+    # container.admin rather than container.developer, and the reason is
+    # not ambition. container.developer reaches ordinary Kubernetes
+    # objects -- Deployments, Services, Secrets, CRDs all applied under
+    # it -- and cannot create Roles, RoleBindings, ClusterRoles or
+    # ClusterRoleBindings. Any chart shipping an operator ships RBAC, so
+    # a GitOps deployer that cannot write RBAC cannot deploy one at all.
+    # The FoundationDB operator is what proved it: every RBAC object
+    # failed, its service account was left with no permissions, and it
+    # crash-looped while everything around it applied cleanly.
+    #
+    # The cost is honest: this also lets Argo create and delete clusters
+    # in this project. The narrower shape is container.clusterViewer
+    # here plus a Kubernetes ClusterRoleBinding on the cluster itself,
+    # which moves the authority into RBAC where it is reviewable in git
+    # -- and needs something able to write RBAC on an instance cluster
+    # before it can be built, which is the machinery this defers. Worth
+    # doing before a production instance; not worth blocking the first
+    # deployment on.
+    #
+    # Here rather than in patch-and-transform because the member is read
+    # from the extra resource above, and a patch cannot reach the
+    # pipeline's context. The account reports its own member string, so
+    # nothing here spells an address: the composite that owns the
+    # identity is the one that says what it is called.
+    #
+    # Absent until the account has been observed, and composed only
+    # then. A binding that waits a reconcile is the same soft failure
+    # the environment patch this replaces chose, and the alternative --
+    # spelling the address from a project id this composite would have
+    # to be told -- is the transcription the fetch removes.
+    # =======================================================================
+    - step: argo-access
+      functionRef:
+        name: function-go-templating
+      # What the plane composed that this step has to name. Fetched by
+      # Crossplane before the step runs -- no function requests it, and
+      # nothing here is templated, because the resource is a singleton the plane labels.
+      #
+      # By label, not by name. The annotation carrying exactly this
+      # value is on every composed resource already, but the match is
+      # `name` or `labels` and never an annotation, so the plane
+      # publishes the slot name as a label for this to select on. A
+      # label is the contract; a name would couple this composite to
+      # the plane's naming scheme.
+      #
+      # No installation in the selector. A plane serves one, so what it
+      # composes here is a singleton, and matching the whole cluster is
+      # matching the one.
+      requirements:
+        requiredResources:
+          - requirementName: argoIdentity
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ServiceAccount
+            namespace: crossplane-system
+            matchLabels:
+              platform.repldriven.com/component: argo-identity
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
+            {{- $found := first (dig "argoIdentity" "items" (list) (.extraResources | default dict)) }}
+            {{- $member := dig "resource" "status" "atProvider" "member" "" ($found | default dict) }}
+            {{- if $member }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: ProjectIAMMember
+            metadata:
+              name: {{ printf "%s-argo-container-admin" $name }}
+              namespace: crossplane-system
+              annotations:
+                # The slot patch-and-transform composed this in, kept
+                # verbatim: a renamed slot is a rebuilt binding.
+                gotemplating.fn.crossplane.io/composition-resource-name: instance-argo-role-container-developer
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $xr.spec.projectId | quote }}
+                role: roles/container.admin
+                member: {{ $member | quote }}
             {{- end }}
     - step: access
       functionRef:
