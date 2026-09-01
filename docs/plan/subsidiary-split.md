@@ -244,74 +244,83 @@ It stops at two places:
   recovery project's id so that a rebuilt project does not rename the
   bucket. A name is a string, not a reference.
 
-### The preferred fix
+### The fix
 
-Install `function-extra-resources` and let the instance fetch what the
-plane composed, by the same deterministic name it would reference:
+Crossplane satisfies a pipeline step's requirements before the step
+runs, so the instance declares what it needs and no function fetches
+anything:
 
 ```yaml
-- step: extra
+- step: recovery
   functionRef:
-    name: function-extra-resources
-  input:
-    spec:
-      extraResources:
-        - into: argoSA
-          apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-          kind: ServiceAccount
-          type: Reference
-          ref:
-            name: sa-<code>-c-argo
+    name: function-go-templating
+  requirements:
+    requiredResources:
+      - requirementName: recoveryProject
+        apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+        kind: Project
+        namespace: crossplane-system
+        matchLabels:
+          platform.repldriven.com/component: recovery-project
 ```
 
-The instance already runs `function-go-templating`, so it spells the
-member from what it read. The same fetch answers the recovery project.
+The step reads it back under `.extraResources`, in that same step, and
+spells the member from what it read. A second requirement on the Argo
+step answers the identity.
 
-Only `argoServiceAccount` leaves the file. `recoveryProjectId` is the
-plane's **input**, not a generated value: the plane composes the
-recovery project *with that id* —
-`dig "projectId" (dig "recoveryProjectId" "" $env) $recovery`, and the
-live manifest has no `recovery` block, so the environment is what tells
-it which project to create. Authored, minted once, like
-`management.projectId`. The instance stops reading it from a file and
-reads it off the composed `Project` instead — one source rather than
-two that must agree — but the file still carries it for the plane.
+By label rather than by name, and the reason is not preference. The
+match is `name` or `labels` and never an annotation — the `oneof` in
+Crossplane's own `ResourceSelector` — so
+`crossplane.io/composition-resource-name`, which already carries
+exactly the value wanted on all 121 managed resources, is unreachable.
+Both fields are static literals besides, so neither can carry the code.
+The plane therefore publishes the slot name as a label, and the
+selector needs no installation in it: a plane serves one, so what it
+composes is a singleton and matching the cluster is matching the one.
 
-Moving it to `installation.yml`'s `spec.recovery.projectId`, which the
-composition already prefers, would take it out of the environment. That
-is a question about which file authored facts live in, separate from
-this one.
+`function-extra-resources` is not installed. It is a fifth function
+whose `Reference` has the same static-literal limitation, and
+`function-go-templating` can request extra resources with a templated
+name where a name is wanted at all. Neither is needed.
 
-The composite may carry the Kubernetes name as a defaulted field, for
-an installation that has to override it. Unlikely to be wanted: the
-name is derived from the code, which is the thing that makes it
-findable at all.
+**Both keys leave the file.** `argoServiceAccount` because nothing
+reads it. `recoveryProjectId` because the plane is its only reader once
+the instance reads the id off the composed `Project` — and a
+single-reader value in a shared config is indirection, not sharing. It
+moves to `installation.yml`'s `spec.recovery.projectId`, which the
+composition already prefers, beside `management.projectId`: the two ids
+consumed permanently, minted in one call, recorded in one file. That
+also settles the question this section used to defer.
+
+The XRD's own description argued *for* the `EnvironmentConfig` — *"two
+copies of one id is two places to disagree"*. That argument holds while
+two composites read it; with one reader there is no second copy to
+avoid, and the override becomes the place.
 
 ### The order it goes in
 
 Inside out: prove the consumer can live without the courier before
 removing it.
 
-1. **Install `function-extra-resources`**, and confirm it `Healthy`. Its
-   own merge, reaching the plane first. A Composition naming a function
-   that is not installed does not degrade — the pipeline step fails and
-   the composite composes nothing, which on a live instance is
-   everything it holds.
-2. **`XQueenswoodInstance` reads both values from extra resources.**
-   The environment is still intact at this point, so this is the proof
-   rather than the commitment: if the fetch does not work, nothing has
-   been removed. Provable before merging —
-   `crossplane render --extra-resources` against a stubbed
-   `ServiceAccount`, diffed resource for resource against today's
-   output.
-3. **`environment.yml` sheds `argoServiceAccount`**, which step 2 made
-   dead.
+1. **`installation.yml` carries `spec.recovery.projectId`.** A no-op:
+   the composition already prefers it and the value is the one the
+   environment holds. It has to be first — with the manifest silent and
+   the environment stripped, the plane composes no recovery project.
+2. **The plane publishes the labels.** Its own merge, reaching GCP
+   first. The instance selects on them, so an instance reconciling
+   before the plane has relabelled finds nothing and drops what depends
+   on it — orphaned rather than deleted, but churn on a live instance.
+3. **The instance reads both values, and the plane stops consulting the
+   environment.** Provable before merging — `crossplane render
+   --extra-resources` against stubbed resources, diffed resource for
+   resource against today's output.
+4. **`environment.yml` sheds both keys**, which step 3 made dead.
 
 ### What it costs
 
-- A fifth function on the plane, and one more thing
-  [crossplane-upgrades](../recipes/infra/crossplane-upgrades.md) checks
-  is healthy afterwards.
+- A label the plane publishes and the instance selects on, which is a
+  contract between two composites where there was none — and one that
+  holds only while a plane serves one installation.
 - A different failure. The environment patch is deliberately not
   `Required` — *"a merge here before the key exists there would fail
   every instance rather than this one binding"* — and an extra resource
@@ -374,12 +383,11 @@ the ADR settles both or neither.
    plane with nowhere to put its projects. The fix is two commands in
    step 5, one sentence in step 6, and `gcp-boot-mgmt-apply` reading
    two files — no new step.
-4. `function-extra-resources`, independent of the rest and worth doing
-   on its own merits: it is what stops a generated value being
-   transcribed by hand. Three merges, inside out — see the section
-   above.
+4. **Reading a generated value rather than transcribing it**,
+   independent of the rest and worth doing on its own merits. Four
+   merges across two repositories, inside out — see the section above.
 5. `access` into `environment.yml`, once 4 has emptied that file of
-   generated values.
+   generated values, leaving `billingAccountId` and `manifestRepoURL`.
 6. The recipe renames, consequential on 1 and blocked only on whether
    `subsidiary-install` survives.
 
