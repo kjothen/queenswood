@@ -20,9 +20,10 @@ You want to add a Queenswood instance to an installation.
 
 - A running Queenswood installation — see
   [management-plane-install](management-plane-install.md).
-- The installation's recovery project, named in its `EnvironmentConfig`
-  as `recoveryProjectId`.
-- `argoServiceAccount` in that same `EnvironmentConfig`, correct.
+- The installation's recovery project composed, where this instance is
+  to keep backups.
+- The plane's Argo identity and recovery project carrying
+  `platform.repldriven.com/component`.
 - The domain verified and delegated, once for the installation — see
   [gcp-dns](gcp-dns.md).
 - Write access to the private manifests repository, and a merge.
@@ -151,11 +152,11 @@ and the denial is reported as absence. The instance's own `access`
 mapping is what grants it, so it has to be merged and reconciled first.
 
 **An instance that composes green while Argo has no rights in it.**
-`argoServiceAccount` in the installation's `EnvironmentConfig` is
-missing or wrong. It is not a `Required` patch — deliberately, since a
-merge there before the account exists would fail every instance rather
-than this one binding — so nothing reports it and the Applications fail
-against the new cluster alone.
+The plane's Argo identity was not found, or has not been observed.
+Check it carries `platform.repldriven.com/component: argo-identity` and
+that `status.atProvider.member` is populated. The requirement resolves
+to nothing rather than failing, so the Applications fail against the
+new cluster alone and nothing else reports it.
 
 **A Secret that syncs green and is empty.** The composite composed the
 container and the operator synced it, both correctly, and no version
@@ -295,9 +296,10 @@ of them makes it. What the instance owns is its project and everything
 in it, which is why `down` stops an environment rather than emptying
 one.
 
-Two of those are supplied by absence as much as by presence. Without
-`recoveryProjectId` the instance composes neither a backups bucket nor
-a backup key entry, and `just queenswood-recovery-backup-key` refuses.
+Two of those are supplied by absence as much as by presence. Where the
+plane composed no recovery project, this instance finds none, composes
+neither a backups bucket nor a backup key entry, and `just
+queenswood-recovery-backup-key` refuses.
 The domain needs no act here at all: a Search Console Domain property
 covers every subdomain, so an instance under one is neither verified
 nor delegated again.
