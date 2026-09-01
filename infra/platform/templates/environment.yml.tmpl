@@ -20,17 +20,8 @@ data:
   # composites need it: a project composed without one comes up unbilled
   # and looks healthy.
   billingAccountId: "${BILLING}"
-  # An instance grants Argo access to its own project and needs the full
-  # email. The code is on the instance and the management project is
-  # not, and a combine cannot mix a composite field with an environment
-  # one.
-  argoServiceAccount: "${ARGO_SA}"
   # Read by every XManagedUnit, and the only Required patch it carries,
   # so a unit's folder says which folder it is and never which
   # repository. A fork, a mirror or a moved organisation is one edit
   # here.
   manifestRepoURL: "${MANIFEST_REPO_URL}"
-  # Stated once for the installation, here rather than in the manifest:
-  # the plane and every instance resolve it from this file, and two
-  # copies of one id is two places to disagree.
-  recoveryProjectId: "${RECOVERY}"

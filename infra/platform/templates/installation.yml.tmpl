@@ -3,9 +3,10 @@
 # substituted literally from the environment; an optional block arrives
 # already rendered, or empty.
 #
-# This is the smallest document that builds a plane. The recovery
-# project and the instances join it afterwards, composed by the plane
-# rather than by the boot cluster.
+# It carries both ids that are consumed permanently -- the management
+# project's and the recovery project's -- minted in the one call, so
+# the file records both or neither. The instances join afterwards,
+# composed by the plane rather than by the boot cluster.
 apiVersion: platform.repldriven.com/v1alpha1
 kind: XManagementPlane
 metadata:

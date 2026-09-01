@@ -100,15 +100,17 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
     # from-scratch installation has somewhere to keep what it would be
     # rebuilt from without anyone deciding to. Its own id for the same
     # reason the management project's is minted once: consumed
-    # permanently, and not derivable afterwards.
-    # Omitted unless an id is given, which is what a bootstrap wants:
-    # the boot cluster composes as little as it can, and the plane
-    # composes the recovery project once it is reconciling. An id here
-    # adopts or creates one at bootstrap instead.
-    RECOVERY_BLOCK=""
-    if [[ -n "{{ recovery }}" ]]; then
-      RECOVERY_BLOCK=$(printf '  recovery:\n    projectId: "%s"' "{{ recovery }}")
+    # permanently, and not derivable afterwards -- and minted in the
+    # same call, so the file records both permanent ids or neither.
+    # The plane is the only thing that reads it, so it is authored
+    # here rather than in the environment: an instance reads the id
+    # off the Project this composes.
+    RECOVERY="{{ recovery }}"
+    if [[ -z "$RECOVERY" ]]; then
+      RECOVERY="prj-{{ CODE }}-c-recovery-$(openssl rand -hex 3)"
+      echo ">>> naming the recovery project $RECOVERY" >&2
     fi
+    RECOVERY_BLOCK=$(printf '  recovery:\n    projectId: "%s"' "$RECOVERY")
 
     # Set only when the project already exists, for the same reason the
     # folder's adoption field is: a pre-set external name turns a
@@ -260,8 +262,8 @@ queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
     RECOVERY=$(just _gcp-recovery-project || true)
     if [[ -z "$RECOVERY" ]]; then
       echo "no recovery project for {{ CODE }}" >&2
-      echo "the plane composes it from recoveryProjectId -- merge that" >&2
-      echo "into the installation's EnvironmentConfig first" >&2
+      echo "the plane composes it from spec.recovery.projectId --" >&2
+      echo "merge that into the installation's manifest first" >&2
       exit 1
     fi
     # The bucket carries the recovery project's suffix, not its own: a
@@ -448,7 +450,8 @@ queenswood-recovery-backup-key env=ENV label=LABEL supersede="":
     PROJECT=$(just _gcp-recovery-project || true)
     if [[ -z "$PROJECT" ]]; then
       echo "no recovery project for {{ CODE }}" >&2
-      echo "the plane composes it from recoveryProjectId -- merge that first" >&2
+      echo "the plane composes it from spec.recovery.projectId --" >&2
+      echo "merge that into the installation's manifest first" >&2
       exit 1
     fi
     if ! gcloud secrets describe "$SECRET" --project="$PROJECT" >/dev/null 2>&1; then
@@ -615,32 +618,14 @@ queenswood-environment-manifest recovery="" billing="":
       exit 1
     fi
 
-    # Adopted where one already exists, and minted where there is none,
-    # so a from-scratch installation has somewhere to keep what it would
-    # be rebuilt from without anyone deciding to. Never regenerated: a
-    # project id is consumed permanently, and a second would strand what
-    # the first was holding.
-    RECOVERY="{{ recovery }}"
-    if [[ -z "$RECOVERY" ]]; then
-      RECOVERY=$(just _gcp-recovery-project || true)
-    fi
-    if [[ -z "$RECOVERY" ]]; then
-      RECOVERY="prj-{{ CODE }}-c-recovery-$(openssl rand -hex 3)"
-      echo ">>> naming the recovery project $RECOVERY" >&2
-    fi
-
     CODE="{{ CODE }}" BILLING="$BILLING" \
-    ARGO_SA="sa-{{ CODE }}-c-argo@$MGMT.iam.gserviceaccount.com" \
     MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
-    RECOVERY="$RECOVERY" \
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
       infra/platform/templates/environment.yml.tmpl > "$FILE"
 
     echo ">>> wrote $FILE"
     echo
     echo "  billing   $BILLING"
-    echo "  argo      sa-{{ CODE }}-c-argo@$MGMT.iam.gserviceaccount.com"
-    echo "  recovery  $RECOVERY"
 
 # Print the nameservers Cloud DNS assigned the installation's zone.
 queenswood-zone-nameservers domain="":

@@ -430,15 +430,15 @@ spec:
                     projectId:
                       type: string
                       description: |
-                        Normally left absent: the id is stated once for
-                        the installation, in its EnvironmentConfig as
-                        `recoveryProjectId`, and the plane and every
-                        instance resolve it from there. Two copies of
-                        one id is two places to disagree, which is the
-                        argument billingAccountId already makes.
+                        Where the id is authored, and the only place.
+                        The plane is its one reader -- it is what says
+                        which project to compose -- and an instance
+                        reads the id off the composed Project rather
+                        than from a second copy of it, so the shared
+                        config that once held it would now be
+                        indirection for a single consumer.
 
-                        This is the override. Either way it is supplied
-                        rather than generated, for the reason
+                        Supplied rather than generated, for the reason
                         management.projectId is: a project id is
                         consumed permanently, so a plane that invented
                         one would strand what the last was holding.
