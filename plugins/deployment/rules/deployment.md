@@ -244,6 +244,33 @@ manifest still sets it — the schema prunes, and Argo then diffs for
 ever.
 See [ADR-0027](../../../docs/adr/0027-the-folder-is-a-subsidiary.md).
 
+## The contract is agreed before the boundary is built
+
+Commit the installation's `environment.yml` before applying its
+boundary: the composite reads `access` and `folder` from it and
+composes neither the bindings nor the folder without them, and IAM
+rejects a binding to a principal that does not exist, so the principals
+come before the file that names them. Which folder, and whether we made
+it, is a field there rather than a procedure — `folder.folderId` adopts
+and takes precedence, `folder.parent` with `folder.displayName`
+composes — so a folder handed over changes one field rather than a
+manifest and a path through the recipe. Never state the other two
+beside a `folderId` and expect them to apply: they are ignored, and
+deleting that one line later leaves them behind to compose a second
+folder, which GCP permits under one parent and nothing else refuses.
+Prove an adoption by counting folders under the parent rather than by
+reading the composite, which reports healthy either way. Put the
+manifest at the top of the installation's directory, never inside a
+subdirectory, since the Application that syncs it does not recurse. The
+manifest itself carries the code alone and may be re-rendered freely,
+holding nothing generated, which the contract beside it does not — that
+one carries the folder id. Read `Unsynced resources: folder` against a
+folder reporting `Synced` as a rejected apply rather than a broken
+folder, and read the composite's events for the reason.
+Commands: `just queenswood-subsidiary-manifest`, `just
+queenswood-environment-manifest`.
+See [boundary-install](../../../docs/recipes/infra/boundary-install.md).
+
 ## A composite builds what an instance is, Argo installs what runs there
 
 The plane is the only thing that reconciles anything, the durable home,

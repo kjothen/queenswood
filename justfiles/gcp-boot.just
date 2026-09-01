@@ -647,8 +647,20 @@ gcp-boot-cluster-up:
     kubectl --context {{ BOOT_CTX }} apply \
       -f infra/platform/crossplane-xrds/xmanagementplane-composition.yml
 
+    # And the boundary's, because the plane is built inside a folder
+    # this composes and finds by name. Without it nothing creates the
+    # folder, folderIdRef resolves to nothing, and the plane never gets
+    # a management project -- while every composite reports healthy,
+    # since a reference that cannot resolve blocks rather than fails.
+    kubectl --context {{ BOOT_CTX }} apply \
+      -f infra/platform/crossplane-xrds/xsubsidiary-xrd.yml
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
+      xrd/xsubsidiaries.platform.repldriven.com
+    kubectl --context {{ BOOT_CTX }} apply \
+      -f infra/platform/crossplane-xrds/xsubsidiary-composition.yml
+
     echo
-    echo ">>> plane ready. Next: just gcp-boot-mgmt-apply <parent> [display-name]"
+    echo ">>> plane ready. Next: just gcp-boot-mgmt-apply"
 
 # Apply the committed manifest to the boot cluster, as its bootstrap.
 gcp-boot-mgmt-apply billing="" yes="":
@@ -682,6 +694,19 @@ gcp-boot-mgmt-apply billing="" yes="":
     # bootstrap may run ahead of it and be completed afterwards.
     ENV_FILE={{ INSTALLATIONS_REPO }}/{{ CODE }}/environment.yml
 
+    # The boundary, applied before the plane rather than beside it: the
+    # plane composes its project with folderIdRef naming fldr-<code>,
+    # which resolves only once this composite has made or adopted it.
+    # Required, unlike the environment -- a plane with nowhere to put
+    # its projects builds nothing at all.
+    SUB_FILE={{ INSTALLATIONS_REPO }}/{{ CODE }}/subsidiary.yml
+    if [[ ! -f "$SUB_FILE" ]]; then
+      echo "no boundary at $SUB_FILE" >&2
+      echo "the folder is declared and committed before the plane is" >&2
+      echo "built in it -- see docs/recipes/infra/boundary-install.md" >&2
+      exit 1
+    fi
+
     # Supplied here and not in the committed manifest, because creating
     # a project is the one moment it is needed. Discovered from the
     # identity's own binding, so applying does not depend on remembering
@@ -704,7 +729,8 @@ gcp-boot-mgmt-apply billing="" yes="":
 
     # Shown whole before anything is applied: this is the document the
     # boot cluster receives, and the ids in it are consumed permanently.
-    echo "applying    $FILE"
+    echo "applying    $SUB_FILE"
+    echo "            $FILE"
     if [[ -f "$ENV_FILE" ]]; then echo "            $ENV_FILE"; fi
     echo "to          {{ BOOT_CTX }}"
     echo "billing     $BILLING"
@@ -724,20 +750,27 @@ gcp-boot-mgmt-apply billing="" yes="":
       fi
     fi
 
-    print -r -- "$DOC" | kubectl --context {{ BOOT_CTX }} apply -f -
-
-    echo ">>> applied $FILE"
-    # After the composite, not before: the EnvironmentConfig is
-    # cluster-scoped and nothing composes it, so order buys nothing --
-    # but applying it second keeps the manifest the thing this recipe is
-    # about, and a missing environment is reported rather than fatal.
+    # The environment first, then the boundary, then the plane. The
+    # boundary reads the access mapping and the folder block, and the
+    # plane resolves the folder the boundary composes.
     if [[ -f "$ENV_FILE" ]]; then
       kubectl --context {{ BOOT_CTX }} apply -f "$ENV_FILE"
       echo ">>> applied $ENV_FILE"
     else
       echo ">>> no $ENV_FILE; the folder and project will have no access"
-      echo ">>> bindings until one is rendered, committed and applied"
+      echo ">>> bindings, and no folder to compose unless subsidiary.yml"
+      echo ">>> names one itself"
     fi
+
+    kubectl --context {{ BOOT_CTX }} apply -f "$SUB_FILE"
+    echo ">>> applied $SUB_FILE"
+    kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
+      --for=condition=ready --timeout=300s \
+      xsubsidiary/{{ CODE }} || true
+
+    print -r -- "$DOC" | kubectl --context {{ BOOT_CTX }} apply -f -
+
+    echo ">>> applied $FILE"
     echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \
