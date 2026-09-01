@@ -252,9 +252,8 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   `just gcp-policy-status` reports what is in force.
 - Pivot the composite off the throwaway plane before discarding it
   with `just gcp-boot-cluster-down`.
-- Close the seed identity once this is done — see
-  [organisation-bootstrap](organisation-bootstrap.md). Its organisation
-  grants, and the
+- Close the seed identity once this is done, with `just
+  gcp-boot-seed-close`. Its organisation grants, and the
   impersonation that reaches them, otherwise stand for ever, and the
   plane needs neither.
 
@@ -304,8 +303,8 @@ serves the whole organisation. The identity in it carries a code, since
 each one creates a particular installation, and ends up holding
 `projectCreator` and `folderIamAdmin` on the folder or its parent,
 `billing.user` on the billing account, and `orgpolicy.policyAdmin`
-where the organisation allows it — the last three from
-[organisation-bootstrap](organisation-bootstrap.md).
+where the organisation allows it — the last three held at the
+organisation rather than in the folder.
 
 **What preflight can and cannot see.** A subsidiary's `parent` takes
 `organizations/{id}` or `folders/{id}`, and `gcp-boot-preflight` checks
@@ -398,9 +397,8 @@ the billing
 account's own IAM policy, which lives outside the organisation's
 hierarchy; granting it six roles at the organisation needs Organization
 Administrator; steps 1 to 7 here act as that identity, which
-[organisation-bootstrap](organisation-bootstrap.md) grants `platformAdmin`
-impersonation of; and closing it removes an organisation binding, which
-is
+`platformAdmin` may impersonate; and closing it removes an organisation
+binding, which is
 `organizations.setIamPolicy` — the same right as adding one, which is
 why `grp-gcp-org-admin@` comes back for one step at the end.
 

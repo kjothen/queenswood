@@ -21,9 +21,8 @@ member string, so a capability may be answered by a group, a user, or a
 `principalSet://` from an external provider. The steps below are how we
 answer them: one group per capability, coded to the installation and
 deleted with it, only the day-to-day one populated and the rest joined
-for a task. In an established organisation this is the recipe to read and
-not to follow — answer them with whatever it gives you and go straight
-to [management-plane-install](management-plane-install.md).
+for a task. In an established organisation this is the recipe to read
+and not to follow: answer each with whatever it gives you.
 
 ### Prerequisites
 
@@ -42,10 +41,9 @@ to [management-plane-install](management-plane-install.md).
 
 **As a super admin.**
 
-In `admin.google.com` under **Directory, then Groups**, exactly as
-[organisation-foundation](organisation-foundation.md) creates the
-organisation's: Restricted before Only invited users, and no owner or
-manager. One group per capability.
+In `admin.google.com` under **Directory, then Groups**: Restricted
+before Only invited users, and no owner or manager. One group per
+capability.
 
 - **`grp-gcp-qw01-platform-viewer@`** — Populated. *"Reads qw01 and
   everything inside it, and writes nothing. Populated: this is
@@ -80,8 +78,7 @@ alongside where each of the other three is granted instead —
 
 Nothing else here is bound at the organisation. The rest is folder and
 project scoped, and reaches these groups through the installation's
-manifest — which is [management-plane-install](management-plane-install.md),
-and needs them to exist by the time it renders one.
+manifest.
 
 ### 3. Add the people who operate it
 
@@ -176,15 +173,13 @@ somebody to notice.
 of it.** Creating a group is a directory act and binding a role is a
 Google Cloud one, and the two have separate authorities. A super admin
 administers the directory and holds nothing in the organisation's IAM
-policy once [organisation-foundation](organisation-foundation.md) has stood
-it down, so binding at the organisation means joining the group that
+policy, so binding at the organisation means joining the group that
 carries Organization Administrator, and leaving it again.
 
-Creating them cannot be scripted, for the reason
-[organisation-foundation](organisation-foundation.md) gives: every Cloud
-Identity write attributes quota to a project, and at this point the
-installation has none. Binding needs no quota project, which is why one
-half is a recipe and the other is a browser.
+Creating them cannot be scripted: every Cloud Identity write attributes
+quota to a project, and at this point the installation has none.
+Binding needs no quota project, which is why one half is a recipe and
+the other is a browser.
 
 Several rather than one because they separate capabilities that must be
 held at different times by different people: reading an installation is
