@@ -8,6 +8,36 @@ spec:
     kind: XSubsidiary
   mode: Pipeline
   pipeline:
+    # =======================================================================
+    # What is true of the whole installation rather than of this folder:
+    # the access mapping, stated once and read by the plane and every
+    # instance as well. Merged into the pipeline's context, where the
+    # access step below reads it.
+    #
+    # Optional, unlike the plane's. This composite is applied by the boot
+    # cluster before any EnvironmentConfig exists -- the file reaches a
+    # cluster through Argo, which is not running until the plane is up --
+    # and a Required resolution would fail the pipeline, which on this
+    # kind means the folder itself is not composed. Absent, the manifest's
+    # own access is what binds, which is what a bootstrap sets.
+    # =======================================================================
+    - step: environment
+      functionRef:
+        name: function-environment-configs
+      input:
+        apiVersion: environmentconfigs.fn.crossplane.io/v1beta1
+        kind: Input
+        spec:
+          policy:
+            resolution: Optional
+          environmentConfigs:
+            - type: Selector
+              selector:
+                mode: Multiple
+                matchLabels:
+                  - type: FromCompositeFieldPath
+                    key: installation
+                    valueFromFieldPath: spec.code
     - step: resources
       functionRef:
         name: function-patch-and-transform
@@ -103,7 +133,14 @@ spec:
           template: |
             {{- $xr := .observed.composite.resource }}
             {{- $code := $xr.spec.code }}
-            {{- $access := dig "access" dict $xr.spec }}
+            {{- /* The installation's mapping, overridden per capability by
+                   this manifest's own field where it names one. Stated
+                   once for the subsidiary, the plane and every instance,
+                   because it is one mapping and each binds the subset it
+                   can -- only these two bind on a folder. */}}
+            {{- $env := index .context "apiextensions.crossplane.io/environment" | default dict }}
+            {{- $envAccess := dig "access" dict $env }}
+            {{- $ownAccess := dig "access" dict $xr.spec }}
             {{- $capabilities := list
                   (dict "key" "platformViewer" "roles" (list
                     "roles/browser"
@@ -115,7 +152,7 @@ spec:
                   (dict "key" "clusterAdmin" "roles" (list
                     "roles/container.admin")) }}
             {{- range $capability := $capabilities }}
-            {{- range $member := dig $capability.key list $access }}
+            {{- range $member := dig $capability.key (dig $capability.key list $envAccess) $ownAccess }}
             {{- range $role := $capability.roles }}
             {{- /* Hashed, not indexed: a member removed from the middle
                    of the list would otherwise renumber the ones after
