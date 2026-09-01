@@ -43,10 +43,14 @@ spec:
           properties:
             spec:
               type: object
+              # Only the code. The folder facts are stated in the
+              # installation's EnvironmentConfig so a handover touches
+              # one file, and which of them is wanted depends on the
+              # mode: a folder handed over needs its id and nothing
+              # else, since its name and its place are read from GCP.
+              # Both remain here as per-field overrides.
               required:
                 - code
-                - parent
-                - displayName
               properties:
                 code:
                   type: string
