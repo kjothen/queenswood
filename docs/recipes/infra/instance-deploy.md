@@ -19,10 +19,11 @@ You want to add a Queenswood instance to an installation.
 ### Prerequisites
 
 - A running Queenswood installation — see
-  [queenswood-installation](queenswood-installation.md).
-- The installation's recovery project, named in its `EnvironmentConfig`
-  as `recoveryProjectId`.
-- `argoServiceAccount` in that same `EnvironmentConfig`, correct.
+  [management-plane-install](management-plane-install.md).
+- The installation's recovery project composed, where this instance is
+  to keep backups.
+- The plane's Argo identity and recovery project carrying
+  `platform.repldriven.com/component`.
 - The domain verified and delegated, once for the installation — see
   [gcp-dns](gcp-dns.md).
 - Write access to the private manifests repository, and a merge.
@@ -34,8 +35,9 @@ You want to add a Queenswood instance to an installation.
 **As the installation's platform viewer.** Ours is
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
-Exports follow the [cloud-naming](../practices/cloud-naming.md)'s `<code>`, `<env>` and
-`<label>` convention, which every composed name is built from —
+Exports follow [cloud-naming](../practices/cloud-naming.md)'s `<code>`,
+`<env>` and `<label>` convention, which every composed name is built
+from —
 they are stated once here and carried through every step below.
 Everything else the render needs is read from the installation's
 own manifest and from the running management plane.
@@ -150,11 +152,11 @@ and the denial is reported as absence. The instance's own `access`
 mapping is what grants it, so it has to be merged and reconciled first.
 
 **An instance that composes green while Argo has no rights in it.**
-`argoServiceAccount` in the installation's `EnvironmentConfig` is
-missing or wrong. It is not a `Required` patch — deliberately, since a
-merge there before the account exists would fail every instance rather
-than this one binding — so nothing reports it and the Applications fail
-against the new cluster alone.
+The plane's Argo identity was not found, or has not been observed.
+Check it carries `platform.repldriven.com/component: argo-identity` and
+that `status.atProvider.member` is populated. The requirement resolves
+to nothing rather than failing, so the Applications fail against the
+new cluster alone and nothing else reports it.
 
 **A Secret that syncs green and is empty.** The composite composed the
 container and the operator synced it, both correctly, and no version
@@ -294,9 +296,10 @@ of them makes it. What the instance owns is its project and everything
 in it, which is why `down` stops an environment rather than emptying
 one.
 
-Two of those are supplied by absence as much as by presence. Without
-`recoveryProjectId` the instance composes neither a backups bucket nor
-a backup key entry, and `just queenswood-recovery-backup-key` refuses.
+Two of those are supplied by absence as much as by presence. Where the
+plane composed no recovery project, this instance finds none, composes
+neither a backups bucket nor a backup key entry, and `just
+queenswood-recovery-backup-key` refuses.
 The domain needs no act here at all: a Search Console Domain property
 covers every subdomain, so an instance under one is neither verified
 nor delegated again.
@@ -308,9 +311,9 @@ debugging rather than any part of standing an instance up.
 
 ## References
 
-- [queenswood-bootstrap](queenswood-bootstrap.md) — building the plane
+- [management-plane-install](management-plane-install.md) — building the plane
   this runs on.
-- [queenswood-installation](queenswood-installation.md) — the manifest
+- [management-plane-install](management-plane-install.md) — the manifest
   the plane reads, and changing it by merge.
 - [google-sign-in](google-sign-in.md) — the console acts and the Admin
   API call behind step 4.

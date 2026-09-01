@@ -24,7 +24,7 @@ capabilities, each held by nobody until somebody joins for a task.
 > In an established Google Cloud organisation, this recipe is not yours.
 > Those capabilities are already held some other way, by people who are
 > not you, and your directory is not yours to add groups to. Go to
-> [queenswood-secure-foundation](queenswood-secure-foundation.md), which
+> [contract-install](contract-install.md), which
 > is where an installation's own capabilities are named, and answer each
 > with whatever your organisation gives you.
 
@@ -288,7 +288,8 @@ somebody asks before joining a break-glass group and the one an auditor
 asks afterwards — so it is worth being able to read without running
 anything, and worth a diff when it changes. Group *names* stay in the
 justfile because they are derived from the installation code and
-[cloud-naming](../practices/cloud-naming.md) governs them. Each role carries its own
+[cloud-naming](../practices/cloud-naming.md) governs them. Each role
+carries its own
 reason in the file rather than in a comment beside it, which is what
 lets `just gcp-roles` print the reason along with the role: a grant
 nobody has justified is a grant nobody has decided.
@@ -301,13 +302,14 @@ which is why one half is a recipe and the other is a browser.
 
 ## References
 
-- [queenswood-secure-foundation](queenswood-secure-foundation.md) — an
+- [contract-install](contract-install.md) — an
   installation's own capabilities, which come next.
-- [cloud-naming](../practices/cloud-naming.md) — the code every installation name is
+- [cloud-naming](../practices/cloud-naming.md) — the code every
+  installation name is
   built from.
-- [queenswood-bootstrap](queenswood-bootstrap.md) — the management plane
+- [management-plane-install](management-plane-install.md) — the management plane
   this leaves you ready to build.
-- [queenswood-up-and-running](queenswood-up-and-running.md) — every
+- [up-and-running](up-and-running.md) — every
   recipe from here to a bank serving traffic, in order.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) —
   read-only or break-glass, and no third category.

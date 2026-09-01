@@ -123,7 +123,30 @@ gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
 `just gcp-org-setup`, `just gcp-policy-status`, `just
 gcp-boot-cluster-down`, `just gcp-boot-seed-close`, `just
 gcp-boot-seed-open`.
-See [queenswood-bootstrap](../../../docs/recipes/infra/queenswood-bootstrap.md).
+See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
+
+## The identity that builds installations is opened and closed
+
+Create the seed identity once for an organisation rather than once per
+installation, and reuse the project labelled `queenswood-tier=seed`
+where one exists rather than minting a second -- its id is consumed and
+it is retained rather than deleted. Hold `folderCreator` and
+`folderIamAdmin` on the parent, never `folderAdmin`, so it cannot
+delete a folder, and grant them there because creating a folder is
+checked on the parent rather than on the folder. Impersonate it rather
+than holding a credential, never create a key for it, and never grant a
+person `serviceAccountTokenCreator` on it outside a bootstrap. Close it
+once a bootstrap is done and reopen it for the next: its organisation
+grants otherwise stand for ever, and the plane that succeeds it needs
+none of them. Read an instant exit with no output from
+`gcp-boot-preflight` as `set -e` aborting before the first echo rather
+than as a check that passed. Skip this entirely where an organisation
+hands you a folder and an identity able to create projects in it --
+this is how we produce one, not what an installation requires.
+Commands: `just gcp-boot-preflight`, `just gcp-boot-seed`, `just
+gcp-boot-seed-grant-org-roles`, `just gcp-boot-seed-close`, `just
+gcp-boot-seed-open`.
+See [organisation-bootstrap](../../../docs/recipes/infra/organisation-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
 
@@ -160,7 +183,7 @@ manifest per folder allows
 more than one installation.
 Commands: `just queenswood-environment-manifest`, `just
 queenswood-dns-manifest-snippet`.
-See [queenswood-installation](../../../docs/recipes/infra/queenswood-installation.md).
+See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
 
 ## An instance is a unit, and its secrets are written while it builds
 
@@ -206,7 +229,7 @@ queenswood-instance-keycloak-admin`, `just
 queenswood-instance-google-secret`, `just
 queenswood-recovery-backup-key`, `just crossplane-unready`, `just
 argo-apps-status`, `just gcp-instance-cluster-ctx`.
-See [queenswood-instance](../../../docs/recipes/infra/queenswood-instance.md).
+See [instance-deploy](../../../docs/recipes/infra/instance-deploy.md).
 
 ## A folder is a subsidiary, and the plane is built in one
 
@@ -243,6 +266,33 @@ child adopts by external name. Never remove a field from an XRD while a
 manifest still sets it — the schema prunes, and Argo then diffs for
 ever.
 See [ADR-0027](../../../docs/adr/0027-the-folder-is-a-subsidiary.md).
+
+## The contract is agreed before the boundary is built
+
+Commit the installation's `environment.yml` before applying its
+boundary: the composite reads `access` and `folder` from it and
+composes neither the bindings nor the folder without them, and IAM
+rejects a binding to a principal that does not exist, so the principals
+come before the file that names them. Which folder, and whether we made
+it, is a field there rather than a procedure — `folder.folderId` adopts
+and takes precedence, `folder.parent` with `folder.displayName`
+composes — so a folder handed over changes one field rather than a
+manifest and a path through the recipe. Never state the other two
+beside a `folderId` and expect them to apply: they are ignored, and
+deleting that one line later leaves them behind to compose a second
+folder, which GCP permits under one parent and nothing else refuses.
+Prove an adoption by counting folders under the parent rather than by
+reading the composite, which reports healthy either way. Put the
+manifest at the top of the installation's directory, never inside a
+subdirectory, since the Application that syncs it does not recurse. The
+manifest itself carries the code alone and may be re-rendered freely,
+holding nothing generated, which the contract beside it does not — that
+one carries the folder id. Read `Unsynced resources: folder` against a
+folder reporting `Synced` as a rejected apply rather than a broken
+folder, and read the composite's events for the reason.
+Commands: `just queenswood-subsidiary-manifest`, `just
+queenswood-environment-manifest`.
+See [boundary-install](../../../docs/recipes/infra/boundary-install.md).
 
 ## A composite builds what an instance is, Argo installs what runs there
 
@@ -299,7 +349,7 @@ verification, the registrar's delegation, an OAuth client with a chosen
 redirect URI. These are not kinds nobody has written yet — they cannot
 be in the catalogue, and somebody will eventually go looking for the
 abstraction that cannot exist. The manual half lives in the
-`gcp-secure-foundation`, `gcp-dns` and `google-sign-in` recipes and
+`organisation-foundation`, `gcp-dns` and `google-sign-in` recipes and
 is as much a part of building an installation as anything composed.
 What is
 excluded is only the thing itself: the OAuth client cannot be composed,
@@ -453,7 +503,7 @@ many installations follow. The first two are a browser and have no API
 at all; from the plane onwards everything is a file in a repository,
 which is where the work stops being performed and starts being
 recorded.
-See [queenswood-up-and-running](../../../docs/recipes/infra/queenswood-up-and-running.md).
+See [up-and-running](../../../docs/recipes/infra/up-and-running.md).
 
 ## A foundation produces capabilities, not groups
 
@@ -510,8 +560,8 @@ and why with `just gcp-roles` — everything folder or project scoped is
 in the compositions under `infra/platform/crossplane-xrds/`.
 Commands: `just gcp-roles`, `just gcp-groups-bind-org`,
 `just gcp-groups-bind-installation`, `just gcp-groups-bind`.
-See [gcp-secure-foundation](../../../docs/recipes/infra/gcp-secure-foundation.md) and
-[queenswood-secure-foundation](../../../docs/recipes/infra/queenswood-secure-foundation.md).
+See [organisation-foundation](../../../docs/recipes/infra/organisation-foundation.md) and
+[contract-install](../../../docs/recipes/infra/contract-install.md).
 
 ## An automation identity is granted, never inherited
 
@@ -895,7 +945,7 @@ composite reports `Synced` while nothing happens, so read
 recovery, being a target rather than a mode, and a test environment may
 restore in place.
 See [fdb-recovery](../../../docs/recipes/infra/fdb-recovery.md),
-[cluster-rebuild](../../../docs/recipes/infra/queenswood-instance-cluster-rebuild.md)
+[instance-rebuild-cluster](../../../docs/recipes/infra/instance-rebuild-cluster.md)
 and
 [ADR-0026](../../../docs/adr/0026-recovering-data-and-the-states-that-do-it.md).
 

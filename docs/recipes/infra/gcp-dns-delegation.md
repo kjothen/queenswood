@@ -16,7 +16,7 @@ the registrar that sold it.
 ### Prerequisites
 
 - A public zone, composed and answering — that is
-  [queenswood-installation](queenswood-installation.md), and this
+  [management-plane-install](management-plane-install.md), and this
   recipe cannot begin without it, because every step below queries the
   nameservers Cloud DNS assigned it.
 - The domain prepared by [gcp-dns](gcp-dns.md): verified, its
@@ -132,5 +132,5 @@ holding either one are wrong.
 ## References
 
 - [gcp-dns](gcp-dns.md) — preparing the domain, which comes first.
-- [queenswood-installation](queenswood-installation.md) — composing the
+- [management-plane-install](management-plane-install.md) — composing the
   zone this delegates to.

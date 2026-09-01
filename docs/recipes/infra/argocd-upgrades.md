@@ -317,7 +317,7 @@ enough to read the composed `Release`, the running values and every
 verification. The upgrade replaces Deployments, a StatefulSet, the CRDs
 and Helm's own release Secrets, which needs `roles/container.admin`. So
 it is joined for that one step and left again, the same shape
-[cluster-rebuild](queenswood-instance-cluster-rebuild.md) uses for its
+[instance-rebuild-cluster](instance-rebuild-cluster.md) uses for its
 break-glass moments.
 
 **What the restart costs.** Every component is replaced, so for a minute
@@ -332,7 +332,7 @@ managed resource being reconciled rather than merely being read.
 from the composition and leaves no divergence, which is worth it when
 several changes have accumulated, or when nobody is sure what the plane
 is running any more. See
-[queenswood-bootstrap](queenswood-bootstrap.md).
+[management-plane-install](management-plane-install.md).
 
 **What this does not cover.** Argo applies `infra/helm/management-plane`
 from git on every sync, so anything in that chart — the
@@ -343,7 +343,7 @@ of this. Only the release Argo itself runs from is `Observe`.
 ## References
 
 - [argocd-apps](argocd-apps.md) — how Argo applies what it does own
-- [queenswood-bootstrap](queenswood-bootstrap.md) — building a
+- [management-plane-install](management-plane-install.md) — building a
   plane, and the rebuild path
-- [queenswood-installation](queenswood-installation.md) — what a plane
+- [management-plane-install](management-plane-install.md) — what a plane
   cannot change about itself

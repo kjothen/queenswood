@@ -96,7 +96,7 @@ a name prefix — an identity that could mint
 would put an escalation path into the one identity the whole bootstrap
 impersonates.
 
-[organisation-foundation](../recipes/infra/gcp-secure-foundation.md)
+[organisation-foundation](../recipes/infra/organisation-foundation.md)
 currently gives a different reason — that a Cloud Identity write needs
 a quota project and none exists. That is true when it is written and
 false by the time a subsidiary is created, since `prj-b-seed` exists by
@@ -114,7 +114,8 @@ organisation answers each capability with its own group, a user, or a
 - **Handed a folder** — `folderId` set; it adopts and records the one
   you were given, keeping their `displayName` and `parent`.
 
-Both leave the same object for `subsidiary-boot` to read, so the branch
+Both leave the same object for `management-plane-install` to read, so
+the branch
 that today sits at step 5 of an eleven-step bootstrap becomes one field
 in a manifest. It is the convention the installation manifest already
 uses — *"Supply `management.projectId` always and
@@ -173,31 +174,36 @@ legal entity, and `fldr-qw01` could be read as one. Worth weighing
 `tenant`, `estate`, `landing-zone` — the industry term for exactly this
 — and `cell` before committing.
 
-Names that follow, replacing the `queenswood-` prefix that says nothing
-in a repository where everything is Queenswood:
+**Done.** The names, replacing the `queenswood-` prefix that says
+nothing in a repository where everything is Queenswood:
 
 ```
-organisation-foundation     the org, billing, directory groups     ours only
-gcp-bootstrap               prj-b-seed and the seed identity       ours only
-subsidiary-foundation       the access groups, in the directory    ours only
-subsidiary-create           the XSubsidiary: compose or adopt      both modes
-──────────────────────────  identical in both modes from here ─────────────
-subsidiary-boot             the management project, cluster, plane
-subsidiary-install          what the plane offers, if it survives below
+organisation-foundation     the org, billing, directory groups  ┐ once per
+organisation-bootstrap      prj-b-seed and the seed identity    ┘ organisation
+──────────────────────────  the installation's own, from here ────────────
+contract-install            who holds what, which folder, what pays
+boundary-install            the folder, and what binds on it
+management-plane-install    the project, cluster, Crossplane, Argo
 instance-deploy             one environment's project and the bank on it
 instance-rebuild-cluster
 up-and-running              the order they go in
 ```
 
-`subsidiary-foundation` comes **before** `subsidiary-create`: the
-folder composite binds the capabilities, and IAM rejects a binding to a
+`contract-install` comes **before** `boundary-install`: the folder
+composite binds the capabilities, and IAM rejects a binding to a
 principal that does not exist.
 
-The seam moves somewhere better. Today it is a branch inside bootstrap
-at step 5 — *"Where a platform team hands you a folder, steps 1 to 3
-are theirs"*. After the split it is a line between two recipes, and
-`up-and-running`'s two paths become "start at 1" or "start at 4" with
-no recipe that is read rather than followed.
+The seam moved somewhere better. It was a branch inside bootstrap —
+*"where a platform team hands you a folder, steps 1 to 3 are theirs"* —
+and is now a field in the contract: `folder.folderId` adopts,
+`folder.parent` with `folder.displayName` composes. `up-and-running`'s
+two paths are "start at 1" or "start at 2", with no recipe that is read
+rather than followed.
+
+`subsidiary-install` does not survive. Its six steps each belonged
+somewhere else: the environment render is the contract, the Argo
+credential and the zone finish the management plane, and the domain and
+its delegation were already `gcp-dns` and `gcp-dns-delegation`.
 
 **Done, ahead of the rest.** `cloud-dns` and `cloud-dns-delegation`
 became `gcp-dns` and `gcp-dns-delegation`, since `gcp-iam` and the two
@@ -376,24 +382,22 @@ expected to bind the capabilities, and one that does costs nothing,
 since the bindings are declared rather than added and reconcile to the
 same state.
 
-## Open: does `subsidiary-install` survive
+## Answered: `subsidiary-install` did not survive
 
-Its four parts may each belong somewhere else once the layers separate:
+Its four parts each belonged somewhere else, as suspected, and one more
+turned up when the file was read again:
 
-- **The Argo credential** looks like part of the boot. Without it the
-  plane reconciles from nothing while reporting healthy, which is an
-  incomplete boot rather than a later step.
-- **The environment config** is cluster-scoped and holds what is true
-  of the whole subsidiary, so it may belong to `XSubsidiary`.
-- **The recovery project** is folder-tier and durable, so likewise.
-- **The zone and its delegation** are a browser and a registrar, and
-  [gcp-dns](../recipes/infra/gcp-dns.md) and
-  [gcp-dns-delegation](../recipes/infra/gcp-dns-delegation.md)
-  already own most of them.
+- **The Argo credential** is part of the boot. Without it the plane
+  reconciles from nothing while reporting healthy.
+- **The environment config** is the contract, and moved earlier rather
+  than later: it is agreed before the boundary is built, since the
+  boundary reads two of its four keys.
+- **The recovery project** is composed by the plane from that contract.
+- **The zone and its delegation** are `gcp-dns` and
+  `gcp-dns-delegation`, pointed at rather than restated.
+- **The readiness check** is the management plane's last step.
 
-If all four move, the recipe dissolves rather than being renamed.
-Answering this is the same as answering what `XSubsidiary` composes, so
-the ADR settles both or neither.
+So the recipe was deleted rather than renamed.
 
 ## Ordering
 
@@ -407,7 +411,7 @@ the ADR settles both or neither.
    `Delete` withheld in a merge of its own, then the transfer. No
    binding left GCP at any point. `createFolder` came out of the XRD,
    the manifest and the renderer after it.
-3. **`queenswood-bootstrap` no longer describes what happens.** Its
+3. **`management-plane-install` no longer describes what happens.** Its
    step 5 renders an installation manifest with no folder and step 6
    says the apply reports one. Nothing renders or applies a
    `subsidiary.yml`. A second installation following it would get a
@@ -433,8 +437,9 @@ the ADR settles both or neither.
    `Optional`: it is applied by the boot cluster before any
    `EnvironmentConfig` exists, and `Required` would fail the pipeline,
    which on that kind means no folder.
-6. The recipe renames, consequential on 1 and blocked only on whether
-   `subsidiary-install` survives.
+6. **Done** — the recipe renames, and the two splits they were waiting
+   on: the seed identity out of the bootstrap, and the installation
+   recipe dissolved into the contract and the management plane.
 
 ## References
 

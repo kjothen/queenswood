@@ -5,7 +5,7 @@
 # Here rather than in gcp.just because these write files and touch no
 # cloud resource -- they read GCP to discover what the plane already
 # built, and change nothing in it. See
-# docs/recipes/infra/queenswood-instance.md.
+# docs/recipes/infra/instance-deploy.md.
 # =========================================================================
 
 # The instance these recipes act on, and the folder's parent for a first
@@ -520,14 +520,15 @@ queenswood-subsidiary-manifest:
 queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" billing="":
     #!/usr/bin/env zsh
     set -e
+    # The installation's first file, and the one the rest is derived
+    # against, so it makes its own directory rather than expecting a
+    # manifest to have made one. What it declares -- who holds which
+    # capability, and which folder this is -- is known before anything
+    # is built, which is why it comes before the boundary rather than
+    # after the plane.
     ROOT={{ INSTALLATIONS_REPO }}/{{ CODE }}
     FILE="$ROOT/environment.yml"
-    if [[ ! -d "$ROOT" ]]; then
-      echo "no installation at $ROOT" >&2
-      echo "the plane's manifest is committed there first:" >&2
-      echo "  just queenswood-installation-manifest organizations/<org-id>" >&2
-      exit 1
-    fi
+    mkdir -p "$ROOT"
     # Committed is the line, as it is for a unit: nothing has read an
     # uncommitted file, so re-rendering costs nothing, and a committed
     # one may carry an edit this cannot reproduce.
@@ -543,33 +544,32 @@ queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" bill
       echo ">>> replacing the uncommitted $FILE" >&2
     fi
 
-    if ! MGMT=$(just _gcp-mgmt-project); then
-      exit 1
-    fi
-
-    # Read off the project rather than asked of the seed identity, which
-    # is closed by the time this runs. Not silenced: a denial exits
-    # non-zero with empty stdout, and an empty billing account renders a
-    # file that composes projects nothing pays for.
+    # Read off the management project where there is one, and asked of
+    # the identity where there is not. This file is written before the
+    # plane is built, so on a first installation there is no project to
+    # read -- and the account is a property of the identity anyway, which
+    # holds billing.user on exactly one. Not silenced either way: a
+    # denial exits non-zero with empty stdout, and an empty billing
+    # account renders a file that composes projects nothing pays for.
     BILLING="{{ billing }}"
     if [[ -z "$BILLING" ]]; then
-      if ! OUT=$(gcloud billing projects describe "$MGMT" \
-                   --format='value(billingAccountName)' 2>&1); then
-        echo "cannot read the billing account of $MGMT:" >&2
-        printf '%s\n' "$OUT" | sed 's/^/  /' >&2
-        exit 1
+      if MGMT=$(just _gcp-mgmt-project 2>/dev/null) && [[ -n "$MGMT" ]]; then
+        if ! OUT=$(gcloud billing projects describe "$MGMT" \
+                     --format='value(billingAccountName)' 2>&1); then
+          echo "cannot read the billing account of $MGMT:" >&2
+          printf '%s\n' "$OUT" | sed 's/^/  /' >&2
+          exit 1
+        fi
+        BILLING="${OUT#billingAccounts/}"
+      else
+        BILLING=$(just _gcp-billing-account)
       fi
-      BILLING="${OUT#billingAccounts/}"
     fi
     if [[ -z "$BILLING" ]]; then
-      echo "$MGMT is billed to nothing; link it, then re-run" >&2
+      echo "no billing account; link one, or pass it, then re-run" >&2
       exit 1
     fi
 
-    # Captured before it is used rather than substituted inline: a
-    # denial exits non-zero with empty stdout, and an empty domain
-    # renders every principal as `group:grp-...@`, which IAM rejects
-    # only once the manifest is applied.
     # Which folder, and whether we made it. folderId adopts an existing
     # one and is the only field wanted in that mode: an adopted folder
     # is named and placed by whoever owns it, and the composite reads
@@ -619,6 +619,10 @@ queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" bill
       FOLDER_BLOCK=$(printf '    parent: "%s"\n    displayName: "%s"' "{{ parent }}" "$NAME")
     fi
 
+    # Captured before it is used rather than substituted inline: a
+    # denial exits non-zero with empty stdout, and an empty domain
+    # renders every principal as `group:grp-...@`, which IAM rejects
+    # only once the manifest is applied.
     if ! DOMAIN=$(just _gcp-domain); then
       exit 1
     fi

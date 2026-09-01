@@ -1,4 +1,4 @@
-# An installation's secure foundation
+# The contract an installation is built to
 
 <!-- tessl-plugin: deployment -->
 
@@ -8,8 +8,10 @@
 
 ## Problem
 
-You are about to build an installation, and its manifest will name
-principals that have to exist before it does.
+You want the facts an installation is built to — who holds which
+capability, which folder it is, what pays for it and where its
+manifests live — agreed and committed, with the principals it names
+already existing.
 
 ## Solution
 
@@ -21,12 +23,12 @@ answer them: one group per capability, coded to the installation and
 deleted with it, only the day-to-day one populated and the rest joined
 for a task. In an established organisation this is the recipe to read and
 not to follow — answer them with whatever it gives you and go straight
-to [queenswood-bootstrap](queenswood-bootstrap.md).
+to [management-plane-install](management-plane-install.md).
 
 ### Prerequisites
 
 - An organisation, from
-  [gcp-secure-foundation](gcp-secure-foundation.md), or an established
+  [organisation-foundation](organisation-foundation.md), or an established
   one.
 - The installation's four-character code, chosen now — see
   [cloud-naming](../practices/cloud-naming.md).
@@ -41,7 +43,7 @@ to [queenswood-bootstrap](queenswood-bootstrap.md).
 **As a super admin.**
 
 In `admin.google.com` under **Directory, then Groups**, exactly as
-[gcp-secure-foundation](gcp-secure-foundation.md) creates the
+[organisation-foundation](organisation-foundation.md) creates the
 organisation's: Restricted before Only invited users, and no owner or
 manager. One group per capability.
 
@@ -78,7 +80,7 @@ alongside where each of the other three is granted instead —
 
 Nothing else here is bound at the organisation. The rest is folder and
 project scoped, and reaches these groups through the installation's
-manifest — which is [queenswood-bootstrap](queenswood-bootstrap.md),
+manifest — which is [management-plane-install](management-plane-install.md),
 and needs them to exist by the time it renders one.
 
 ### 3. Add the people who operate it
@@ -92,6 +94,25 @@ nothing else — not a break-glass group, and not the billing group.
 Nobody needs a direct organisation binding. Project Creator and Billing
 Account Creator are granted to the whole domain, and every other right
 arrives through membership.
+
+### 4. Write the contract
+
+**As the installation's platform viewer, from here on.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
+
+```bash
+just queenswood-environment-manifest <parent-or-blank> "" <folder-id>
+```
+
+Four keys under `data`: the access mapping naming the principals above,
+the folder, the billing account and the manifests repository.
+
+> [!WARNING]
+> Re-render as often as you like until it is committed. Once it is, that
+> file may be the only record of an id GCP has consumed — the recovery
+> project's — and the recipe refuses rather than minting a second.
+
+Read it, then commit and merge it.
 
 ## Failures
 
@@ -155,12 +176,12 @@ somebody to notice.
 of it.** Creating a group is a directory act and binding a role is a
 Google Cloud one, and the two have separate authorities. A super admin
 administers the directory and holds nothing in the organisation's IAM
-policy once [gcp-secure-foundation](gcp-secure-foundation.md) has stood
+policy once [organisation-foundation](organisation-foundation.md) has stood
 it down, so binding at the organisation means joining the group that
 carries Organization Administrator, and leaving it again.
 
 Creating them cannot be scripted, for the reason
-[gcp-secure-foundation](gcp-secure-foundation.md) gives: every Cloud
+[organisation-foundation](organisation-foundation.md) gives: every Cloud
 Identity write attributes quota to a project, and at this point the
 installation has none. Binding needs no quota project, which is why one
 half is a recipe and the other is a browser.
@@ -183,9 +204,9 @@ to set before anything depends on not having it.
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) — the organisation,
+- [organisation-foundation](organisation-foundation.md) — the organisation,
   the domain these accounts are on, and its own capabilities.
-- [queenswood-bootstrap](queenswood-bootstrap.md) — what needs these to
+- [management-plane-install](management-plane-install.md) — what needs these to
   exist.
 - [cloud-naming](../practices/cloud-naming.md) — the code they are named for.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the

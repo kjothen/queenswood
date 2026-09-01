@@ -132,7 +132,7 @@ topic.
 - **Rebuilding an instance's cluster** — the runbook for a planned
   cluster rebuild: why a ForceNew field reports `Synced` and does
   nothing, the order, and what it leaves standing. See
-  [cluster-rebuild](docs/recipes/infra/queenswood-instance-cluster-rebuild.md).
+  [instance-rebuild-cluster](docs/recipes/infra/instance-rebuild-cluster.md).
 - **Recovering FoundationDB** — the scenario matrix, restore mode
   against destination state, RPO per scenario, why scale-to-zero is not
   a recovery scenario, and the CIS and DORA controls each open item
@@ -172,27 +172,36 @@ topic.
   either direction, and why groups are bound here and created
   elsewhere. See
   [ADR-0027](docs/adr/0027-the-folder-is-a-subsidiary.md).
+- **Declaring the boundary** — the contract agreed before anything is
+  built, which folder this installation is as a field rather than a
+  path, and why the manifest carries only the code. See
+  [boundary-install.md](docs/recipes/infra/boundary-install.md).
 - **Up and running, end to end** — every recipe from an empty Google
   account to a bank serving traffic, in order, and what each leaves for
   the next.
-  See [up-and-running](docs/recipes/infra/queenswood-up-and-running.md).
+  See [up-and-running](docs/recipes/infra/up-and-running.md).
 - **An organisation's secure foundation** — Cloud Identity, the
   organisation, a billing account, and capabilities nobody holds by
   default; skipped entirely in an established organisation. See
-  [gcp-secure-foundation](docs/recipes/infra/gcp-secure-foundation.md).
-- **An installation's secure foundation** — the capabilities its
-  manifest names, answered by groups coded to it and created before the
-  manifest, since IAM rejects a binding to a principal that does not
-  exist. See
-  [secure-foundation](docs/recipes/infra/queenswood-secure-foundation.md).
-- **Building the ability to deploy** — why a plane of the wrong kind
-  cannot install this at all, what the composite builds, the path from
-  a throwaway plane to a durable one, and the four identities. See
-  [queenswood-bootstrap](docs/recipes/infra/queenswood-bootstrap.md).
+  [organisation-foundation](docs/recipes/infra/organisation-foundation.md).
+- **The contract an installation is built to** — the capabilities its
+  manifest names, answered by principals created before the file that
+  names them, since IAM rejects a binding to one that does not exist.
+  See
+  [contract-install](docs/recipes/infra/contract-install.md).
+- **The identity that builds installations** — the seed project and the
+  organisation-scoped rights it holds for a bootstrap and no longer,
+  and why creating a folder is checked on the parent. See
+  [organisation-bootstrap.md](docs/recipes/infra/organisation-bootstrap.md).
+- **The management plane** — why a plane of the wrong kind cannot
+  install this at all, what the composite builds, the path from a
+  throwaway plane to a durable one, the four identities, and the
+  credential and zone that finish it. See
+  [management-plane-install](docs/recipes/infra/management-plane-install.md).
 - **Adding an instance to an installation** — the unit's two places,
   why the secrets are written while the composite builds, and why
   `down` is not a starting state. See
-  [queenswood-instance.md](docs/recipes/infra/queenswood-instance.md).
+  [instance-deploy.md](docs/recipes/infra/instance-deploy.md).
 - **Upgrading or reconfiguring Argo CD** — the steps for a plane whose
   own Argo is `Observe`, the `extraObjects` a values file must carry,
   and why a merged change does not reach it. See
@@ -201,10 +210,6 @@ topic.
   Argo's with the opposite hazards: no values block to lose, and a
   restart that stops every managed resource being reconciled. See
   [crossplane-upgrades.md](docs/recipes/infra/crossplane-upgrades.md).
-- **Bringing an installation into service** — the credential that has to
-  land before any merge means anything, the shared facts, the recovery
-  project and the zone, and why the access mapping comes last. See
-  [queenswood-installation.md](docs/recipes/infra/queenswood-installation.md).
 - **Debugging an installation** — where a failure reports, which field
   manager owns what, and why a status field disappears. See
   [crossplane-debug.md](docs/recipes/infra/crossplane-debug.md).

@@ -5,86 +5,41 @@
 ## Status
 
 **Untested as written**, and incomplete: one installation was built
-this way, but step 8 — moving the composite onto the cluster it just
+this way, but step 5 — moving the composite onto the cluster it just
 created — has no recipe behind it and was not performed. Until it is,
 the plane a run of this page leaves behind is the throwaway one, and
 the durable cluster reconciles nothing.
 
 ## Problem
 
-You want to build the capability to deploy a Queenswood installation,
-and then to deploy the first one.
+You want a management plane inside the boundary an installation
+occupies, reconciling that installation from git.
 
 ## Solution
 
 ### Prerequisites
 
-- A Google Cloud organisation, a billing account, and a parent to
-  create in. With none of these, start at
-  [gcp-secure-foundation](gcp-secure-foundation.md).
-- The installation's access groups, from
-  [queenswood-secure-foundation](queenswood-secure-foundation.md).
-- Either a folder id, written `folders/<folder-id>`, or a parent to
-  create one under.
-- Where a platform team hands you a folder, steps 1 to 3 are theirs,
-  and it is `XSubsidiary` that adopts it — rendered by
-  `just queenswood-subsidiary-manifest`.
-- Steps 5 and 8 — write access to the manifests repository, and a
+- The seed identity, from [organisation-bootstrap](organisation-bootstrap.md), and an
+  organisation and billing account behind it.
+- The boundary this plane is built inside, from
+  [boundary-install](boundary-install.md).
+- The installation's contract, from
+  [contract-install](contract-install.md).
+- Steps 2 and 5 — write access to the manifests repository, and a
   merge.
 - The capability each step names. Ours is a Google group; yours may differ.
 
 ```bash
-# the installation code, from queenswood-secure-foundation, e.g.
+# the installation code, e.g.
 export QW_CODE=qw01
 # the private manifests repository, wherever it is checked out
 export QW_INSTALLATIONS_REPO=../installations
 ```
 
-### 1. Check what you can reach
-
-**As any account in the organisation.**
-
-```bash
-just gcp-boot-preflight
-```
-
-The organisation, the billing account, your own direct roles, and the
-parents you may create under, ending in `nothing blocking` or a
-`BLOCKED:` list and a non-zero exit. Ids, never display names.
-
-Roles reported as `none bound directly` or `not readable by this
-account` block nothing.
-
-### 2. Create the seed project and the seed identity
-
-**As an org billing admin.** Ours is `grp-gcp-billing-admin@` — join
-for this step, then leave.
-
-```bash
-just gcp-boot-seed
-```
-
-The seed project, the service account in it, `billing.user` on the
-billing account, and the platform-admin group allowed to impersonate
-it. No key is created, and it reuses a seed project labelled
-`queenswood-tier=seed` where one exists rather than minting a second.
-
-### 3. Grant the seed identity its organisation roles
-
-**As an org admin.** Ours is `grp-gcp-org-admin@` — join for this
-step, then leave.
-
-```bash
-just gcp-boot-seed-grant-org-roles
-```
-
-Where you were given a folder, these are held on that folder instead
-and granted by whoever owns it.
-
-### 4. Raise a throwaway plane
+### 1. Raise a throwaway plane
 
 **As the installation's platform admin.** Ours is
-`grp-gcp-<code>-platform-admin@` — join for steps 4 to 10, then
+`grp-gcp-<code>-platform-admin@` — join for steps 1 to 7, then
 leave.
 
 ```bash
@@ -94,21 +49,22 @@ just gcp-boot-cluster-up
 
 A local kind cluster running Crossplane and the GCP providers,
 authenticating from ADC that impersonates the seed identity. No key
-exists, and step 10 ends the impersonation.
+exists, and step 7 ends the impersonation.
 
 It ends by applying `xmanagementplane-xrd.yml` and its Composition from
-this repository, so the boot cluster serves the one kind step 6
+this repository, so the boot cluster serves the one kind step 3
 applies.
 
-### 5. Render the manifest into the installations repository
+### 2. Render the manifest into the installations repository
 
 The installation's own manifest goes in the private manifests
-repository, not this one. The parent is one step 1 listed, the folder
+repository, not this one. The parent is one `gcp-boot-preflight`
+listed, the folder
 is named `fldr-<code>` unless you pass a name for one handed to you
 already named, and the rest defaults from the code:
 
 ```bash
-# the parent step 1 listed, e.g.
+# the parent gcp-boot-preflight listed, e.g.
 export QW_PARENT="organizations/<org-id>"
 
 just queenswood-installation-manifest \
@@ -118,20 +74,20 @@ just queenswood-installation-manifest \
 Seven keys under `spec`, and no `recovery` block. Step 6 reads the file
 back from the same path.
 
-Read it, then commit it. Pushing can wait for step 8.
+Read it, then commit it. Pushing can wait for step 5.
 
 > [!WARNING]
 > Only where that file does not exist yet. The management project id is
 > minted per call, so a second render replaces the recorded id with one
 > no project answers to.
 
-### 6. Apply the committed manifest
+### 3. Apply the committed manifest
 
 ```bash
 just gcp-boot-mgmt-apply
 ```
 
-It reads the file step 5 wrote, merges in the billing account and
+It reads the file step 2 wrote, merges in the billing account and
 `management.bootstrap: true`, prints the whole document, and asks
 before applying. It ends by waiting on the composite and reporting the
 folder.
@@ -143,7 +99,7 @@ folder.
 > the boot cluster takes over the Crossplane and Argo running on it,
 > and two planes reconcile the same composite.
 
-### 7. Read back what it built
+### 4. Read back what it built
 
 ```bash
 kubectl --context kind-boot-mgmt -n crossplane-system \
@@ -153,16 +109,16 @@ kubectl --context kind-boot-mgmt -n crossplane-system \
 `status` carries the folder id, the management project and the platform
 identity. Those are what everything later is named and bound against.
 
-### 8. Pivot onto the cluster it built
+### 5. Pivot onto the cluster it built
 
 Push the manifest first, then move the composite onto the management
-cluster created in step 6. No recipe does the move yet.
+cluster created in step 3. No recipe does the move yet.
 
 After it, the management cluster reconciles its own project and folder,
 and every later change is a merge. The manifest driving them is
-[queenswood-installation](queenswood-installation.md).
+[management-plane-install](management-plane-install.md).
 
-### 9. Delete the boot cluster
+### 6. Delete the boot cluster
 
 ```bash
 just gcp-boot-cluster-down
@@ -172,10 +128,10 @@ The folder and everything in it are orphaned, not deleted: the cluster
 holds no cloud state, and what it created is now the management
 plane's. The `gcp-creds` Secret — a copy of your ADC — goes with it.
 
-### 10. Revoke the impersonation
+### 7. Revoke the impersonation
 
 **As the installation's platform admin.** Ours is
-`grp-gcp-<code>-platform-admin@` — join for steps 4 to 10, then
+`grp-gcp-<code>-platform-admin@` — join for steps 1 to 7, then
 leave.
 
 > [!WARNING]
@@ -190,24 +146,45 @@ just gcp-boot-seed-impersonate-revoke
 `just gcp-boot-seed-impersonate-status` then reports no impersonation.
 Run it as soon as the throwaway plane is gone.
 
-### 11. Close the seed identity
+### 8. Give Argo the credential for the private repository
 
-**As an org admin.** Ours is `grp-gcp-org-admin@` — join for this
-step, then leave.
+**As the installation's secrets admin.** Ours is
+`grp-gcp-<code>-secrets-admin@` — join for this step, then leave.
+
+[argocd-github](argocd-github.md) is the whole of this: it names the
+repository in the manifest, creates a GitHub App, installs it on that
+repository, and stores the App ID, Installation ID and private key in
+the entry the composite made for them.
+
+Come back when the `installation` Application reports `Synced`.
+
+### 9. Compose the zone
+
+Prepare the domain first with [gcp-dns](gcp-dns.md), and come back when
+`just dns-carried <domain>` names a verification token.
 
 ```bash
-just gcp-boot-seed-close
+just queenswood-dns-manifest-snippet <domain>
 ```
 
-It removes the platform-admin group's `serviceAccountTokenCreator`, so
-nobody can become the seed identity at all, and revokes the three roles
-it only needed in order to build — `folderCreator`, `folderIamAdmin`
-and `projectCreator`. `orgpolicy.policyAdmin`, `cloudasset.viewer` and
-`browser` stay, for `just gcp-org-setup` and `just gcp-policy-status`.
+Paste it into `spec` in `<code>/installation.yml`, and merge.
 
-To bootstrap again — a second installation, or a rebuild — reopen with
-`just gcp-boot-seed-open` and `just gcp-boot-seed-grant-org-roles`,
-then carry on from step 3.
+```bash
+just queenswood-zone-nameservers
+```
+
+Four names, which nothing is delegated to yet. Move the delegation with
+[gcp-dns-delegation](gcp-dns-delegation.md).
+
+### 10. Check it can take an instance
+
+```bash
+just crossplane-unready
+```
+
+A header line with nothing under it. The installation now carries
+everything an instance derives from it: the folder, the billing
+account, Argo's identity, the recovery project and the zone.
 
 ## Failures
 
@@ -260,14 +237,8 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   control plane running another toolchain cannot apply this kind.
   `just gcp-boot-cluster-up` raises the throwaway one and loads the
   kind onto it.
-- Read what you can reach with `just gcp-boot-preflight` before choosing
-  between creating a folder and adopting one.
-- Grant the seed identity its rights on the folder or the parent
-  with `just gcp-boot-seed` and
-  `just gcp-boot-seed-grant-org-roles`, never a key.
 - Join a break-glass group for the step that names it and leave again.
-  Four capabilities move across the eleven steps, and each step says
-  which it takes.
+  Each step says which capability it takes.
 - Impersonate with `just gcp-boot-seed-impersonate` rather than holding
   a credential, and revoke it once the throwaway plane is gone with
   `just gcp-boot-seed-impersonate-revoke`. It outlives the plane
@@ -280,11 +251,10 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   `just gcp-policy-status` reports what is in force.
 - Pivot the composite off the throwaway plane before discarding it
   with `just gcp-boot-cluster-down`.
-- Close the seed identity with `just gcp-boot-seed-close` once the
-  bootstrap is done, and reopen it with `just gcp-boot-seed-open` for
-  the next one. Its organisation grants, and the impersonation that
-  reaches them, otherwise stand for ever — and the plane needs
-  neither.
+- Close the seed identity once this is done — see
+  [organisation-bootstrap](organisation-bootstrap.md). Its organisation grants, and the
+  impersonation that reaches them, otherwise stand for ever, and the
+  plane needs neither.
 
 **MUST NOT:**
 
@@ -332,12 +302,13 @@ serves the whole organisation. The identity in it carries a code, since
 each one creates a particular installation, and ends up holding
 `projectCreator` and `folderIamAdmin` on the folder or its parent,
 `billing.user` on the billing account, and `orgpolicy.policyAdmin`
-where the organisation allows it — the last three from step 3.
+where the organisation allows it — the last three from
+[organisation-bootstrap](organisation-bootstrap.md).
 
 **What preflight can and cannot see.** A subsidiary's `parent` takes
-`organizations/{id}` or `folders/{id}`, and step 1 checks
+`organizations/{id}` or `folders/{id}`, and `gcp-boot-preflight` checks
 `folders.create` on it, so which of the two you hold is what decides
-whether step 6 creates a folder or adopts one. What it cannot see is a
+whether step 3 creates a folder or adopts one. What it cannot see is a
 role held through a group: those never appear in a policy read, which
 is why an absent line there is a prompt to check rather than a finding.
 
@@ -369,13 +340,13 @@ is running there. Against an installation that already has a management
 plane the cluster itself is harmless — it is local, and Crossplane on
 it reconciles nothing until a composite is applied there, which is step
 6. What it does leave is a control plane on your machine holding
-credentials to the whole folder, which is what steps 9 and 10 take
+credentials to the whole folder, which is what steps 6 and 7 take
 away.
 
 **Why the manifest is committed before it is applied.** Nothing has
-been created when step 5 finishes: the file is a request, and the
+been created when step 2 finishes: the file is a request, and the
 folder name and the management project id in it are consumed the moment
-step 6 applies them. The commit records them while they are still only
+step 3 applies them. The commit records them while they are still only
 proposed, which is what the file is for — a project id is consumed
 permanently and cannot be undeleted into usefulness, so one that was
 minted, applied and then lost is not recoverable from anything the
@@ -384,7 +355,7 @@ with values substituted, so what it will say is readable before it is
 run.
 
 That id is minted rather than derived, on every call, which is what
-makes step 5 a first-run act: a second render over the same file
+makes step 2 a first-run act: a second render over the same file
 replaces the recorded id with one no project answers to, and the
 redirect truncates before the renderer runs. The folder is guarded —
 a name already in use under the parent is refused, with the adopt
@@ -412,20 +383,22 @@ not of the installation. So the file stays the thing Argo reads, and
 the two planes cannot disagree about what the installation is.
 
 **Why the push waits for the pivot.** The apply reads your working
-tree, so pushing at step 5 changes nothing about what step 6 does. From
-step 8 the management plane reconciles the installation from the
+tree, so pushing at step 2 changes nothing about what step 3 does. From
+step 5 the management plane reconciles the installation from the
 repository instead, and a manifest that never got there leaves it with
 nothing to reconcile. On a rebuild, pushing while the boot plane is
 still applying is the same two-planes hazard arriving through git
 rather than through `bootstrap`.
 
 **Why the capability moves four times.** Each step is bounded by what
-it writes to rather than by who is running it: step 2 sets the billing
+it writes to rather than by who is running it: creating the seed sets
+the billing
 account's own IAM policy, which lives outside the organisation's
-hierarchy; step 3 grants six roles at the organisation, and nothing
-below Organization Administrator can; steps 4 to 10 act as the seed
-identity, which step 2 grants `platformAdmin` impersonation of; and
-step 11 removes an organisation binding, which is
+hierarchy; granting it six roles at the organisation needs Organization
+Administrator; steps 1 to 7 here act as that identity, which
+[organisation-bootstrap](organisation-bootstrap.md) grants `platformAdmin`
+impersonation of; and closing it removes an organisation binding, which
+is
 `organizations.setIamPolicy` — the same right as adding one, which is
 why `grp-gcp-org-admin@` comes back for one step at the end.
 
@@ -441,19 +414,24 @@ the organisation-scoped three have nowhere else to live. Where you were
 given a folder these are the organisation's acts and not yours — ask
 for them.
 
-**Why reopening is `-open` rather than step 2.** Step 2 is idempotent
+**Why reopening is `-open` rather than re-creating the seed.** Creating
+it is idempotent
 and would also reopen the identity, but it wants billing admin and
 project creation for work that is already done. `-open` needs only the
 seed project.
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) — the browser-only
+- [organisation-bootstrap](organisation-bootstrap.md) — the seed identity this
+  impersonates, and closing it afterwards.
+- [boundary-install](boundary-install.md) — the folder this plane is
+  built inside.
+- [organisation-foundation](organisation-foundation.md) — the browser-only
   half, before any
   of this.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — what a
   capability is, and how an organisation answers one.
-- [queenswood-installation](queenswood-installation.md) — the manifest
+- [management-plane-install](management-plane-install.md) — the manifest
   this plane then reads.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md) —
   the folder as the installation, and what protects a foundation.

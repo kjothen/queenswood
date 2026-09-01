@@ -189,7 +189,7 @@ permission and is meant for a project.
 
 ## References
 
-- [queenswood-bootstrap](queenswood-bootstrap.md) — the
+- [management-plane-install](management-plane-install.md) — the
   identities an installation has, and why each is separate.
 - [crossplane-providers](crossplane-providers.md) — how a provider
   authenticates as one.
