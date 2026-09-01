@@ -146,7 +146,7 @@ this is how we produce one, not what an installation requires.
 Commands: `just gcp-boot-preflight`, `just gcp-boot-seed`, `just
 gcp-boot-seed-grant-org-roles`, `just gcp-boot-seed-close`, `just
 gcp-boot-seed-open`.
-See [gcp-bootstrap](../../../docs/recipes/infra/gcp-bootstrap.md).
+See [organisation-bootstrap](../../../docs/recipes/infra/organisation-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
 

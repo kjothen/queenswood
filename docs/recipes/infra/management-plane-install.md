@@ -19,7 +19,7 @@ occupies, reconciling that installation from git.
 
 ### Prerequisites
 
-- The seed identity, from [gcp-bootstrap](gcp-bootstrap.md), and an
+- The seed identity, from [organisation-bootstrap](organisation-bootstrap.md), and an
   organisation and billing account behind it.
 - The boundary this plane is built inside, from
   [boundary-install](boundary-install.md).
@@ -252,7 +252,7 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
 - Pivot the composite off the throwaway plane before discarding it
   with `just gcp-boot-cluster-down`.
 - Close the seed identity once this is done — see
-  [gcp-bootstrap](gcp-bootstrap.md). Its organisation grants, and the
+  [organisation-bootstrap](organisation-bootstrap.md). Its organisation grants, and the
   impersonation that reaches them, otherwise stand for ever, and the
   plane needs neither.
 
@@ -303,7 +303,7 @@ each one creates a particular installation, and ends up holding
 `projectCreator` and `folderIamAdmin` on the folder or its parent,
 `billing.user` on the billing account, and `orgpolicy.policyAdmin`
 where the organisation allows it — the last three from
-[gcp-bootstrap](gcp-bootstrap.md).
+[organisation-bootstrap](organisation-bootstrap.md).
 
 **What preflight can and cannot see.** A subsidiary's `parent` takes
 `organizations/{id}` or `folders/{id}`, and `gcp-boot-preflight` checks
@@ -396,7 +396,7 @@ the billing
 account's own IAM policy, which lives outside the organisation's
 hierarchy; granting it six roles at the organisation needs Organization
 Administrator; steps 1 to 7 here act as that identity, which
-[gcp-bootstrap](gcp-bootstrap.md) grants `platformAdmin`
+[organisation-bootstrap](organisation-bootstrap.md) grants `platformAdmin`
 impersonation of; and closing it removes an organisation binding, which
 is
 `organizations.setIamPolicy` — the same right as adding one, which is
@@ -422,7 +422,7 @@ seed project.
 
 ## References
 
-- [gcp-bootstrap](gcp-bootstrap.md) — the seed identity this
+- [organisation-bootstrap](organisation-bootstrap.md) — the seed identity this
   impersonates, and closing it afterwards.
 - [boundary-install](boundary-install.md) — the folder this plane is
   built inside.

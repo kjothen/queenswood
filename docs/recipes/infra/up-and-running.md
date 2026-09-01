@@ -51,7 +51,7 @@ what each leaves for the next, and none of it is repeated here.
 ### 1. The organisation
 
 [organisation-foundation](organisation-foundation.md), then
-[gcp-bootstrap](gcp-bootstrap.md). Cloud Identity,
+[organisation-bootstrap](organisation-bootstrap.md). Cloud Identity,
 the domain verified against it, the organisation, a billing account,
 the capabilities nobody holds by default, and the seed identity that
 creates folders and projects on behalf of all of it.
@@ -164,7 +164,7 @@ produced them.
 ## References
 
 - [organisation-foundation](organisation-foundation.md) and
-  [gcp-bootstrap](gcp-bootstrap.md) — step 1.
+  [organisation-bootstrap](organisation-bootstrap.md) — step 1.
 - [contract-install](contract-install.md) —
   step 2, and what to ask an organisation for.
 - [boundary-install](boundary-install.md) — step 3.
