@@ -1,4 +1,4 @@
-# Up and running, end to end
+# Up and running
 
 <!-- tessl-plugin: deployment -->
 

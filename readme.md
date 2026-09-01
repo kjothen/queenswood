@@ -259,7 +259,7 @@ projects, the clusters and the workloads toward what that manifest
 says — so changing what exists means editing the manifest and merging
 it.
 
-[Up and running, end to end](docs/recipes/infra/up-and-running.md)
+[Up and running](docs/recipes/infra/up-and-running.md)
 is where to start: every recipe from an empty Google account to a bank
 serving traffic, in order, and what each leaves for the next. There are
 two paths through it — from nothing, or from an established

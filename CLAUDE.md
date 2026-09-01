@@ -176,7 +176,7 @@ topic.
   built, which folder this installation is as a field rather than a
   path, and why the manifest carries only the code. See
   [boundary-install.md](docs/recipes/infra/boundary-install.md).
-- **Up and running, end to end** — every recipe from an empty Google
+- **Up and running** — every recipe from an empty Google
   account to a bank serving traffic, in order, and what each leaves for
   the next.
   See [up-and-running](docs/recipes/infra/up-and-running.md).
