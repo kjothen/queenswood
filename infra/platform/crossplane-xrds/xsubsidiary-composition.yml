@@ -116,10 +116,22 @@ spec:
                 crossplane.io/external-name: {{ $folderId | quote }}
                 {{- end }}
             spec:
+              {{- /* Observe alone where the folder was adopted. Not
+                     only Update: the provider marks displayName
+                     required whenever Create, Update or * is present --
+                     `!('*' in self.managementPolicies || 'Create' in
+                     ... ) || has(self.forProvider.displayName)` on the
+                     CRD -- so a folder we decline to name cannot carry
+                     Create either, and every apply is rejected outright
+                     until it does not. Which is the right semantics
+                     anyway: an adopted folder is not ours to create,
+                     and with an external name Create would never fire.
+                     LateInitialize fills the spec from what GCP
+                     reports. */}}
               managementPolicies:
                 - Observe
-                - Create
                 {{- if not $adopted }}
+                - Create
                 - Update
                 {{- end }}
                 - LateInitialize
