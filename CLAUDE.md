@@ -245,19 +245,19 @@ topic.
   [google-sign-in.md](docs/recipes/infra/google-sign-in.md).
 - **Cloud DNS** — the manual half: proving domain ownership before a
   public zone may be created, and what has to survive a registrar move.
-  See [cloud-dns.md](docs/recipes/infra/cloud-dns.md).
+  See [gcp-dns.md](docs/recipes/infra/gcp-dns.md).
 - **Moving a domain's delegation** — the diff that makes the
   propagation window a no-op, replacing all four nameservers, and why
   the registry rather than the zone is what you ask. See
-  [cloud-dns-delegation.md](docs/recipes/infra/cloud-dns-delegation.md).
+  [gcp-dns-delegation.md](docs/recipes/infra/gcp-dns-delegation.md).
 - **Writing about an installation** — what counts as an identifier,
   what to write instead, and why masking happens while you write rather
   than when a check fails. See
-  [cloud-identifiers.md](docs/recipes/infra/cloud-identifiers.md).
+  [cloud-identifiers.md](docs/recipes/practices/cloud-identifiers.md).
 - **Cloud naming** — the installation code, the prefix/code/env/label
   rule and its exceptions, the inventory of every kind and a worked
   example of one installation. See
-  [cloud-naming.md](docs/recipes/infra/cloud-naming.md) and
+  [cloud-naming.md](docs/recipes/practices/cloud-naming.md) and
   [ADR-0023](docs/adr/0023-installation-naming-and-access.md).
 - **Justfile recipes** — the `set -e` shapes that abort silently,
   capturing before piping, and not rediscovering what the caller

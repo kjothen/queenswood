@@ -24,7 +24,7 @@ You want to add a Queenswood instance to an installation.
   as `recoveryProjectId`.
 - `argoServiceAccount` in that same `EnvironmentConfig`, correct.
 - The domain verified and delegated, once for the installation — see
-  [cloud-dns](cloud-dns.md).
+  [gcp-dns](gcp-dns.md).
 - Write access to the private manifests repository, and a merge.
 - Headroom on the plane.
 - The capability each step names. Ours is a Google group; yours may differ.
@@ -34,7 +34,7 @@ You want to add a Queenswood instance to an installation.
 **As the installation's platform viewer.** Ours is
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
-Exports follow the [cloud-naming](cloud-naming.md)'s `<code>`, `<env>` and
+Exports follow the [cloud-naming](../practices/cloud-naming.md)'s `<code>`, `<env>` and
 `<label>` convention, which every composed name is built from —
 they are stated once here and carried through every step below.
 Everything else the render needs is read from the installation's

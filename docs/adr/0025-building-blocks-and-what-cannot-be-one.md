@@ -40,7 +40,7 @@ way to build cloud infrastructure" is true of one half and false of the
 other, and somebody will eventually go looking for the abstraction that
 cannot exist. The manual half lives in recipes —
 [gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md),
-[cloud-dns](../recipes/infra/cloud-dns.md),
+[gcp-dns](../recipes/infra/gcp-dns.md),
 [google-sign-in](../recipes/infra/google-sign-in.md) — and is as much a
 part of building an installation as anything composed.
 
@@ -72,6 +72,6 @@ still composes about twenty of them directly.
 - [crossplane-design](../recipes/infra/crossplane-design.md) — how a
   kind is designed, which this no longer covers.
 - [gcp-secure-foundation](../recipes/infra/gcp-secure-foundation.md),
-  [cloud-dns](../recipes/infra/cloud-dns.md),
+  [gcp-dns](../recipes/infra/gcp-dns.md),
   [google-sign-in](../recipes/infra/google-sign-in.md) — the manual
   half.

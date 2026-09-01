@@ -26,7 +26,7 @@ hold exactly one part of it.
 thing that needs the credential composes a `Secret` — the entry, with
 no version in it. What exists is therefore declared, and what it holds
 never touches git. The entry is named as
-[cloud-naming](cloud-naming.md) names everything else:
+[cloud-naming](../practices/cloud-naming.md) names everything else:
 `sec-<code>-c-<what>` for the plane's, and
 `sec-<code>-<env>-<label>-<what>` for an instance's.
 
@@ -300,7 +300,7 @@ does, needs a restart after that.
   the waves that order a store ahead of its reader.
 - [gcp-iam](gcp-iam.md) — both halves of a Workload Identity binding,
   and why one half alone reports nothing.
-- [cloud-naming](cloud-naming.md) — what an entry is called, and what
+- [cloud-naming](../practices/cloud-naming.md) — what an entry is called, and what
   the code, environment and label in its name are.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — Secret Manager in the management project, and the one-machine store

@@ -4,7 +4,7 @@
 # Neither GCP's nor Queenswood's: dig is neither, and the whole point of
 # these is that a recipe which shapes a manifest reads facts from here
 # rather than a recipe about a registrar knowing what a manifest is.
-# See docs/recipes/infra/cloud-dns.md.
+# See docs/recipes/infra/gcp-dns.md.
 # =========================================================================
 
 # The record types a domain carries at the apex, and the underscore

@@ -676,7 +676,7 @@ Small, and none of it blocking:
   recorded until now in a comment in the composition.
 - **`sa-qw01-nodes` renamed but the cluster not.** `gke-qw01-c-mgmt` and
   `np-qw01-c-mgmt` keep names that predate the rule in
-  [cloud-naming](../recipes/infra/cloud-naming.md), because renaming either
+  [cloud-naming](../recipes/practices/cloud-naming.md), because renaming either
   destroys the cluster. New installations get the shorter forms.
 
 Then the durable tier and the first instance, both described under
@@ -696,7 +696,7 @@ For most resources this is harmless, because the external name defaults
 to `metadata.name`, and the composition pins those deterministically:
 `vpc-qw01-c-mgmt`, `gke-qw01-c-mgmt`, `np-qw01-c-mgmt`. The provider
 observes, finds the object, and adopts it. This is the second reason for
-[cloud-naming](../recipes/infra/cloud-naming.md)'s rule that Kubernetes names
+[cloud-naming](../recipes/practices/cloud-naming.md)'s rule that Kubernetes names
 are the same names — the recipe gives the cross-reference reason, and
 re-adoption is the one that bites at a pivot.
 
@@ -1330,7 +1330,7 @@ useful. The billing account id and the project-hierarchy identifiers
 pass it.
 
 On what has already leaked: management and seed project ids are printed
-in [cloud-naming](../recipes/infra/cloud-naming.md)'s worked example. A
+in [cloud-naming](../recipes/practices/cloud-naming.md)'s worked example. A
 rebuilt installation takes new random suffixes, at the cost of consuming
 the old project ids permanently — which
 [ADR-0023](../adr/0023-installation-naming-and-access.md) already
@@ -2207,7 +2207,7 @@ stays a console step for the same reason, and only its capture changes.
   together across two repositories. Keeping new XRD fields optional
   with defaults makes it rare rather than solved.
 - Whether a redacted worked example stays in
-  [cloud-naming](../recipes/infra/cloud-naming.md), or the whole example
+  [cloud-naming](../recipes/practices/cloud-naming.md), or the whole example
   follows the manifests into `installations`. It is the one piece of
   this documentation that reads better with real values in it.
 - Whether `pass` is retired at the pivot or kept for the boot path.
@@ -2235,7 +2235,7 @@ stays a console step for the same reason, and only its capture changes.
   infrastructure is declared rather than scripted.
 - [queenswood-bootstrap](../recipes/infra/queenswood-bootstrap.md) —
   what a deployment builds, and the two identities that build it.
-- [cloud-naming](../recipes/infra/cloud-naming.md) — the inventory every new
+- [cloud-naming](../recipes/practices/cloud-naming.md) — the inventory every new
   resource takes its name from.
 - [fdb-recovery](../recipes/infra/fdb-recovery.md) — what a restore
   actually does, which is what the durable tier exists for.

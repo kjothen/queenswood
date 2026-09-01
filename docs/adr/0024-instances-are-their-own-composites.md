@@ -176,7 +176,7 @@ other. Deleting an instance never touches the plane; replacing the plane
 leaves the instances reconciling against the same folder.
 
 It makes the *name* load-bearing, which is what
-[cloud-naming](../recipes/infra/cloud-naming.md) already requires: every name
+[cloud-naming](../recipes/practices/cloud-naming.md) already requires: every name
 derives from the four-character code, so the reference is derivable
 rather than configured.
 

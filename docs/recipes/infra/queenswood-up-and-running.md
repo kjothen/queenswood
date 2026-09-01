@@ -38,7 +38,7 @@ domain and repository as above, and from whoever runs the organisation:
   what to ask them for.
 - A four-character installation code, chosen before step 3 and never
   changed, since every name derives from it — see
-  [cloud-naming](cloud-naming.md).
+  [cloud-naming](../practices/cloud-naming.md).
 
 Each step is a recipe of its own. This page is the order they go in and
 what each leaves behind for the next; none of it is repeated here.
