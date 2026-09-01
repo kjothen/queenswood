@@ -161,6 +161,17 @@ composition produces, not what applying it does to what already
 exists. It cannot see a slot name colliding with a live object, the
 composite's own status, or what a deletion cascades to.
 
+It cannot see the CRD's own validation either, which is what makes a
+change to `managementPolicies` worth reading the schema for. A provider
+marks a field required when the resource is managed rather than when it
+is written — `!('*' in managementPolicies || 'Create' in
+managementPolicies || 'Update' in managementPolicies) ||
+has(forProvider.displayName)` on `Folder` — so dropping a field and
+withholding only `Update` renders perfectly and is rejected by the API
+server on every apply. Read the rule off the installed CRD with `just
+crossplane-explain` before composing a resource that omits a field its
+provider might require.
+
 ## Rules
 
 **MUST:**
@@ -194,7 +205,8 @@ composite's own status, or what a deletion cascades to.
 - Delete a patch for a field you want kept. The composition owns what
   it patches, so the field goes with the patch.
 - Treat a rendered diff as proof of what applying it will do to what
-  already exists.
+  already exists, or as proof that it applies at all. A render does not
+  run the CRD's validation rules.
 
 ## Discussion
 

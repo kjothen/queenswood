@@ -80,13 +80,32 @@ somewhere else entirely.
 ### The handover is the XR, in either direction
 
 Where the folder is ours, `XSubsidiary` composes it. Where an
-organisation hands one over, the same manifest carries `folderId` and
-adopts it, keeping their `displayName` and `parent`. Both leave the same
-object, so the recipe after it is unconditional.
+organisation hands one over, `folderId` adopts it. Both leave the same
+object, so the recipe after it is unconditional. Which of the two, and
+which folder, is stated in the installation's `EnvironmentConfig`
+rather than in the manifest, so a handover edits one file and the
+manifest carries the code alone.
 
-`parent` and `displayName` are required in both modes. The provider
-holds `Update`, so either left to a default is one it would write onto a
-folder somebody else owns.
+**Amended.** This decision first said `parent` and `displayName` were
+required in both modes, because the provider holds `Update` and either
+left to a default is one it would write onto a folder somebody else
+owns. The premise was right and the conclusion was not: what follows
+from it is that an adopted folder must not be *managed*, rather than
+that it must be *named*. A folder handed over is named and placed by
+whoever owns it, so the composite reads both fields back and asserts
+neither, and `folderId` suppresses them where it is set — precedence
+rather than prohibition, since a rejected `EnvironmentConfig` would
+stop the plane and every instance rather than this composite alone.
+
+`Observe` and `LateInitialize` only, then, and not merely `Update`
+withheld. The provider marks `displayName` required whenever the
+resource is managed at all —
+`!('*' in managementPolicies || 'Create' in managementPolicies ||
+'Update' in managementPolicies) || has(forProvider.displayName)` — so a
+folder we decline to name cannot carry `Create` either, and every apply
+is rejected outright until it does not. Which is the right semantics
+anyway: an adopted folder is not ours to create, and an external name
+means `Create` would never fire.
 
 Where an organisation runs no Crossplane at all, nothing instantiates
 the kind and the XRD is read as the contract: what a folder must look
