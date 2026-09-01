@@ -305,9 +305,8 @@ covers every subdomain, so an instance under one is neither verified
 nor delegated again.
 
 No step needs a cluster admin either. That capability is what `kubectl`
-against the new cluster takes, with
-`just gcp-instance-cluster-ctx <env> <label>` to reach it, and that is
-debugging rather than any part of standing an instance up.
+against the new cluster takes, and that is debugging rather than any
+part of standing an instance up.
 
 ## References
 

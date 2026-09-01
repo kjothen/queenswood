@@ -290,9 +290,9 @@ anything, and worth a diff when it changes. Group *names* stay in the
 justfile because they are derived from the installation code and
 [cloud-naming](../practices/cloud-naming.md) governs them. Each role
 carries its own
-reason in the file rather than in a comment beside it, which is what
-lets `just gcp-roles` print the reason along with the role: a grant
-nobody has justified is a grant nobody has decided.
+reason in the file rather than in a comment beside it, so that whatever
+prints a role prints the reason with it: a grant nobody has justified is
+a grant nobody has decided.
 
 **Why creating a group cannot be scripted.** Every Cloud Identity write
 attributes quota to a project, and at this point the organisation has

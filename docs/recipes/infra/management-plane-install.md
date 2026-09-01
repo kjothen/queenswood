@@ -19,7 +19,8 @@ occupies, reconciling that installation from git.
 
 ### Prerequisites
 
-- The seed identity, from [organisation-bootstrap](organisation-bootstrap.md), and an
+- The seed identity, from
+  [organisation-bootstrap](organisation-bootstrap.md), and an
   organisation and billing account behind it.
 - The boundary this plane is built inside, from
   [boundary-install](boundary-install.md).
@@ -252,7 +253,8 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
 - Pivot the composite off the throwaway plane before discarding it
   with `just gcp-boot-cluster-down`.
 - Close the seed identity once this is done — see
-  [organisation-bootstrap](organisation-bootstrap.md). Its organisation grants, and the
+  [organisation-bootstrap](organisation-bootstrap.md). Its organisation
+  grants, and the
   impersonation that reaches them, otherwise stand for ever, and the
   plane needs neither.
 

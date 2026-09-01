@@ -19,10 +19,14 @@ restoring its data from backups.
 
 ### Prerequisites
 
-- A restorable backup and a running instance, confirmed below.
-- Steps 3 and 4 — write access to the installations repository and to
+- A restorable backup, and an instance running to rebuild.
+- Steps 4 and 5 — write access to the installations repository and to
   this one, and a merge.
 - The capability each step names. Ours is a Google group; yours may differ.
+
+### 1. Confirm there is something to restore from
+
+**As the installation's platform viewer.**
 
 ```bash
 gcloud auth application-default login
@@ -30,9 +34,10 @@ just sop-fdb-list-backups <env> <label>
 kubectl --context <code>-<env>-<label> -n queenswood get pods
 ```
 
-The listing gives the current generation and the restorable span.
+The current generation and the restorable span, and the instance's own
+workloads running.
 
-### 1. Stop writing to it
+### 2. Stop writing to it
 
 **No cloud capability.** These are the bank's own workloads.
 
@@ -72,7 +77,7 @@ instance with users is a way to refuse writes at the edge while the
 data tier stays up long enough to flush — the deployments are the
 mechanism, and nothing wraps them.
 
-### 2. Take the restore point
+### 3. Take the restore point
 
 **As the installation's platform viewer.** Ours is
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
@@ -88,7 +93,7 @@ without its generation cannot be used: version numbers restart near
 zero on a rebuild, so they only mean anything inside the container that
 wrote them.
 
-### 3. Set the restore, and open a new generation
+### 4. Set the restore, and open a new generation
 
 **No cloud capability.** Write access to the installations repository.
 
@@ -104,7 +109,7 @@ A rebuilt cluster numbers its versions from near zero, so if it writes
 into the container it read from, `fdbbackup describe` starts answering
 with the dead cluster's higher numbers.
 
-### 4. Merge the change that forces the rebuild
+### 5. Merge the change that forces the rebuild
 
 **No cloud capability.** Write access to this repository.
 
@@ -112,7 +117,7 @@ The manifest or values edit that started this — the new `zone`,
 `region` or `datapathProvider`. Merging it changes nothing yet, by
 design.
 
-### 5. Delete the managed cluster
+### 6. Delete the managed cluster
 
 **As the installation's cluster admin.** Ours is
 `grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
@@ -135,7 +140,7 @@ Crossplane recomposes it from the composite. Expect the node pool to go
 with it and be recomposed too, since a node pool cannot outlive its
 cluster.
 
-### 5b. Expect the node pool's first create to fail
+### 6b. Expect the node pool's first create to fail
 
 **As the installation's cluster admin.** Ours is
 `grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
@@ -177,7 +182,7 @@ The same shape is worth suspecting for anything else late-init owns: a
 value that reads correctly against a resource that exists can still be
 one nothing may ask for at create.
 
-### 6. Wait for Argo to find the new cluster
+### 7. Wait for Argo to find the new cluster
 
 **As the installation's platform viewer.** Ours is
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
@@ -189,7 +194,7 @@ itself on the next reconcile once the new cluster reports; nothing
 needs doing, but an Argo sync failing during that window is expected
 rather than a fault.
 
-### 7. Let the bring-up restore
+### 8. Let the bring-up restore
 
 **No capability at all.** Argo and the chart do this unattended.
 
@@ -199,7 +204,7 @@ gates on it, bootstrap gates on the migrator, and every service gates
 on bootstrap. The destination is empty, so the Job restores rather than
 taking its do-nothing branch.
 
-### 8. Verify the restore, not the Job
+### 9. Verify the restore, not the Job
 
 **As the installation's cluster admin.** Ours is
 `grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
@@ -215,7 +220,7 @@ was there before, and finally sign in through the console and confirm a
 party resolves — Keycloak was never rebuilt, so a user whose party is
 missing means the restore, not the realm.
 
-### 9. Record what happened
+### 10. Record what happened
 
 This procedure exists partly to produce numbers nothing else can:
 
@@ -279,6 +284,10 @@ latest.
   instance standing.
 - Use this for an instance or installation rebuild. Both take the
   database or the backups with them.
+
+
+Commands: `just sop-fdb-list-backups`, `just sop-fdb-version-at`,
+`just sop-fdb-describe`, `just crossplane-unready`.
 
 ## References
 

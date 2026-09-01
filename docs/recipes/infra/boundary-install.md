@@ -119,6 +119,8 @@ a composite that reports healthy.
 - Declare a boundary with an empty `access` mapping, which reconciles
   correctly and which nobody can reach.
 
+Commands: `just queenswood-subsidiary-manifest`.
+
 ## Discussion
 
 The folder is what an installation is, so this is the whole handover:
