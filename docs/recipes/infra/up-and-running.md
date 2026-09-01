@@ -1,4 +1,4 @@
-# Up and running, end to end
+# Up and running
 
 <!-- tessl-plugin: deployment -->
 
@@ -65,8 +65,7 @@ in as, and an identity that can create a folder.
 
 ### 2. The contract
 
-[contract-install](contract-install.md) for the
-principals, then `just queenswood-environment-manifest` for the file
+[contract-install](contract-install.md). The principals, and the file
 that names them: who holds which capability, which folder this
 installation is, what pays for it, and where its manifests live.
 

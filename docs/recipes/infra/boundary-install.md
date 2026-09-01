@@ -4,9 +4,9 @@
 
 ## Status
 
-**Untested as written.** The composite has been applied, and never from
-this recipe: `qw01`'s folder was created by an earlier shape of the
-bootstrap and adopted afterwards.
+**Untested as written.** `qw01`'s manifest was written by hand, and its
+folder created by an earlier shape of the bootstrap and adopted
+afterwards.
 
 ## Problem
 
@@ -60,24 +60,6 @@ directory rather than inside it.
 cat "$QW_INSTALLATIONS_REPO/$QW_CODE/subsidiary.yml"
 ```
 
-### 4. Apply it
-
-On a first installation, nothing: `just gcp-boot-cluster-up` and `just
-gcp-boot-mgmt-apply` do it, in
-[management-plane-install](management-plane-install.md).
-
-Against a management plane already running, merge. Argo applies it from
-the installation's directory.
-
-### 5. Read back what it built
-
-```bash
-kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
-  get xsubsidiary "$QW_CODE" -o yaml
-```
-
-`status.folderId` carries the folder, composed or adopted.
-
 ## Failures
 
 **`Unsynced resources: folder`, while the folder reports `Synced`.**
@@ -119,13 +101,15 @@ a composite that reports healthy.
 - Declare a boundary with an empty `access` mapping, which reconciles
   correctly and which nobody can reach.
 
+Commands: `just queenswood-subsidiary-manifest`.
+
 ## Discussion
 
 The folder is what an installation is, so this is the whole handover:
 one kind, two suppliers, and the same object left behind either way.
-That is why it is a step rather than a branch inside the bootstrap,
-where it used to be — a page that says "steps 1 to 3 are theirs, and
-read this one differently" is a page nobody follows twice the same way.
+Composing one and adopting one differ by a field rather than by a
+procedure, which is what lets a folder somebody else made be declared
+here at all.
 
 The manifest carries the code alone, which looks thin until you notice
 what it is for. It is the XR: applying it is what instantiates the
