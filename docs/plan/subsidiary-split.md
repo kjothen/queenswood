@@ -266,14 +266,46 @@ plane composed, by the same deterministic name it would reference:
 
 The instance already runs `function-go-templating`, so it spells the
 member from what it read. The same fetch answers the recovery project.
-`argoServiceAccount` and `recoveryProjectId` then leave
-`environment.yml` entirely, which is what leaves that file holding only
-facts somebody authored.
+
+Only `argoServiceAccount` leaves the file. `recoveryProjectId` is the
+plane's **input**, not a generated value: the plane composes the
+recovery project *with that id* —
+`dig "projectId" (dig "recoveryProjectId" "" $env) $recovery`, and the
+live manifest has no `recovery` block, so the environment is what tells
+it which project to create. Authored, minted once, like
+`management.projectId`. The instance stops reading it from a file and
+reads it off the composed `Project` instead — one source rather than
+two that must agree — but the file still carries it for the plane.
+
+Moving it to `installation.yml`'s `spec.recovery.projectId`, which the
+composition already prefers, would take it out of the environment. That
+is a question about which file authored facts live in, separate from
+this one.
 
 The composite may carry the Kubernetes name as a defaulted field, for
 an installation that has to override it. Unlikely to be wanted: the
 name is derived from the code, which is the thing that makes it
 findable at all.
+
+### The order it goes in
+
+Inside out: prove the consumer can live without the courier before
+removing it.
+
+1. **Install `function-extra-resources`**, and confirm it `Healthy`. Its
+   own merge, reaching the plane first. A Composition naming a function
+   that is not installed does not degrade — the pipeline step fails and
+   the composite composes nothing, which on a live instance is
+   everything it holds.
+2. **`XQueenswoodInstance` reads both values from extra resources.**
+   The environment is still intact at this point, so this is the proof
+   rather than the commitment: if the fetch does not work, nothing has
+   been removed. Provable before merging —
+   `crossplane render --extra-resources` against a stubbed
+   `ServiceAccount`, diffed resource for resource against today's
+   output.
+3. **`environment.yml` sheds `argoServiceAccount`**, which step 2 made
+   dead.
 
 ### What it costs
 
@@ -344,7 +376,8 @@ the ADR settles both or neither.
    two files — no new step.
 4. `function-extra-resources`, independent of the rest and worth doing
    on its own merits: it is what stops a generated value being
-   transcribed by hand.
+   transcribed by hand. Three merges, inside out — see the section
+   above.
 5. `access` into `environment.yml`, once 4 has emptied that file of
    generated values.
 6. The recipe renames, consequential on 1 and blocked only on whether
