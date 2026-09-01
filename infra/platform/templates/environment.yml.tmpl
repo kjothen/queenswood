@@ -41,3 +41,12 @@ data:
     platformAdmin: ["group:${PLATFORM_ADMIN_GROUP}@${DOMAIN}"]
     clusterAdmin: ["group:${CLUSTER_ADMIN_GROUP}@${DOMAIN}"]
     secretsAdmin: ["group:${SECRETS_ADMIN_GROUP}@${DOMAIN}"]
+  # Which folder this installation is, and whether we made it. folderId
+  # adopts an existing one and takes precedence: the composite then
+  # observes it and never writes to it, so its name and its place are
+  # read from GCP rather than asserted here. To compose one instead,
+  # omit folderId and set the other two. Everything else in this file
+  # reads the same either way -- an installation in a folder handed to
+  # us is declared exactly like one in a folder of ours.
+  folder:
+${FOLDER_BLOCK}

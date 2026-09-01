@@ -495,71 +495,29 @@ queenswood-recovery-backup-key env=ENV label=LABEL supersede="":
         >/dev/null
     echo ">>> $SECRET now holds a key. It is the only copy, deliberately."
 
-# Print the subsidiary manifest, resolved. Takes the folder's parent.
-#
 # The folder and the capabilities bound on it, which is what a plane is
 # later built against. Separate from the plane's manifest because the
-# folder outlives it and may not be ours at all -- see ADR-0027. Pass a
-# folder to adopt one an organisation handed over.
-queenswood-subsidiary-manifest parent=PARENT name="" folder="":
+# folder outlives it and may not be ours at all -- see ADR-0027. Which
+# folder it is, and who holds what, are stated in the environment.
+#
+# Print the subsidiary manifest. Takes nothing: it is the code alone.
+queenswood-subsidiary-manifest:
     #!/usr/bin/env zsh
     set -e
     # stdout carries the manifest and nothing else, so this can be
-    # redirected straight into a file; every message goes to stderr.
-    if [[ -z "{{ parent }}" ]]; then
-      echo "no parent for the folder" >&2
-      echo "export QW_PARENT, or pass it:" >&2
-      echo "  just queenswood-subsidiary-manifest organizations/<org-id>" >&2
-      exit 1
-    fi
-
-    # Deterministic, because the code is what tells one subsidiary from
-    # another. Pass a name where the folder is handed to you already
-    # named: it keeps whatever its organisation chose, and this is
-    # written rather than merely recorded.
-    NAME="{{ name }}"
-    if [[ -z "$NAME" ]]; then
-      NAME="fldr-{{ CODE }}"
-      echo ">>> naming the folder $NAME" >&2
-    fi
-
-    # Refuse to make a second subsidiary by accident. GCP allows the
-    # duplicate display name, so this is the only thing that would
-    # notice -- and with a deterministic name it is what catches a
-    # rebuild that meant to adopt.
-    if [[ -z "{{ folder }}" ]]; then
-      case "{{ parent }}" in
-        organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
-        folders/*)       SCOPE="--folder=${${:-{{ parent }}}#folders/}" ;;
-        *) echo "parent must be organizations/<id> or folders/<id>" >&2; exit 1 ;;
-      esac
-      EXISTING=$(gcloud resource-manager folders list $SCOPE \
-                   --filter="displayName=$NAME" \
-                   --format='value(name)' 2>/dev/null | head -1 || true)
-      if [[ -n "$EXISTING" ]]; then
-        echo "a folder named $NAME already exists under {{ parent }}: folders/$EXISTING" >&2
-        echo "adopt it:  just queenswood-subsidiary-manifest {{ parent }} $NAME folders/$EXISTING" >&2
-        echo "or choose a different name" >&2
-        exit 1
-      fi
-    fi
-
-    # Set only when the folder already exists. A pre-set external name
-    # turns a first-run create into a failed observe.
-    ADOPT=""
-    if [[ -n "{{ folder }}" ]]; then
-      case "{{ folder }}" in
-        folders/*) ADOPT="folderId: \"{{ folder }}\"" ;;
-        *)         ADOPT="folderId: \"folders/{{ folder }}\"" ;;
-      esac
-    fi
-
-    CODE="{{ CODE }}" PARENT="{{ parent }}" NAME="$NAME" ADOPT="$ADOPT" \
+    # redirected straight into a file.
+    #
+    # The code and nothing else. Which folder, and whether we made it,
+    # is stated in environment.yml, so a handover edits one file --
+    # queenswood-environment-manifest is what takes the parent, the name
+    # and the id.
+    CODE="{{ CODE }}" \
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
       infra/platform/templates/subsidiary.yml.tmpl
 
-# Render the installation's environment, beside its manifest.
-queenswood-environment-manifest recovery="" billing="":
+# Render the installation's environment, beside its manifest. Takes the
+# folder's parent to compose one, or a folder id to adopt one instead.
+queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" billing="":
     #!/usr/bin/env zsh
     set -e
     ROOT={{ INSTALLATIONS_REPO }}/{{ CODE }}
@@ -612,6 +570,55 @@ queenswood-environment-manifest recovery="" billing="":
     # denial exits non-zero with empty stdout, and an empty domain
     # renders every principal as `group:grp-...@`, which IAM rejects
     # only once the manifest is applied.
+    # Which folder, and whether we made it. folderId adopts an existing
+    # one and is the only field wanted in that mode: an adopted folder
+    # is named and placed by whoever owns it, and the composite reads
+    # both back rather than asserting them. Composing one needs the
+    # parent and the name instead, and the two sets are exclusive.
+    FOLDER="{{ folder }}"
+    if [[ -n "$FOLDER" ]]; then
+      case "$FOLDER" in
+        folders/*) : ;;
+        *) FOLDER="folders/$FOLDER" ;;
+      esac
+      FOLDER_BLOCK=$(printf '    folderId: "%s"' "$FOLDER")
+      echo ">>> adopting $FOLDER" >&2
+    else
+      if [[ -z "{{ parent }}" ]]; then
+        echo "no folder to adopt and no parent to compose one under" >&2
+        echo "export QW_PARENT, or pass a folder to adopt:" >&2
+        echo "  just queenswood-environment-manifest '' '' folders/<folder-id>" >&2
+        exit 1
+      fi
+      # Deterministic, because the code is what tells one subsidiary
+      # from another. Pass a name where the folder is handed to you
+      # already named.
+      NAME="{{ name }}"
+      if [[ -z "$NAME" ]]; then
+        NAME="fldr-{{ CODE }}"
+        echo ">>> naming the folder $NAME" >&2
+      fi
+      # Refuse to compose a second folder by accident. GCP allows the
+      # duplicate display name, so this is the only thing that would
+      # notice -- and with a deterministic name it is what catches a
+      # rebuild that meant to adopt.
+      case "{{ parent }}" in
+        organizations/*) SCOPE="--organization=${${:-{{ parent }}}#organizations/}" ;;
+        folders/*)       SCOPE="--folder=${${:-{{ parent }}}#folders/}" ;;
+        *) echo "parent must be organizations/<id> or folders/<id>" >&2; exit 1 ;;
+      esac
+      EXISTING=$(gcloud resource-manager folders list $SCOPE \
+                   --filter="displayName=$NAME" \
+                   --format='value(name)' 2>/dev/null | head -1 || true)
+      if [[ -n "$EXISTING" ]]; then
+        echo "a folder named $NAME already exists under {{ parent }}: folders/$EXISTING" >&2
+        echo "adopt it:  just queenswood-environment-manifest '' '' folders/$EXISTING" >&2
+        echo "or choose a different name" >&2
+        exit 1
+      fi
+      FOLDER_BLOCK=$(printf '    parent: "%s"\n    displayName: "%s"' "{{ parent }}" "$NAME")
+    fi
+
     if ! DOMAIN=$(just _gcp-domain); then
       exit 1
     fi
@@ -623,7 +630,7 @@ queenswood-environment-manifest recovery="" billing="":
 
     CODE="{{ CODE }}" BILLING="$BILLING" \
     MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
-    DOMAIN="$DOMAIN" \
+    DOMAIN="$DOMAIN" FOLDER_BLOCK="$FOLDER_BLOCK" \
     PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
     PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
     CLUSTER_ADMIN_GROUP="{{ CLUSTER_ADMIN_GROUP }}" \

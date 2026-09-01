@@ -5,7 +5,9 @@
 #
 # This is the handover. Composed where the folder is ours, and adopted
 # where an organisation hands one over, leaving the same object either
-# way for the plane to be built against. See ADR-0027.
+# way for the plane to be built against. Which of those, and which
+# folder, is stated in environment.yml, so a handover edits one file
+# and this states the code alone. See ADR-0027.
 apiVersion: platform.repldriven.com/v1alpha1
 kind: XSubsidiary
 metadata:
@@ -13,8 +15,3 @@ metadata:
   namespace: crossplane-system
 spec:
   code: "${CODE}"
-  # Stated in both modes. The provider holds Update, so either left to
-  # a default is one it would write onto a folder somebody else owns.
-  parent: "${PARENT}"
-  displayName: "${NAME}"
-  ${ADOPT}
