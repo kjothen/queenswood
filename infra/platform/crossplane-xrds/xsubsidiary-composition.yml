@@ -67,8 +67,27 @@ spec:
           template: |
             {{- $xr := .observed.composite.resource }}
             {{- $code := $xr.spec.code }}
-            {{- $folderId := dig "folderId" "" $xr.spec }}
+            {{- /* The installation's folder, overridden by this
+                   manifest's own field where it names one. Stated in
+                   the environment so a handover touches one file: the
+                   id where a folder is handed over, the parent and the
+                   name where we compose one. */}}
+            {{- $envFolder := dig "folder" dict (index .context "apiextensions.crossplane.io/environment" | default dict) }}
+            {{- $folderId := dig "folderId" (dig "folderId" "" $envFolder) $xr.spec }}
             {{- $adopted := ne $folderId "" }}
+            {{- /* Precedence rather than prohibition. An adopted folder
+                   is named and placed by whoever owns it, so these are
+                   read from GCP and never written -- and stating them
+                   anyway is inert rather than an error, which is the
+                   better failure: a rejected EnvironmentConfig would
+                   stop every composite that reads it, not just this
+                   one. */}}
+            {{- $parent := "" }}
+            {{- $displayName := "" }}
+            {{- if not $adopted }}
+            {{- $parent = dig "parent" (dig "parent" "" $envFolder) $xr.spec }}
+            {{- $displayName = dig "displayName" (dig "displayName" "" $envFolder) $xr.spec }}
+            {{- end }}
             {{- /* A soft-deleted folder still reads as existing, so the
                    provider reports it Ready for the whole 30-day window
                    and goes on doing so. Readiness is stated here from
@@ -108,10 +127,10 @@ spec:
                 kind: ClusterProviderConfig
                 name: default
               forProvider:
-                {{- with dig "parent" "" $xr.spec }}
+                {{- with $parent }}
                 parent: {{ . | quote }}
                 {{- end }}
-                {{- with dig "displayName" "" $xr.spec }}
+                {{- with $displayName }}
                 displayName: {{ . | quote }}
                 {{- end }}
                 # Stops the provider deleting the folder. Not a person:
