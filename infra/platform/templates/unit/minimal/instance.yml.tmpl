@@ -19,14 +19,6 @@ spec:
   region: ${REGION}
   regionCode: ${REGION_CODE}
   zone: ${GCP_ZONE}
-  # platformAdmin holds roles/oauthconfig.editor on this project, which
-  # is what creating the OAuth client needs. secretsAdmin is this
-  # instance's own: the installation's binds on the management project
-  # and writes nothing here.
-  access:
-    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${ORG_DOMAIN}"]
-    platformAdmin: ["group:${PLATFORM_ADMIN_GROUP}@${ORG_DOMAIN}"]
-    secretsAdmin: ["group:${SECRETS_ADMIN_GROUP}@${ORG_DOMAIN}"]
   # Identical in every instance, which is safe while the VPCs are
   # isolated. State them per instance before two of them peer, not
   # after: a range is immutable.

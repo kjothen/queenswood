@@ -353,16 +353,24 @@ none of it. Each composite still carries `spec.access` as a
 per-capability override, so an instance may name a different
 `secretsAdmin` without the file changing for anyone else.
 
-The folder facts stay in `subsidiary.yml`. `folderId` has one reader —
-nothing else needs it, since the plane and the instance resolve the
-folder by the composed object's Kubernetes name, `fldr-<code>`, which
-is derived from `spec.code` in both the composed and the adopted mode.
-That reference works only while an `XSubsidiary` exists on the cluster,
-though, and ADR-0027 contemplates it not existing — *"where an
-organisation runs no Crossplane, nothing instantiates the kind"*. So
-there is a gap there, and it is a different question from this one: not
-a repeated value to hoist, but a missing escape hatch for a folder we
-did not compose.
+The folder id stays in `subsidiary.yml`, for the reason
+`recoveryProjectId` moved there: one reader, which is `XSubsidiary`
+itself. Neither the plane nor the instance takes a folder id at all —
+both resolve the composed object by its Kubernetes name, `fldr-<code>`,
+derived from `spec.code` in the composed and the adopted mode alike, so
+the id is never spelled twice and `XSubsidiary` is where it is
+authoritative. What it publishes as `status.folderId` is for people and
+tooling, not for another composite.
+
+That reference holds because the kind is always instantiated: composed
+where the folder is ours, adopted where an organisation hands one over.
+ADR-0027's *"where an organisation runs no Crossplane, nothing
+instantiates the kind"* is about the organisation supplying the folder,
+and says nothing about the plane receiving it — which runs the kind
+either way. Binding is ours in both modes too: a supplier is not
+expected to bind the capabilities, and one that does costs nothing,
+since the bindings are declared rather than added and reconcile to the
+same state.
 
 ## Open: does `subsidiary-install` survive
 

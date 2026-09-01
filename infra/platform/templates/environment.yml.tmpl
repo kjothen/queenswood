@@ -25,3 +25,19 @@ data:
   # repository. A fork, a mirror or a moved organisation is one edit
   # here.
   manifestRepoURL: "${MANIFEST_REPO_URL}"
+  # Capability -> principal, for the whole installation. Whole IAM
+  # member strings, because the principal need not be a group, and a
+  # capability left out binds nothing. Read by the subsidiary, the plane
+  # and every instance, each binding the subset it can: only
+  # platformViewer and clusterAdmin bind on a folder, platformAdmin
+  # binds on a service account, and an instance's secretsAdmin binds on
+  # its own project. Stated here so a new instance restates none of it.
+  #
+  # The names are ours and the principals are the organisation's. One
+  # that hands you a folder may name its groups nothing like these, and
+  # a capability may be answered by a user or a principalSet instead.
+  access:
+    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${DOMAIN}"]
+    platformAdmin: ["group:${PLATFORM_ADMIN_GROUP}@${DOMAIN}"]
+    clusterAdmin: ["group:${CLUSTER_ADMIN_GROUP}@${DOMAIN}"]
+    secretsAdmin: ["group:${SECRETS_ADMIN_GROUP}@${DOMAIN}"]

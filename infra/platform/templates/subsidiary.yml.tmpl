@@ -18,12 +18,3 @@ spec:
   parent: "${PARENT}"
   displayName: "${NAME}"
   ${ADOPT}
-  # Only the capabilities that bind on the folder. platformAdmin binds
-  # on the platform service account and secretsAdmin on the management
-  # project, and both stay with XManagementPlane.
-  #
-  # The names are ours and the principals are the organisation's. One
-  # that hands you a folder may name its groups nothing like these.
-  access:
-    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${DOMAIN}"]
-    clusterAdmin: ["group:${CLUSTER_ADMIN_GROUP}@${DOMAIN}"]

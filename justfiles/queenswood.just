@@ -155,10 +155,6 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
     # can be read and reviewed as YAML rather than as shell.
     CODE="{{ CODE }}" REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
     ZONE="{{ ZONE }}" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
-    PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
-    PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
-    CLUSTER_ADMIN_GROUP="{{ CLUSTER_ADMIN_GROUP }}" \
-    SECRETS_ADMIN_GROUP="{{ SECRETS_ADMIN_GROUP }}" \
     RECOVERY_BLOCK="$RECOVERY_BLOCK" MGMT="$MGMT" MGMT_ADOPT="$MGMT_ADOPT" \
     SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
     SOURCE_PATH_PREFIX="{{ SOURCE_PATH_PREFIX }}" \
@@ -295,9 +291,6 @@ queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
       BACKUP_BUCKET="bkt-$INSTANCE-backups-$RECOVERY_SUFFIX" \
       BACKUP_GENERATION="fdb/continuous/$(date +%Y-%m-%d)" \
       ORG_DOMAIN="$APEX" \
-      PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
-      PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
-      SECRETS_ADMIN_GROUP="{{ SECRETS_ADMIN_GROUP }}" \
       SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
       MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
       EXTERNAL_SECRETS_VERSION="$ES_VERSION" \
@@ -562,9 +555,6 @@ queenswood-subsidiary-manifest parent=PARENT name="" folder="":
     fi
 
     CODE="{{ CODE }}" PARENT="{{ parent }}" NAME="$NAME" ADOPT="$ADOPT" \
-    DOMAIN="$(just _gcp-domain)" \
-    PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
-    CLUSTER_ADMIN_GROUP="{{ CLUSTER_ADMIN_GROUP }}" \
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
       infra/platform/templates/subsidiary.yml.tmpl
 
@@ -618,14 +608,33 @@ queenswood-environment-manifest recovery="" billing="":
       exit 1
     fi
 
+    # Captured before it is used rather than substituted inline: a
+    # denial exits non-zero with empty stdout, and an empty domain
+    # renders every principal as `group:grp-...@`, which IAM rejects
+    # only once the manifest is applied.
+    if ! DOMAIN=$(just _gcp-domain); then
+      exit 1
+    fi
+    if [[ -z "$DOMAIN" ]]; then
+      echo "no organisation domain; the access mapping would name" >&2
+      echo "principals with no domain at all" >&2
+      exit 1
+    fi
+
     CODE="{{ CODE }}" BILLING="$BILLING" \
     MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
+    DOMAIN="$DOMAIN" \
+    PLATFORM_VIEWER_GROUP="{{ PLATFORM_VIEWER_GROUP }}" \
+    PLATFORM_ADMIN_GROUP="{{ PLATFORM_ADMIN_GROUP }}" \
+    CLUSTER_ADMIN_GROUP="{{ CLUSTER_ADMIN_GROUP }}" \
+    SECRETS_ADMIN_GROUP="{{ SECRETS_ADMIN_GROUP }}" \
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
       infra/platform/templates/environment.yml.tmpl > "$FILE"
 
     echo ">>> wrote $FILE"
     echo
     echo "  billing   $BILLING"
+    echo "  access    4 capabilities on $DOMAIN"
 
 # Print the nameservers Cloud DNS assigned the installation's zone.
 queenswood-zone-nameservers domain="":
