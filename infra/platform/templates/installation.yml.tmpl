@@ -18,13 +18,6 @@ spec:
   regionCode: "${REGION_CODE}"
   zone: "${ZONE}"
   ${BILLING_LINE}
-  # Capability -> principal. Whole IAM member strings, because the
-  # principal need not be a group. A capability left out binds nothing.
-  access:
-    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${DOMAIN}"]
-    platformAdmin: ["group:${PLATFORM_ADMIN_GROUP}@${DOMAIN}"]
-    clusterAdmin: ["group:${CLUSTER_ADMIN_GROUP}@${DOMAIN}"]
-    secretsAdmin: ["group:${SECRETS_ADMIN_GROUP}@${DOMAIN}"]
 ${RECOVERY_BLOCK}
   management:
     projectId: "${MGMT}"

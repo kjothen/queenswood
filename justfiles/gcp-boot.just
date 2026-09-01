@@ -668,6 +668,20 @@ gcp-boot-mgmt-apply billing="" yes="":
       exit 1
     fi
 
+    # The environment beside it, which carries the access mapping every
+    # composite reads. Applied here because nothing else does until Argo
+    # is running on the management cluster, and Argo is not running
+    # until this recipe has built it. Without it the folder and the
+    # management project come up with no bindings at all -- clusterAdmin
+    # included, which is how a person reaches the cluster once the seed
+    # impersonation is revoked.
+    #
+    # Optional, because it is not needed to build: a composite reading
+    # an absent environment binds nothing and reconciles, and the
+    # bindings appear on the next pass once the file exists. So a
+    # bootstrap may run ahead of it and be completed afterwards.
+    ENV_FILE={{ INSTALLATIONS_REPO }}/{{ CODE }}/environment.yml
+
     # Supplied here and not in the committed manifest, because creating
     # a project is the one moment it is needed. Discovered from the
     # identity's own binding, so applying does not depend on remembering
@@ -691,6 +705,7 @@ gcp-boot-mgmt-apply billing="" yes="":
     # Shown whole before anything is applied: this is the document the
     # boot cluster receives, and the ids in it are consumed permanently.
     echo "applying    $FILE"
+    if [[ -f "$ENV_FILE" ]]; then echo "            $ENV_FILE"; fi
     echo "to          {{ BOOT_CTX }}"
     echo "billing     $BILLING"
     echo
@@ -712,6 +727,17 @@ gcp-boot-mgmt-apply billing="" yes="":
     print -r -- "$DOC" | kubectl --context {{ BOOT_CTX }} apply -f -
 
     echo ">>> applied $FILE"
+    # After the composite, not before: the EnvironmentConfig is
+    # cluster-scoped and nothing composes it, so order buys nothing --
+    # but applying it second keeps the manifest the thing this recipe is
+    # about, and a missing environment is reported rather than fatal.
+    if [[ -f "$ENV_FILE" ]]; then
+      kubectl --context {{ BOOT_CTX }} apply -f "$ENV_FILE"
+      echo ">>> applied $ENV_FILE"
+    else
+      echo ">>> no $ENV_FILE; the folder and project will have no access"
+      echo ">>> bindings until one is rendered, committed and applied"
+    fi
     echo ">>> waiting for the folder and management project"
     kubectl --context {{ BOOT_CTX }} -n crossplane-system wait \
       --for=condition=ready --timeout=300s \
