@@ -189,6 +189,10 @@ topic.
   manifest, since IAM rejects a binding to a principal that does not
   exist. See
   [secure-foundation](docs/recipes/infra/queenswood-secure-foundation.md).
+- **The identity that builds installations** — the seed project and the
+  organisation-scoped rights it holds for a bootstrap and no longer,
+  and why creating a folder is checked on the parent. See
+  [gcp-bootstrap.md](docs/recipes/infra/gcp-bootstrap.md).
 - **Building the ability to deploy** — why a plane of the wrong kind
   cannot install this at all, what the composite builds, the path from
   a throwaway plane to a durable one, and the four identities. See

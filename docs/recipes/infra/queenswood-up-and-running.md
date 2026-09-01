@@ -4,12 +4,9 @@
 
 ## Status
 
-**Untested as written**, and ahead of the recipes. Every step below has
-been run and never in one sequence by one person. Step 1's seed
-identity is still the first three of
-[queenswood-bootstrap](queenswood-bootstrap.md)'s eleven steps, and
-what that recipe calls step 5 onwards is step 4 here. Until they are
-separated, read steps 1 and 4 out of the one recipe.
+**Untested as written.** Every step below has been run and never in one
+sequence by one person. Expect the first run to find an ordering this
+page states wrongly rather than a recipe it omits.
 
 ## Problem
 
@@ -53,8 +50,8 @@ what each leaves for the next, and none of it is repeated here.
 
 ### 1. The organisation
 
-[gcp-secure-foundation](gcp-secure-foundation.md), then steps 2, 3 and
-11 of [queenswood-bootstrap](queenswood-bootstrap.md). Cloud Identity,
+[gcp-secure-foundation](gcp-secure-foundation.md), then
+[gcp-bootstrap](gcp-bootstrap.md). Cloud Identity,
 the domain verified against it, the organisation, a billing account,
 the capabilities nobody holds by default, and the seed identity that
 creates folders and projects on behalf of all of it.
@@ -87,9 +84,8 @@ bound on it.
 
 ### 4. The management plane
 
-[queenswood-bootstrap](queenswood-bootstrap.md), less the seed identity
-that belongs to step 1 and the folder that belongs to step 3. A
-throwaway control plane raises the management project and the cluster
+[queenswood-bootstrap](queenswood-bootstrap.md). A throwaway control
+plane raises the management project and the cluster
 inside the boundary, the composite pivots onto the cluster it built,
 and the throwaway one is discarded.
 
@@ -167,13 +163,12 @@ produced them.
 
 ## References
 
-- [gcp-secure-foundation](gcp-secure-foundation.md) — step 1, and the
-  seed identity in [queenswood-bootstrap](queenswood-bootstrap.md).
+- [gcp-secure-foundation](gcp-secure-foundation.md) and
+  [gcp-bootstrap](gcp-bootstrap.md) — step 1.
 - [queenswood-secure-foundation](queenswood-secure-foundation.md) —
   step 2, and what to ask an organisation for.
 - [boundary-install](boundary-install.md) — step 3.
-- [queenswood-bootstrap](queenswood-bootstrap.md) — step 4, and step
-  1's seed identity, which it does not yet separate.
+- [queenswood-bootstrap](queenswood-bootstrap.md) — step 4.
 - [queenswood-installation](queenswood-installation.md) — the rest of
   step 4, still written as though it followed one.
 - [instance-deploy](instance-deploy.md) — step 5.

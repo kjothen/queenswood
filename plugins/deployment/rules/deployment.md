@@ -125,6 +125,29 @@ gcp-boot-cluster-down`, `just gcp-boot-seed-close`, `just
 gcp-boot-seed-open`.
 See [queenswood-bootstrap](../../../docs/recipes/infra/queenswood-bootstrap.md).
 
+## The identity that builds installations is opened and closed
+
+Create the seed identity once for an organisation rather than once per
+installation, and reuse the project labelled `queenswood-tier=seed`
+where one exists rather than minting a second -- its id is consumed and
+it is retained rather than deleted. Hold `folderCreator` and
+`folderIamAdmin` on the parent, never `folderAdmin`, so it cannot
+delete a folder, and grant them there because creating a folder is
+checked on the parent rather than on the folder. Impersonate it rather
+than holding a credential, never create a key for it, and never grant a
+person `serviceAccountTokenCreator` on it outside a bootstrap. Close it
+once a bootstrap is done and reopen it for the next: its organisation
+grants otherwise stand for ever, and the plane that succeeds it needs
+none of them. Read an instant exit with no output from
+`gcp-boot-preflight` as `set -e` aborting before the first echo rather
+than as a check that passed. Skip this entirely where an organisation
+hands you a folder and an identity able to create projects in it --
+this is how we produce one, not what an installation requires.
+Commands: `just gcp-boot-preflight`, `just gcp-boot-seed`, `just
+gcp-boot-seed-grant-org-roles`, `just gcp-boot-seed-close`, `just
+gcp-boot-seed-open`.
+See [gcp-bootstrap](../../../docs/recipes/infra/gcp-bootstrap.md).
+
 ## An installation is one file, and changing it is a merge
 
 Change what exists by editing the manifest and merging it, never by
