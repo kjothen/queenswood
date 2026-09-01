@@ -38,90 +38,100 @@ spec:
                   - type: FromCompositeFieldPath
                     key: installation
                     valueFromFieldPath: spec.code
-    - step: resources
+    # =======================================================================
+    # The folder, and the only resource this kind composes itself. Here
+    # rather than in patch-and-transform because what it manages depends
+    # on how it was obtained, and a patch cannot branch.
+    #
+    # Delete is withheld in every mode: composed, it is the protected
+    # tier and holds every project; adopted, it is not ours to delete at
+    # all. Liens are applied separately and are the control that holds
+    # if this is edited.
+    #
+    # Update is withheld where the folder was adopted. A folder somebody
+    # handed over is theirs to name and to place, so displayName and
+    # parent are read rather than asserted -- and withholding Update is
+    # what makes that structural instead of a convention, since the
+    # provider then cannot write either field whatever the spec says.
+    # An empty displayName renames a folder and an empty parent moves
+    # it, so the difference matters more than it reads.
+    # =======================================================================
+    - step: folder
       functionRef:
-        name: function-patch-and-transform
+        name: function-go-templating
       input:
-        apiVersion: pt.fn.crossplane.io/v1beta1
-        kind: Resources
-        resources:
-          # ===================================================================
-          # The folder, and the only resource this kind composes itself.
-          # Delete is withheld in every mode: composed, it is the
-          # protected tier and holds every project; adopted, it is not
-          # ours to delete at all. Liens are applied separately and are
-          # the control that holds if this is edited.
-          # ===================================================================
-          - name: folder
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: Folder
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  displayName: queenswood
-                  parent: organizations/0
-                  # Stops the provider deleting the folder. Not a
-                  # person: a console delete goes through regardless,
-                  # which is what nobody holding folders.delete is for.
-                  deletionProtection: true
-            # A soft-deleted folder still reads as existing, so the
-            # provider reports this resource Ready for the whole 30-day
-            # window and goes on doing so. This check moves the composite
-            # to Ready: False. The managed resource itself still says
-            # True, so alerting belongs on composites rather than on MRs.
-            readinessChecks:
-              - type: MatchString
-                fieldPath: status.atProvider.lifecycleState
-                matchString: ACTIVE
-            patches:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $code := $xr.spec.code }}
+            {{- $folderId := dig "folderId" "" $xr.spec }}
+            {{- $adopted := ne $folderId "" }}
+            {{- /* A soft-deleted folder still reads as existing, so the
+                   provider reports it Ready for the whole 30-day window
+                   and goes on doing so. Readiness is stated here from
+                   the state the folder reports, which moves the
+                   composite to Ready: False where auto-ready alone
+                   would not. Absent on the first pass, which reads as
+                   not ready, and is correct. */}}
+            {{- $observed := dig "folder" "resource" dict (dig "resources" dict .observed) }}
+            {{- $state := dig "status" "atProvider" "lifecycleState" "" $observed }}
+            ---
+            apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+            kind: Folder
+            metadata:
               # Named from the code rather than generated, so the
               # bindings below can spell it and the Kubernetes name
               # matches the GCP one.
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "fldr-%s"
-              # Adoption. Skipped when absent, so a subsidiary with no
-              # folderId composes one and a handover records the one it
-              # was given.
-              - fromFieldPath: spec.folderId
-                toFieldPath: metadata.annotations[crossplane.io/external-name]
-              - fromFieldPath: spec.parent
-                toFieldPath: spec.forProvider.parent
-              - fromFieldPath: spec.displayName
-                toFieldPath: spec.forProvider.displayName
-              # The numeric id lands in the external-name annotation
-              # before it appears anywhere in status.atProvider.
-              - type: ToCompositeFieldPath
-                fromFieldPath: metadata.annotations[crossplane.io/external-name]
-                toFieldPath: status.folderId
-
-    # =======================================================================
-    # What each capability may do inside the folder, and nothing about
-    # who holds it -- that is the access mapping, and the principals in
-    # it belong to whoever owns the directory.
-    #
-    # Only the two that bind on the folder. platformAdmin binds on the
-    # platform service account and secretsAdmin on the management
-    # project, neither of which exists until a plane is built here.
-    #
-    # A separate step because the resources vary: none for a capability
-    # the organisation does not provide, one per member per role where
-    # it does. Patch-and-transform composes a fixed set.
-    # =======================================================================
+              name: {{ printf "fldr-%s" $code }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: folder
+                gotemplating.fn.crossplane.io/ready: {{ if eq $state "ACTIVE" }}"True"{{ else }}"False"{{ end }}
+                {{- if $adopted }}
+                # Adoption. Absent on a folder this composes, so a
+                # subsidiary with no folderId creates one and a handover
+                # records the one it was given.
+                crossplane.io/external-name: {{ $folderId | quote }}
+                {{- end }}
+            spec:
+              managementPolicies:
+                - Observe
+                - Create
+                {{- if not $adopted }}
+                - Update
+                {{- end }}
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                {{- with dig "parent" "" $xr.spec }}
+                parent: {{ . | quote }}
+                {{- end }}
+                {{- with dig "displayName" "" $xr.spec }}
+                displayName: {{ . | quote }}
+                {{- end }}
+                # Stops the provider deleting the folder. Not a person:
+                # a console delete goes through regardless, which is
+                # what nobody holding folders.delete is for.
+                deletionProtection: true
+            {{- /* The numeric id lands in the external-name annotation
+                   before it appears anywhere in status.atProvider. An
+                   adopted folder answers from the spec on the first
+                   pass, before anything is observed; a composed one has
+                   no answer until it exists, and reports none rather
+                   than an empty string. */}}
+            {{- $reported := dig "metadata" "annotations" "crossplane.io/external-name" $folderId $observed }}
+            {{- if $reported }}
+            ---
+            apiVersion: platform.repldriven.com/v1alpha1
+            kind: XSubsidiary
+            status:
+              folderId: {{ $reported | quote }}
+            {{- end }}
     - step: access
       functionRef:
         name: function-go-templating
