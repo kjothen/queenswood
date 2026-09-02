@@ -164,6 +164,23 @@ interval.
 carried `state: down`. An already-stopped database cannot be created;
 an instance is built up and stopped afterwards.
 
+**An instance that will not come back up.** `state: up` is merged, the
+unit's Application reports the new revision as synced, and the
+composite still reads `down`. The Application that syncs the unit holds
+both the `XQueenswoodInstance` and the workload Applications, and its
+sync waits for those to report healthy — so the sync that applied
+`down` then waited for workloads `down` had just removed, and has been
+Running ever since. A new sync cannot start behind an operation still
+in flight.
+
+`just argo-apps-operation <app>` shows it: an operation whose revision
+is the one that took the instance down, `Running`, with `retryCount`
+unset because nothing is failing. Terminate it before removing the
+queued one, and never the other way round —
+[argocd-apps](argocd-apps.md) has the two steps and what removing
+`.operation` first does. Posting `up` has always worked, so this only
+appears on the way back from a `down`.
+
 **The plane's own pods restarting while the instance builds.** The
 instance's composites and Applications landed on a plane with no
 headroom. The symptom is liveness kills rather than memory pressure,
