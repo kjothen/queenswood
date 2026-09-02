@@ -54,6 +54,59 @@ Against a plane being built from nothing, none of that applies. The
 names are chosen once, the composites are composed from the start, and
 there is no transfer.
 
+## Does `XCluster` fit the plane
+
+Checked field by field. It does, with one addition.
+
+**The `Cluster` is the same or better.** Both compositions patch the
+same six fields — `location`, `networkRef.name`, `project`,
+`releaseChannel.channel`, `subnetworkRef.name`,
+`workloadIdentityConfig.workloadPool` — and `XCluster`'s `base` is a
+superset of the plane's. It fixes four invariants the plane has never
+set:
+
+```
+addonsConfig               httpLoadBalancing enabled
+gatewayApiConfig           CHANNEL_STANDARD
+datapathProvider           ADVANCED_DATAPATH
+inTransitEncryptionConfig  IN_TRANSIT_ENCRYPTION_INTER_NODE_TRANSPARENT
+```
+
+Two of those cannot be turned on afterwards, which is another reason
+this belongs to a build rather than a migration.
+
+**The `NodePool` is a superset too.** Same `networkConfig.podRange`,
+`oauthScopes` and `GKE_METADATA`; plus machine type, disk, the node
+service account, upgrade settings, and a node count driven by
+`spec.state`. The plane has no state and never will —
+[ADR-0024](../adr/0024-instances-are-their-own-composites.md) says
+state is an instance's property — so it takes the XRD's default of
+`up` and never sets it.
+
+**The one thing `XCluster` deliberately does not do.** It composes the
+node identity and its `defaultNodeServiceAccount` binding, but no
+`serviceAccountUser` on that identity, and says why: for an instance
+the platform identity created the project, so it is owner and attaching
+a service account to a node pool is a right it already holds. The
+plane's project was created by the seed, not by the platform identity,
+so the plane grants that binding explicitly and must go on doing so.
+
+Keep it in `XManagementPlane` rather than adding a flag to `XCluster`.
+The binding is a fact about who created the project, not about
+clusters.
+
+**Names that move**, beyond the cluster itself:
+
+```
+                today               after
+node identity   sa-<code>-c-nodes   sa-<code>-c-mgmt-nodes
+node pool       np-<code>-c-mgmt    np-<code>-c-mgmt-primary
+```
+
+Check both against `XCluster` rather than trusting this table: they are
+what a rebuild gets right for free and a migration would have to
+delete.
+
 ## What to change
 
 **`XManagementPlane` composes `XNetwork`** rather than a `Network` and
@@ -95,6 +148,25 @@ way. Then:
   [contract-install](../recipes/infra/contract-install.md) already says
   the environment is for.
 
+## `XPublicZone`, while the plane is being built
+
+[composite-catalogue](composite-catalogue.md) already argues for it —
+a public zone is the installation's and a public endpoint is an
+environment's, and their lifecycles are opposite. The plane composes
+the `ManagedZone` and its records in a go-templated `dns` step today.
+
+What a rebuild adds to that argument is the reason to do it **first**,
+not during. A recreated zone gets new nameservers, the registrar does
+not follow, and each fresh zone draws from a finite per-domain pool —
+see [gcp-dns](../recipes/infra/gcp-dns.md). So the zone is the one
+thing a from-scratch rebuild must *not* rebuild.
+
+Which means either the zone is extracted into `XPublicZone` before the
+plane is torn down, so it outlives the composite that used to hold it,
+or the rebuild adopts the existing zone rather than composing one. The
+first is the point of the split; the second is what happens by accident
+if nobody decides.
+
 ## What not to do
 
 A `subnetworkSelector` with `matchLabels` will resolve the subnet
@@ -129,16 +201,6 @@ Against a live plane, if it is ever done that way instead: 1, then the
 `XNetwork` move as two merges with `Delete` withheld first, then the
 cluster rename as a plane rebuild and pivot, then 4.
 
-## What this does not settle
-
-Whether `XCluster` fits the plane at all. It composes a node identity
-and a `roles/container.defaultNodeServiceAccount` binding, which the
-plane also composes, and the plane's cluster carries Workload Identity
-config, release channel and authorized networks that an instance's may
-not. Read both compositions before assuming the plane is an instance
-with a different label — that assumption is what this plan is worth
-checking against.
-
 ## References
 
 - [cloud-naming](../recipes/practices/cloud-naming.md) — no kind prefix
@@ -151,3 +213,7 @@ checking against.
   — building the plane, and the pivot a rename would repeat.
 - [ADR-0024](../adr/0024-instances-are-their-own-composites.md) — what
   the plane composes, and what Argo installs.
+- [composite-catalogue](composite-catalogue.md) — `XPublicZone`, and
+  the rest of what hollowing out the plane leaves.
+- [gcp-dns](../recipes/infra/gcp-dns.md) — why a zone is the one thing
+  a rebuild must not rebuild.
