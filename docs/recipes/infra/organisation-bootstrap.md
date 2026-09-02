@@ -31,7 +31,7 @@ one already exists, skip to step 3 and reopen it.
 **As any account in the organisation.**
 
 ```bash
-just gcp-boot-preflight
+just seed-preflight
 ```
 
 The organisation, the billing account, your own direct roles, and the
@@ -47,7 +47,7 @@ account` block nothing.
 for this step, then leave.
 
 ```bash
-just gcp-boot-seed
+just seed-create
 ```
 
 The seed project, the service account in it, `billing.user` on the
@@ -61,7 +61,7 @@ exists.
 step, then leave.
 
 ```bash
-just gcp-boot-seed-grant-org-roles
+just seed-grant-org-roles
 ```
 
 Where an organisation hands you a folder, these are held on that folder
@@ -72,19 +72,19 @@ and granted by whoever owns it.
 **As an org admin.**
 
 ```bash
-just gcp-boot-seed-close
+just seed-close
 ```
 
 It removes the platform-admin group's `serviceAccountTokenCreator` and
 revokes `folderCreator`, `folderIamAdmin` and `projectCreator`.
 `orgpolicy.policyAdmin`, `cloudasset.viewer` and `browser` stay.
 
-To bootstrap again, reopen with `just gcp-boot-seed-open` and `just
-gcp-boot-seed-grant-org-roles`.
+To bootstrap again, reopen with `just seed-open` and `just
+seed-grant-org-roles`.
 
 ## Failures
 
-**`gcp-boot-preflight` exits immediately with no output.** `set -e`
+**`seed-preflight` exits immediately with no output.** `set -e`
 aborting before the recipe's first `echo`, not a check that passed.
 
 **A second seed project appears.** The label was missing from the
@@ -96,12 +96,19 @@ duplicate is permanent.
 
 **MUST:**
 
-- Hold `folderCreator` and `folderIamAdmin` on the parent, never
-  `folderAdmin`, so the identity cannot delete a folder.
-- Close the identity once a bootstrap is done and reopen it for the
-  next. Its organisation grants otherwise stand for ever, and nothing
-  after the bootstrap needs them.
-- Impersonate it rather than holding a credential.
+- Read what you can reach with `just seed-preflight` before choosing
+  between creating a folder and adopting one.
+- Create the identity with `just seed-create`, which reuses the seed
+  project where one exists rather than minting a second.
+- Grant it `folderCreator` and `folderIamAdmin` on the parent with
+  `just seed-grant-org-roles`, never `folderAdmin`, so it cannot delete
+  a folder.
+- Close the identity with `just seed-close` once a bootstrap is done
+  and reopen it for the next with `just seed-open`. Its organisation
+  grants otherwise stand for ever, and nothing after the bootstrap
+  needs them.
+- Impersonate it with `just seed-impersonate` rather than holding a
+  credential.
 
 **MUST NOT:**
 
@@ -116,10 +123,6 @@ duplicate is permanent.
 - Skip this entirely where an organisation hands you a folder and an
   identity able to create projects in it. This recipe is how we produce
   one, not what an installation requires.
-
-Commands: `just gcp-boot-preflight`, `just gcp-boot-seed`, `just
-gcp-boot-seed-grant-org-roles`, `just gcp-boot-seed-close`, `just
-gcp-boot-seed-open`.
 
 ## Discussion
 

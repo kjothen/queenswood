@@ -116,13 +116,13 @@ its own composite applied afterwards, asking a platform team for the
 folder and the identity shortens the path without changing it, and
 another XRD and composition loaded onto the plane deploys something
 else the same way.
-Commands: `just gcp-boot-cluster-up`, `just gcp-boot-preflight`, `just
-gcp-boot-seed`, `just gcp-boot-seed-grant-org-roles`, `just
-gcp-boot-seed-impersonate`, `just gcp-boot-seed-impersonate-revoke`,
-`just queenswood-installation-manifest`, `just gcp-boot-mgmt-apply`,
-`just gcp-org-setup`, `just gcp-policy-status`, `just
-gcp-boot-cluster-down`, `just gcp-boot-seed-close`, `just
-gcp-boot-seed-open`.
+Commands: `just boot-cluster-up`, `just seed-preflight`, `just
+seed-create`, `just seed-grant-org-roles`, `just
+seed-impersonate`, `just seed-impersonate-revoke`,
+`just queenswood-installation-manifest`, `just boot-mgmt-apply`,
+`just gcp-org-enforce-constraints`, `just
+boot-cluster-down`, `just seed-close`, `just
+seed-open`.
 See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
 
 ## The identity that builds installations is opened and closed
@@ -139,13 +139,13 @@ person `serviceAccountTokenCreator` on it outside a bootstrap. Close it
 once a bootstrap is done and reopen it for the next: its organisation
 grants otherwise stand for ever, and the plane that succeeds it needs
 none of them. Read an instant exit with no output from
-`gcp-boot-preflight` as `set -e` aborting before the first echo rather
+`seed-preflight` as `set -e` aborting before the first echo rather
 than as a check that passed. Skip this entirely where an organisation
 hands you a folder and an identity able to create projects in it --
 this is how we produce one, not what an installation requires.
-Commands: `just gcp-boot-preflight`, `just gcp-boot-seed`, `just
-gcp-boot-seed-grant-org-roles`, `just gcp-boot-seed-close`, `just
-gcp-boot-seed-open`.
+Commands: `just seed-preflight`, `just seed-create`, `just
+seed-grant-org-roles`, `just seed-close`, `just
+seed-open`.
 See [organisation-bootstrap](../../../docs/recipes/infra/organisation-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
@@ -228,7 +228,7 @@ Commands: `just queenswood-instance-manifest`, `just
 queenswood-instance-keycloak-admin`, `just
 queenswood-instance-google-secret`, `just
 queenswood-recovery-backup-key`, `just crossplane-unready`, `just
-argo-apps-status`, `just gcp-instance-cluster-ctx`.
+argo-apps-status`, `just queenswood-instance-ctx`.
 See [instance-deploy](../../../docs/recipes/infra/instance-deploy.md).
 
 ## A folder is a subsidiary, and the plane is built in one
@@ -684,7 +684,7 @@ change with it, the registrar does not follow, and each fresh zone
 draws from a finite per-domain pool. Move the apex once rather than
 delegating a subdomain per environment. Moving the delegation itself is
 the section below.
-Commands: `just gcp-platform-sa`, `just dns-records`, `just
+Commands: `just plane-identity`, `just dns-records`, `just
 dns-carried`.
 See [gcp-dns](../../../docs/recipes/infra/gcp-dns.md).
 
@@ -785,7 +785,7 @@ version before reading it as a wrong credential, and read the
 `ExternalSecret`'s status rather than the Secret to check the
 credential arrived — it carries the same answer and needs no right to
 the value.
-Commands: `just gcp-github-app-secret`.
+Commands: `just argo-github-app-secret`.
 See [argocd-github](../../../docs/recipes/infra/argocd-github.md).
 
 ## Argo and Crossplane on a plane are upgraded by hand

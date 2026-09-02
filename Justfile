@@ -6,11 +6,6 @@ DOCKER_REGISTRY := "ghcr.io/repldriven/queenswood"
 XP_CLUSTER := "xp-mp"
 KIND_XP_CLUSTER := "kind-xp-mp"
 
-# GCP region + compute zone. Single-zone footprint -- cluster and
-# regional/zonal resources all live in europe-west2-a.
-REGION := "europe-west2"
-ZONE := REGION + "-a"
-
 # Active queenswood environment. Names the GKE namespace, the Helm
 # release, and the `pass` branch. `kind-xp-install-root` substitutes it
 # into the root Argo Application, so this is the only place an
@@ -36,11 +31,14 @@ PASS_ENV := "queenswood/gcp/" + QUEENSWOOD_ENV
 list:
     just --list
 
+import 'justfiles/vars.just'
 import 'justfiles/github.just'
 import 'justfiles/build.just'
 import 'justfiles/cloud.just'
 import 'justfiles/gcp.just'
-import 'justfiles/gcp-boot.just'
+import 'justfiles/seed.just'
+import 'justfiles/boot.just'
+import 'justfiles/plane.just'
 import 'justfiles/queenswood.just'
 import 'justfiles/dns.just'
 import 'justfiles/argo.just'

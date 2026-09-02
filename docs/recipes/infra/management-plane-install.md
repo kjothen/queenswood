@@ -1,19 +1,17 @@
-# Bootstrapping a management plane
+# An installation's management plane
 
 <!-- tessl-plugin: deployment -->
 
 ## Status
 
-**Untested as written**, and incomplete: one installation was built
-this way, but step 5 — moving the composite onto the cluster it just
-created — has no recipe behind it and was not performed. Until it is,
-the plane a run of this page leaves behind is the throwaway one, and
-the durable cluster reconciles nothing.
+**Untested.** One installation was built this way, but step 5 — moving
+the composite onto the cluster it created — has no recipe behind it and
+was not performed, so what a run leaves behind is the throwaway plane
+and a durable cluster reconciling nothing.
 
 ## Problem
 
-You want a management plane inside the boundary an installation
-occupies, reconciling that installation from git.
+You want to build an installation's management plane.
 
 ## Solution
 
@@ -44,8 +42,8 @@ export QW_INSTALLATIONS_REPO=../installations
 leave.
 
 ```bash
-just gcp-boot-seed-impersonate
-just gcp-boot-cluster-up
+just seed-impersonate
+just boot-cluster-up
 ```
 
 A local kind cluster running Crossplane and the GCP providers,
@@ -59,13 +57,12 @@ applies.
 ### 2. Render the manifest into the installations repository
 
 The installation's own manifest goes in the private manifests
-repository, not this one. The parent is one `gcp-boot-preflight`
-listed, the folder
-is named `fldr-<code>` unless you pass a name for one handed to you
-already named, and the rest defaults from the code:
+repository, not this one. The folder is named `fldr-<code>` unless you
+pass a name for one handed to you already named, and the rest defaults
+from the code.
 
 ```bash
-# the parent gcp-boot-preflight listed, e.g.
+# the parent seed-preflight listed, e.g.
 export QW_PARENT="organizations/<org-id>"
 
 just queenswood-installation-manifest \
@@ -85,7 +82,7 @@ Read it, then commit it. Pushing can wait for step 5.
 ### 3. Apply the committed manifest
 
 ```bash
-just gcp-boot-mgmt-apply
+just boot-mgmt-apply
 ```
 
 It reads the file step 2 wrote, merges in the billing account and
@@ -115,14 +112,13 @@ identity. Those are what everything later is named and bound against.
 Push the manifest first, then move the composite onto the management
 cluster created in step 3. No recipe does the move yet.
 
-After it, the management cluster reconciles its own project and folder,
-and every later change is a merge. The manifest driving them is
-[management-plane-install](management-plane-install.md).
+After it, the management cluster reconciles its own project and folder
+from the manifest step 2 wrote, and every later change is a merge.
 
 ### 6. Delete the boot cluster
 
 ```bash
-just gcp-boot-cluster-down
+just boot-cluster-down
 ```
 
 The folder and everything in it are orphaned, not deleted: the cluster
@@ -141,10 +137,10 @@ leave.
 > the plane, the terminal and the reboot.
 
 ```bash
-just gcp-boot-seed-impersonate-revoke
+just seed-impersonate-revoke
 ```
 
-`just gcp-boot-seed-impersonate-status` then reports no impersonation.
+`just seed-impersonate-status` then reports no impersonation.
 Run it as soon as the throwaway plane is gone.
 
 ### 8. Give Argo the credential for the private repository
@@ -236,24 +232,24 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
 
 - Build the plane before expecting a merge to install anything — a
   control plane running another toolchain cannot apply this kind.
-  `just gcp-boot-cluster-up` raises the throwaway one and loads the
+  `just boot-cluster-up` raises the throwaway one and loads the
   kind onto it.
 - Join a break-glass group for the step that names it and leave again.
   Each step says which capability it takes.
-- Impersonate with `just gcp-boot-seed-impersonate` rather than holding
+- Impersonate with `just seed-impersonate` rather than holding
   a credential, and revoke it once the throwaway plane is gone with
-  `just gcp-boot-seed-impersonate-revoke`. It outlives the plane
+  `just seed-impersonate-revoke`. It outlives the plane
   otherwise — the terminal and the reboot too.
-- Render the manifest with `just queenswood-installation-manifest` and commit it
-  before applying it with `just gcp-boot-mgmt-apply`, and push it
-  before any plane takes over reading it from git.
+- Render the manifest with `just queenswood-installation-manifest` and
+  commit it before applying it with `just boot-mgmt-apply`, and
+  push it before any plane takes over reading it from git.
 - Ask for `compute.skipDefaultNetworkCreation` before the first project
-  is created. `just gcp-org-setup` enforces the constraints and
-  `just gcp-policy-status` reports what is in force.
+  is created. `just gcp-org-enforce-constraints` enforces them, as the
+  identity you name — during a bootstrap, the seed.
 - Pivot the composite off the throwaway plane before discarding it
-  with `just gcp-boot-cluster-down`.
+  with `just boot-cluster-down`.
 - Close the seed identity once this is done, with `just
-  gcp-boot-seed-close`. Its organisation grants, and the
+  seed-close`. Its organisation grants, and the
   impersonation that reaches them, otherwise stand for ever, and the
   plane needs neither.
 
@@ -281,158 +277,138 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
 
 ## Discussion
 
-We build the plane once and install everything else by merging, because
-the privilege that installs software in a GitOps organisation has to be
-of the right kind: a control plane reconciling Terraform against AWS
-cannot apply an `XManagementPlane` at all, since the manifest names a
-kind its API server has never heard of. The question is not whether you
-deploy declaratively but whether you hold a Crossplane control plane
-that can be taught this kind, and where you do not, this builds one.
+We build the plane once and install everything else by merging. A control
+plane reconciling Terraform against AWS cannot apply an `XManagementPlane` at
+all, since the manifest names a kind its API server has never heard of, so
+what matters is holding a Crossplane control plane that can be taught this
+kind — and where you do not, this builds one.
 
-What it leaves behind is not Queenswood-specific. A plane in a folder,
-running Crossplane and Argo against a repository, reconciles whatever
-composite it is given, so loading another XRD and composition deploys
-something else the same way. An organisation builds this once and holds
-a general capability afterwards.
+What it leaves behind is not Queenswood-specific. A plane in a folder, running
+Crossplane and Argo against a repository, reconciles whatever composite it is
+given, so loading another XRD and composition deploys something else the same
+way. An organisation builds this once and holds a general capability
+afterwards.
 
-**Why a seed project comes before anything else.** A service account
-has to live in a project, and the identity that creates the folder must
-exist before the folder does, so one project comes first — named
-`prj-b-seed-<suffix>` and carrying no installation code, because one
-serves the whole organisation. The identity in it carries a code, since
-each one creates a particular installation, and ends up holding
+**The seed project.** A service account has to live in a project, and the
+identity that creates the folder must exist before the folder does, so one
+project comes first — named `prj-b-seed-<suffix>` and carrying no installation
+code, because one serves the whole organisation. The identity in it carries a
+code, since each one creates a particular installation, and ends up holding
 `projectCreator` and `folderIamAdmin` on the folder or its parent,
-`billing.user` on the billing account, and `orgpolicy.policyAdmin`
-where the organisation allows it — the last three held at the
-organisation rather than in the folder.
+`billing.user` on the billing account, and `orgpolicy.policyAdmin` where the
+organisation allows it — the last three held at the organisation rather than
+in the folder.
 
-**What preflight can and cannot see.** A subsidiary's `parent` takes
-`organizations/{id}` or `folders/{id}`, and `gcp-boot-preflight` checks
-`folders.create` on it, so which of the two you hold is what decides
-whether step 3 creates a folder or adopts one. What it cannot see is a
-role held through a group: those never appear in a policy read, which
-is why an absent line there is a prompt to check rather than a finding.
+**What preflight checks.** A subsidiary's `parent` takes `organizations/{id}`
+or `folders/{id}`, and `seed-preflight` checks `folders.create` on it, so
+which of the two you hold is what decides whether step 3 creates a folder or
+adopts one. What it cannot see is a role held through a group: those never
+appear in a policy read, which is why an absent line there is a prompt to
+check rather than a finding.
 
-**The four identities, and why they are four.** The **bootstrap
-identity** creates the management project; members of the platform-admin
-group impersonate it, and where an organisation provisions folders a CI
-runner assumes it through federation and no person can. The **platform
-identity** is created by the manifest and used by the management cluster
-through Workload Identity, and nobody impersonates it. The **secrets
-identity** reads Secret Manager for one cluster and does nothing else,
-kept separate from the platform identity — which could do the same
-reading but can also create projects and administer every cluster in the
-folder — and there is one per cluster, so an instance's operator cannot
-read another instance's secrets. The **node identity** is what one
-cluster's nodes run as, holding only what a GKE node needs to report
-itself, and never the default compute service account: a node pool asks
-for `cloud-platform` scopes, so whatever it holds is reachable by every
-workload on the cluster through the metadata server. None holds a key,
-because `iam.disableServiceAccountKeyCreation` is enforced at the
-organisation by default — inherited rather than established here, so it
-holds for a folder handed to you as well, and worth confirming rather
-than assuming.
+**The four identities.** The **bootstrap identity** creates the management
+project; members of the platform-admin group impersonate it, and where an
+organisation provisions folders a CI runner assumes it through federation and
+no person can. The **platform identity** is created by the manifest and used
+by the management cluster through Workload Identity, and nobody impersonates
+it. The **secrets identity** reads Secret Manager for one cluster and does
+nothing else, kept separate from the platform identity — which could do the
+same reading but can also create projects and administer every cluster in the
+folder — and there is one per cluster, so an instance's operator cannot read
+another instance's secrets. The **node identity** is what one cluster's nodes
+run as, holding only what a GKE node needs to report itself, and never the
+default compute service account: a node pool asks for `cloud-platform` scopes,
+so whatever it holds is reachable by every workload on the cluster through the
+metadata server. None holds a key, because
+`iam.disableServiceAccountKeyCreation` is enforced at the organisation by
+default — inherited rather than established here, so it holds for a folder
+handed to you as well. Confirm it rather than assuming.
 
-**What the boot cluster serves, and what it cannot disturb.** One kind,
-and only the providers that kind composes with: `XManagementPlane`
-composes managed resources and no other composite, where an instance
-composes four. The management cluster gets the rest from git once Argo
-is running there. Against an installation that already has a management
-plane the cluster itself is harmless — it is local, and Crossplane on
-it reconciles nothing until a composite is applied there, which is step
-6. What it does leave is a control plane on your machine holding
-credentials to the whole folder, which is what steps 6 and 7 take
-away.
+**What the boot cluster serves.** One kind, and only the providers that kind
+composes with: `XManagementPlane` composes managed resources and no other
+composite, where an instance composes four. The management cluster gets the
+rest from git once Argo is running there. Against an installation that already
+has a management plane the cluster itself is harmless — it is local, and
+Crossplane on it reconciles nothing until a composite is applied there, which
+is step 3. What it does leave is a control plane on your machine holding
+credentials to the whole folder, which is what steps 6 and 7 take away.
 
-**Why the manifest is committed before it is applied.** Nothing has
-been created when step 2 finishes: the file is a request, and the
-folder name and the management project id in it are consumed the moment
-step 3 applies them. The commit records them while they are still only
-proposed, which is what the file is for — a project id is consumed
-permanently and cannot be undeleted into usefulness, so one that was
-minted, applied and then lost is not recoverable from anything the
-cluster holds. The document is `infra/platform/templates/installation.yml.tmpl`
-with values substituted, so what it will say is readable before it is
-run.
+**Committing before applying.** Nothing has been created when step 2 finishes:
+the file is a request, and the folder name and the management project id in it
+are consumed the moment step 3 applies them. The commit records them while
+they are still only proposed, which is what the file is for — a project id is
+consumed permanently and cannot be undeleted into usefulness, so one that was
+minted, applied and then lost is not recoverable from anything the cluster
+holds. The document is `infra/platform/templates/installation.yml.tmpl` with
+values substituted, so what it will say is readable before it is run.
 
-That id is minted rather than derived, on every call, which is what
-makes step 2 a first-run act: a second render over the same file
-replaces the recorded id with one no project answers to, and the
-redirect truncates before the renderer runs. The folder is guarded —
-a name already in use under the parent is refused, with the adopt
-command printed — but that catches a rebuild which reached GCP and
-cannot catch the project id at all. Until a renderer exists that reads
-an existing manifest and preserves what it already holds, the file is
-the only record and overwriting it is how an installation is lost.
+That id is minted rather than derived, on every call, which is what makes step
+2 a first-run act: a second render over the same file replaces the recorded id
+with one no project answers to, and the redirect truncates before the renderer
+runs. The folder is guarded — a name already in use under the parent is
+refused, with the adopt command printed — but that catches a rebuild which
+reached GCP and cannot catch the project id at all. Until a renderer exists
+that reads an existing manifest and preserves what it already holds, the file
+is the only record and overwriting it is how an installation is lost.
 
-**Where the exports go.** Every recipe below discovers the
-organisation, the billing account and the parents for itself, taking an
-`org=` or `billing=` argument only where discovery is wrong, and the
-folder id is a manifest value rather than a shell one. What is left is
-two. `QW_CODE` and `QW_INSTALLATIONS_REPO` are `env_var_or_default` in
-the justfile, so the two exports in `### Prerequisites` set both the
-path the render is redirected to and the path `gcp-boot-mgmt-apply`
-reads back. Writing the path into the redirect literally instead leaves
-the render in one place and the apply reading another.
+**Where the exports go.** Every recipe below discovers the organisation, the
+billing account and the parents for itself, taking an `org=` or `billing=`
+argument only where discovery is wrong, and the folder id is a manifest value
+rather than a shell one. What is left is two. `QW_CODE` and
+`QW_INSTALLATIONS_REPO` are `env_var_or_default` in the justfile, so the two
+exports in `### Prerequisites` set both the path the render is redirected to
+and the path `boot-mgmt-apply` reads back. Writing the path into the
+redirect literally instead leaves the render in one place and the apply
+reading another.
 
-**Two values that belong to the act rather than the installation.** The
-billing account and `management.bootstrap: true` are merged into the
-document as it is applied rather than written into the file. Billing is
-discovered from the identity's own binding and is wanted only at the
-moment a project is created; `bootstrap` is true of the boot plane and
-not of the installation. So the file stays the thing Argo reads, and
-the two planes cannot disagree about what the installation is.
+**Billing and `bootstrap`.** The billing account and `management.bootstrap:
+true` are merged into the document as it is applied rather than written into
+the file. Billing is discovered from the identity's own binding and is wanted
+only at the moment a project is created; `bootstrap` is true of the boot plane
+and not of the installation. So the file stays the thing Argo reads, and the
+two planes cannot disagree about what the installation is.
 
-**Why the push waits for the pivot.** The apply reads your working
-tree, so pushing at step 2 changes nothing about what step 3 does. From
-step 5 the management plane reconciles the installation from the
-repository instead, and a manifest that never got there leaves it with
-nothing to reconcile. On a rebuild, pushing while the boot plane is
-still applying is the same two-planes hazard arriving through git
-rather than through `bootstrap`.
+**The push waits for the pivot.** The apply reads your working tree, so
+pushing at step 2 changes nothing about what step 3 does. From step 5 the
+management plane reconciles the installation from the repository instead, and
+a manifest that never got there leaves it with nothing to reconcile. On a
+rebuild, pushing while the boot plane is still applying is the same two-planes
+hazard arriving through git rather than through `bootstrap`.
 
-**Why the capability moves four times.** Each step is bounded by what
-it writes to rather than by who is running it: creating the seed sets
-the billing
-account's own IAM policy, which lives outside the organisation's
-hierarchy; granting it six roles at the organisation needs Organization
-Administrator; steps 1 to 7 here act as that identity, which
-`platformAdmin` may impersonate; and closing it removes an organisation
-binding, which is
-`organizations.setIamPolicy` — the same right as adding one, which is
-why `grp-gcp-org-admin@` comes back for one step at the end.
+**The capability at each step.** Each step is bounded by what it writes to
+rather than by who is running it: creating the seed sets the billing account's
+own IAM policy, which lives outside the organisation's hierarchy; granting it
+six roles at the organisation needs Organization Administrator; steps 1 to 7
+here act as that identity, which `platformAdmin` may impersonate; and closing
+it removes an organisation binding, which is `organizations.setIamPolicy` —
+the same right as adding one, which is why `grp-gcp-org-admin@` comes back for
+one step at the end.
 
-**Why organisation policy is not composed.** `orgpolicy.policyAdmin` is
-granted at the organisation and nowhere else — GCP refuses it at folder
-scope — so the management plane cannot hold it without being able to
-weaken any constraint anywhere in that organisation. That is also why
-closing the seed identity leaves it standing alongside
-`cloudasset.viewer` and `browser`: the three build roles go because the
-plane creates instance projects and binds folder IAM as the platform
-identity from then on, which the composite grants on the folder, and
-the organisation-scoped three have nowhere else to live. Where you were
-given a folder these are the organisation's acts and not yours — ask
-for them.
+**Organisation policy.** `orgpolicy.policyAdmin` is granted at the
+organisation and nowhere else — GCP refuses it at folder scope — so the
+management plane cannot hold it without being able to weaken any constraint
+anywhere in that organisation. That is also why closing the seed identity
+leaves it standing alongside `cloudasset.viewer` and `browser`: the three
+build roles go because the plane creates instance projects and binds folder
+IAM as the platform identity from then on, which the composite grants on the
+folder, and the organisation-scoped three have nowhere else to live. Where you
+were given a folder these are the organisation's acts and not yours — ask for
+them.
 
-**Why reopening is `-open` rather than re-creating the seed.** Creating
-it is idempotent
-and would also reopen the identity, but it wants billing admin and
-project creation for work that is already done. `-open` needs only the
-seed project.
+**Reopening the seed.** Creating it is idempotent and would also reopen the
+identity, but it wants billing admin and project creation for work that is
+already done. `-open` needs only the seed project.
 
 ## References
 
-- [organisation-bootstrap](organisation-bootstrap.md) — the seed identity this
-  impersonates, and closing it afterwards.
+- [organisation-bootstrap](organisation-bootstrap.md) — the seed
+  identity this impersonates, and closing it afterwards.
 - [boundary-install](boundary-install.md) — the folder this plane is
   built inside.
-- [organisation-foundation](organisation-foundation.md) — the browser-only
-  half, before any
-  of this.
+- [organisation-foundation](organisation-foundation.md) — the
+  browser-only half, before any of this.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — what a
   capability is, and how an organisation answers one.
-- [management-plane-install](management-plane-install.md) — the manifest
-  this plane then reads.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md) —
   the folder as the installation, and what protects a foundation.
 - [ADR-0024](../../adr/0024-instances-are-their-own-composites.md) —

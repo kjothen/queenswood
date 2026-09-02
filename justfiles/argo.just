@@ -182,3 +182,29 @@ argo-health-kinds ctx=MGMT_CTX:
       echo "Progressing for good once the precedence is corrected. Add it"
       echo "to has_no_conditions in argocd-cm.yaml and to LISTED above."
     fi
+
+# Store the GitHub App credentials the management plane reads the manifest with.
+argo-github-app-secret pem app_id installation_id:
+    #!/usr/bin/env zsh
+    set -e
+    # A person's act, once per App, from the secretsAdmin capability --
+    # GitHub has no API that creates an App, so nothing here can be
+    # declared. See docs/recipes/infra/management-plane-install.md for the console
+    # steps that produce these three values.
+    #
+    # The container is composed by the installation; this adds a
+    # version to it. A container that does not exist yet means the
+    # composite has not reconciled, which is worth saying plainly
+    # rather than failing on a gcloud error.
+    if [[ ! -f "{{ pem }}" ]]; then
+      echo "no private key at {{ pem }}" >&2
+      exit 1
+    fi
+    # All three together, so the identifiers travel with the key rather
+    # than through a second channel. --rawfile because a PEM is
+    # multi-line and has to be JSON-escaped, and because it keeps the
+    # key off the command line.
+    jq -n --arg app "{{ app_id }}" --arg inst "{{ installation_id }}" \
+      --rawfile key "{{ pem }}" \
+      '{appID: $app, installationID: $inst, privateKey: $key}' \
+      | just gcp-secret-version sec-{{ CODE }}-c-github-app "$(just _mgmt-project)"

@@ -416,7 +416,7 @@ So the recipe was deleted rather than renamed.
    says the apply reports one. Nothing renders or applies a
    `subsidiary.yml`. A second installation following it would get a
    plane with nowhere to put its projects. The fix is two commands in
-   step 5, one sentence in step 6, and `gcp-boot-mgmt-apply` reading
+   step 5, one sentence in step 6, and `boot-mgmt-apply` reading
    two files — no new step.
 4. **Reading a generated value rather than transcribing it**,
    independent of the rest and worth doing on its own merits. Four
@@ -427,7 +427,7 @@ So the recipe was deleted rather than renamed.
    compositions read it in preference to their own field, which changes
    nothing while the manifests still set theirs; the manifests shed it;
    and the bootstrap learns to apply the file. That last one is not
-   optional — `gcp-boot-mgmt-apply` applies `installation.yml` and
+   optional — `boot-mgmt-apply` applies `installation.yml` and
    nothing else, and `environment.yml` reaches a cluster only through
    Argo, which is not running until the plane is up. Without it a fresh
    installation has no bindings at all until the first sync,

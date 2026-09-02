@@ -4,172 +4,112 @@
 
 ## Status
 
-**Untested as written.** Every step below has been run and never in one
-sequence by one person. Expect the first run to find an ordering this
-page states wrongly rather than a recipe it omits.
+**Untested.** The steps have each been run, never in one sequence by
+one person.
 
 ## Problem
 
-You want a Queenswood instance serving traffic, starting either from no
-Google Cloud at all or from a folder an organisation hands you.
+You want to run Queenswood on Google Cloud.
 
 ## Solution
 
 ### Prerequisites
 
-Two paths, and which one you are on decides where you start.
+- A private git repository for the manifests.
+- For a new organisation - a domain with access to edit its records at
+  the registrar, and a payment method for the billing account.
 
-**From nothing**, being your own platform team. Start at step 1, and
-you need:
+Start at step 1 if you need to create a new organisation.
 
-- A domain, with access to edit its records at the registrar.
-- A payment method, for a billing account.
-- Somewhere to keep a private git repository, for the manifests.
+Start at step 2 if your organisation exists already and they can give
+you a folder, or somewhere to make one.
 
-Everything else is created on the way.
-
-**From an established organisation.** Step 1 is its to do, however it
-does it, so start at step 2. You need the domain and the repository
-above, and from whoever runs the organisation:
-
-- An IAM member string per capability the contract names — read
-  [contract-install](contract-install.md) for
-  what to ask for.
-- Either a parent to create a folder under, or the id of a folder they
-  hand you, written `folders/<folder-id>`.
-- A four-character installation code, chosen before step 2 and never
-  changed, since every name derives from it — see
-  [cloud-naming](../practices/cloud-naming.md).
-
-Whether they hand you a folder or a place to make one is a field in
-step 2, not a different path: `folder.folderId` adopts, and
-`folder.parent` with `folder.displayName` composes.
-
-Each step is a recipe of its own. This page is the order they go in and
-what each leaves for the next, and none of it is repeated here.
-
-### 1. The organisation
+### 1. New organisation
 
 [organisation-foundation](organisation-foundation.md), then
 [organisation-bootstrap](organisation-bootstrap.md). Cloud Identity,
 the domain verified against it, the organisation, a billing account,
-the capabilities nobody holds by default, and the seed identity that
-creates folders and projects on behalf of all of it.
+the access capabilities, and the seed identity that creates folders
+and projects.
 
 Done once for an organisation rather than once per installation: the
 seed project is reused where one exists, and its organisation-scoped
 rights are opened for a bootstrap and closed after it.
 
-Leaves: an organisation, a billing account, a super admin nobody signs
-in as, and an identity that can create a folder.
-
 ### 2. The contract
 
-[contract-install](contract-install.md). The principals, and the file
-that names them: who holds which capability, which folder this
-installation is, what pays for it, and where its manifests live.
-
-Leaves: `environment.yml` committed, naming principals that exist.
+[contract-install](contract-install.md). `environment.yml`, committed,
+naming the installation's folder, its manifests repository, its billing
+account, and a principal for each capability.
 
 ### 3. The boundary
 
-[boundary-install](boundary-install.md). The folder that the
-installation is, and the capabilities bound inside it: composed where
-the folder is ours, adopted where an organisation hands one over.
-
-Leaves: `subsidiary.yml` committed, and — once step 4 raises something
-able to apply it — a folder with `platformViewer` and `clusterAdmin`
-bound on it.
+[boundary-install](boundary-install.md). `subsidiary.yml`, committed,
+declaring the installation's folder and the capabilities bound inside
+it, composed where the folder is ours and adopted where an organisation
+hands one over.
 
 ### 4. The management plane
 
-[management-plane-install](management-plane-install.md). A throwaway control
-plane raises the management project and the cluster
-inside the boundary, the composite pivots onto the cluster it built,
-and the throwaway one is discarded.
-
-[management-plane-install](management-plane-install.md) carries the rest
-of it — the Argo credential, the recovery project, the zone and its
-delegation — and still reads as a sixth step it is not.
-
-Leaves: a management plane reconciling the installation from git, and
-an installation an instance can derive everything from.
+[management-plane-install](management-plane-install.md). The management
+project, a cluster running Crossplane and Argo that reconciles the
+installation from git, Argo's credential for the manifests repository, the
+recovery project, and the public zone with its delegation. A throwaway control
+plane raises the project and the cluster, the composite pivots onto the
+cluster it built, and the throwaway one is discarded.
 
 ### 5. An instance
 
-[instance-deploy](instance-deploy.md). A unit: the project,
-network, cluster, database and names one environment answers on, and
-then the bank on top of it.
-
-Leaves: a console answering at `https://console.<domain>`.
+[instance-deploy](instance-deploy.md). The instance's unit: its
+project, network, cluster, database and DNS records for one
+environment, and then the bank on top of it, answering at
+`https://console.<domain>`.
 
 ## Rules
 
 **MUST:**
 
-- Do these in order. Each leaves what the next reads, and every
-  ordering hazard is one recipe assuming what an earlier one built.
-- Choose the installation's code before step 2 and never change it.
-  Every name derives from it, and nothing after step 2 chooses one.
-- Answer every capability before the contract names it, since IAM
-  rejects a binding to a principal that does not exist.
-- Commit the contract before step 3. The boundary reads `access` and
-  `folder` from it, and composes neither the bindings nor the folder
-  without them.
-- Prepare the domain before the zone and delegate it after — see
-  [gcp-dns](gcp-dns.md) and
-  [gcp-dns-delegation](gcp-dns-delegation.md), which step 4 sequences
-  rather than either pointing at the other.
+- Do these in order.
 
 **MAY:**
 
-- Start at step 2 where the organisation is established. That is the
-  same page read from further down, never a step done differently —
-  and a folder handed over is a field in the contract rather than a
-  path of its own.
-- Stop after step 4, which is an installation with no instance on it —
-  valid, and what a platform team hands over.
-- Run step 1 once for an organisation and steps 2 to 5 once per
-  installation, where you run the organisation at all.
+- Start at step 2 where the organisation is established.
+- Stop after step 4, which is an installation with no instance on it.
+- Run step 1 once for an organisation, and steps 2 to 5 once per
+  installation.
 
 ## Discussion
 
-The order is not arbitrary and the dependencies run one way: a
-directory before an organisation, principals before anything binds
-them, a folder before a project inside it, a plane before anything it
-reconciles, an installation before an instance derives from it.
+The dependencies run one way: a directory before an organisation,
+principals before anything binds them, a folder before a project inside
+it, a plane before anything it reconciles, an installation before an
+instance derives from it.
 
-Step 1 is a browser and nothing in it has an API — Cloud Identity, a
-directory, a billing account — with the seed identity the one part that
-is a shell. Everything from step 3 is a file in a repository. That is
-the seam worth knowing about, because it is where the work stops being
-performed and starts being recorded.
+Step 1 is a browser. Cloud Identity, a directory and a billing account
+have no API between them, and the seed identity is the one part done in
+a shell. Everything from step 3 is a file in a repository. That is the
+first seam: where the work stops being performed and starts being
+recorded.
 
-Step 3 is the other seam, and the more useful one. A folder is what an
-installation is, so handing one over is the whole handover, and
-`XSubsidiary` is the same object whether we composed it or adopted what
-somebody gave us. That is why the three paths are three starting points
-on one page rather than one page with a branch in it: the earlier
-version of this recipe told you to read step 3 and do parts of it
-differently, which is a step nobody can follow twice the same way.
+Step 3 is the second. A folder is what an installation is, so an
+organisation handing one over hands over the whole thing, and step 3
+declares the same folder either way. That is what makes the two entries
+two starting points rather than a branch: nothing after step 2 is done
+differently depending on where you came in.
 
-What every path converges on is capabilities rather than groups. Every
-recipe from step 3 asks for `platformViewer` rather than for
-`grp-gcp-<code>-platform-viewer@`, which is only our worked answer.
-An established organisation answers the same capabilities its own way,
-and the boundary, the plane and the instance cannot tell which path
-produced them.
+Both entries converge on capabilities. Every step from 3 onwards asks
+for a capability rather than for whoever answers it, so an established
+organisation can answer the same ones its own way, and the boundary,
+the plane and the instance cannot tell which entry produced them.
 
 ## References
 
 - [organisation-foundation](organisation-foundation.md) and
   [organisation-bootstrap](organisation-bootstrap.md) — step 1.
-- [contract-install](contract-install.md) —
-  step 2, and what to ask an organisation for.
+- [contract-install](contract-install.md) — step 2, and what to ask an
+  organisation for.
 - [boundary-install](boundary-install.md) — step 3.
 - [management-plane-install](management-plane-install.md) — step 4.
-- [management-plane-install](management-plane-install.md) — the rest of
-  step 4, still written as though it followed one.
 - [instance-deploy](instance-deploy.md) — step 5.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as the boundary an installation occupies.

@@ -444,7 +444,7 @@ cluster match git, Crossplane makes GCP match the cluster.
 
 **Something undeclared has to place the first Crossplane**, because
 Crossplane cannot install itself onto a cluster that has none. That
-irreducible step is `gcp-boot-cluster-up`: a kind cluster, Crossplane by Helm,
+irreducible step is `boot-cluster-up`: a kind cluster, Crossplane by Helm,
 providers by manifest. It is the floor, and the design's aim is to keep
 it at a scratch cluster on a laptop rather than at anything inside the
 installation.
@@ -495,17 +495,17 @@ argument for the durable plane over raising throwaway ones repeatedly.
 So every recipe answers one question: does this exist only because no
 privileged plane exists yet?
 
-- **Scaffolding**, if it does — `gcp-boot-preflight`, the `gcp-boot-*`
-  recipes, `gcp-groups-bind`, the `gcp-adc-*` recipes and the
-  `gcp-plane-*` recipes. Most of the file.
-- **Durable**, if it does not — `gcp-mgmt-cluster-ctx`,
-  `gcp-platform-status`, `gcp-platform-billing-role`,
-  `gcp-github-app-secret`. What survives having a platform.
+- **Scaffolding**, if it does — the `seed-*` and `boot-*` recipes,
+  `gcp-groups-bind`, the `gcp-adc-*` recipes and the `gcp-plane-*`
+  recipes. Most of the file.
+- **Durable**, if it does not — `plane-ctx`,
+  `plane-status`, `plane-billing-role`,
+  `argo-github-app-secret`. What survives having a platform.
 
 Judge the scaffolding as scaffolding: it runs once and is discarded, so
 its bar is reaching parity reliably rather than being a surface worth
-polishing. The diagnostics among it — `gcp-boot-seed-impersonate-status`,
-`gcp-boot-mgmt-status`, `gcp-boot-seed-status` — inspect the ladder rather than
+polishing. The diagnostics among it — `seed-impersonate-status`,
+`boot-mgmt-status`, `seed-status` — inspect the ladder rather than
 the installation, which is why they sit oddly beside the recipes that
 operate one.
 
@@ -576,12 +576,12 @@ recipes make it look.
 
 Each leaves the composite Ready and every managed resource green.
 
-- **A manifest that was never pushed.** `gcp-boot-mgmt-apply` checks that
+- **A manifest that was never pushed.** `boot-mgmt-apply` checks that
   the file is on disk, which is all a boot plane needs, but after the
   pivot the manifest is read from GitHub — so a local-only file passes
   every check in the ladder and then reconciles from nothing. Producing
   it should know the destination applying it already knows:
-  `gcp-boot-mgmt-apply` resolves `QW_INSTALLATIONS_REPO`, while
+  `boot-mgmt-apply` resolves `QW_INSTALLATIONS_REPO`, while
   `queenswood-installation-manifest` prints to stdout for somebody to redirect there.
 - **A secret with no version.** The composite composes the container and
   a person adds the version, so in between Argo holds no credential for
@@ -591,7 +591,7 @@ Each leaves the composite Ready and every managed resource green.
 - **An org policy nothing enforces.** Neither
   `compute.skipDefaultNetworkCreation` nor
   `iam.disableServiceAccountKeyCreation` is composed, and
-  `gcp-boot-seed-grant-org-roles` grants `orgpolicy.policyAdmin` to an identity
+  `seed-grant-org-roles` grants `orgpolicy.policyAdmin` to an identity
   that never spends it — but only one of the two is exposed by that. GCP
   enforces the key ban at the organisation by default, which is why
   `_gcp-allow-sa-keys` reads the effective policy and does nothing where
@@ -655,7 +655,7 @@ Small, and none of it blocking:
 - **Labels** carrying the installation code on the folder and the
   management project, which is what would let a bare login find an
   installation without knowing a random suffix, and would retire the
-  project-id prefix match in `gcp-mgmt-cluster-ctx`. A `Project` takes
+  project-id prefix match in `plane-ctx`. A `Project` takes
   labels; a `Folder` takes only tags, which are a separate mechanism
   with their own resources, so the project alone may be enough.
 - **Resource requests** on what runs on the management cluster. Nothing
@@ -733,7 +733,7 @@ lost.
 
 ### 1. Widen the boot plane
 
-`gcp-boot-cluster-up` installed a narrowed set of packages, chosen when the
+`boot-cluster-up` installed a narrowed set of packages, chosen when the
 composition stopped at a folder. It now takes `provider-helm` as well,
 which is what lets the boot plane install onto the management cluster
 in step 3, and applies a `ProviderConfig` for it.
@@ -783,7 +783,7 @@ The conclusion survives the correction, for a different reason. A
 `Policy` needs `orgpolicy.policyAdmin`, which is granted at the
 organisation and nowhere else, so the plane cannot hold it without
 being able to weaken any constraint anywhere in that organisation.
-`just gcp-org-setup` does this as a person instead. A package the
+`just gcp-org-enforce-constraints` does this as a person instead. A package the
 composition composes nothing from is still a provider pod for
 nothing.
 
@@ -793,15 +793,15 @@ The management plane runs as `sa-qw01-platform` through Workload
 Identity. **This is where the work now starts.**
 
 **Done: the billing account.** `roles/billing.user` is bound, by
-`gcp-platform-billing-role`. It could not come from the composition — a
+`plane-billing-role`. It could not come from the composition — a
 billing account sits above the folder, and `sa-qw01-boot` holds
 `billing.user` rather than `billing.admin`, so it cannot delegate what
-it was given. That made it the same seam as `gcp-boot-seed-grant-org-roles`: a
+it was given. That made it the same seam as `seed-grant-org-roles`: a
 recipe run once by a billing administrator, which is a person and
 deliberately so.
 
 **Declared: everything inside the folder**, which the identity does not
-hold until a plane applies it. `just gcp-platform-status` prints all
+hold until a plane applies it. `just plane-status` prints all
 three scopes. Derived from what the composition creates now and what an
 instance adds — project, network, cluster, database, service accounts,
 address, certificate:
@@ -865,7 +865,7 @@ and Argo CD. **Both are written.** What Argo reconciles from is not
 part of them — putting Argo on the cluster and pointing it at a
 repository are separate, and only the first is a `Release`.
 
-This is what keeps the installer at four commands. `gcp-boot-mgmt-apply`
+This is what keeps the installer at four commands. `boot-mgmt-apply`
 applies the composite, so anything the composite composes arrives in
 that one step — where a recipe running `helm upgrade` against the new
 cluster would be a fifth, and an imperative one in the middle of the
@@ -1005,7 +1005,7 @@ safe value is what a manifest without the field produces. Both cases
 are spelled in the patch, so setting it to `false` says what leaving it
 out says.
 
-`gcp-boot-mgmt-apply` passes it, and nothing else does. That is what makes
+`boot-mgmt-apply` passes it, and nothing else does. That is what makes
 "the boot plane may install the management plane, and the management
 plane may not reinstall itself" a property of who is applying rather
 than a rule someone has to remember.
@@ -1049,7 +1049,7 @@ GCP provider configuration has, reached the same way.
 in the chain. The GitHub App is created by a person in a UI, because
 GitHub has no API that creates one — see
 [management-plane-install](../recipes/infra/management-plane-install.md) —
-and `gcp-github-app-secret` writes its three values into Secret Manager
+and `argo-github-app-secret` writes its three values into Secret Manager
 as one JSON entry, run by a person holding `secretsAdmin`. The
 identifiers travel with the key rather than through a second channel, so
 nothing about an installation's GitHub App reaches either repository.
@@ -1208,7 +1208,7 @@ checking for at step 5 rather than after step 6.
 The private `installations` repository holds
 `qw01/installation.yml`, rendered by `queenswood-installation-manifest` and carrying
 its own `createFolder.folderId` and `management.adopt`. **This step is
-now complete**: `gcp-boot-mgmt-apply` applies that file rather than
+now complete**: `boot-mgmt-apply` applies that file rather than
 assembling a composite from five arguments, so the boot plane and Argo
 consume the same document and cannot disagree about what the
 installation is.
@@ -1232,7 +1232,7 @@ Branch protection requiring review is the control that repository has,
 deliberately, since it carries nothing executable — a direct push to its
 main changes infrastructure with nothing in the way.
 
-Note that the three values `gcp-boot-mgmt-apply` prints are not the whole
+Note that the three values `boot-mgmt-apply` prints are not the whole
 set that has to be frozen. The rest — the code, the domain the group
 addresses are built from, the billing account — are *discovered* at
 apply time, from a constant in the justfile, from the organisation
@@ -1355,18 +1355,18 @@ Three facts make this cleaner than it first looks:
   a folder is only a hierarchy and IAM node — which is why projects are
   portable. There is nothing to inherit.
 - **`billing.user` is bound on the billing account, not the folder**,
-  which `gcp-boot-seed` already does. Linking a project needs
+  which `seed-create` already does. Linking a project needs
   `resourcemanager.projects.createBillingAssignment` on the project and
   `billing.resourceAssociations.create` on the account.
 - **The identity can list what it is bound to.** Where an organisation
   hands over a folder and an identity, that list has exactly one entry.
   Discovery through the identity is therefore *more* reliable than the
-  current `gcp-boot-mgmt-apply` behaviour, which takes the first open
+  current `boot-mgmt-apply` behaviour, which takes the first open
   account visible to the operator, who may see several.
 
 Discovery is confirmed rather than assumed: `gcloud billing accounts
 list`, run as the boot identity, returns exactly one open account. Run
-as the operator it may return several, which is why `gcp-boot-mgmt-apply`
+as the operator it may return several, which is why `boot-mgmt-apply`
 taking the first one is fragile today and stops being so here.
 
 The design is one shape, not a choice between mechanisms:
@@ -1449,7 +1449,7 @@ The live installation has crossed over: the XRD makes the field
 optional, the XR carries no `billingAccountId`, the provider owns
 `forProvider.billingAccount` alone, and GCP still bills the project.
 The composition keeps its patch, which now fires only when a manifest
-supplies the field — which `gcp-boot-mgmt-apply` does at creation and the
+supplies the field — which `boot-mgmt-apply` does at creation and the
 committed manifest never does.
 
 Two things that run did **not** establish, both worth knowing before
@@ -1463,7 +1463,7 @@ relinquishing cannot remove the field, so no window opened.
 
 Where the window actually is: the composition owns `billingAccount`
 only when a composite supplies `billingAccountId`, and the only thing
-that supplies it is `gcp-boot-mgmt-apply`, at creation. So the window is
+that supplies it is `boot-mgmt-apply`, at creation. So the window is
 the *first reconcile from the committed manifest* after a new
 installation is created — the moment the composition stops declaring
 what it declared at creation. That is a fresh-installation concern, on
@@ -1668,7 +1668,7 @@ cannot run `gcloud`. The declarative layer carries only what it is told.
 One thing survives the rejection. **Label the folder, the management
 project and every instance project with the installation code.** Not for
 Crossplane, which will not use it, but for the recovery path: today
-`gcp-mgmt-cluster-ctx` matches a project-id prefix and says why — "the
+`plane-ctx` matches a project-id prefix and says why — "the
 suffix is random, so it is not derivable, and nothing labels the
 project". A label turns finding an entire installation from a bare login
 into one query, which is worth having when the management project is
@@ -1700,7 +1700,7 @@ Labels land here as well, carrying the installation code on the folder,
 the management project and later every instance project. Crossplane will
 not use them; `gcloud` will, and it is what lets a bare login find a
 whole installation without knowing a random suffix. It also retires the
-project-id prefix match in `gcp-mgmt-cluster-ctx`.
+project-id prefix match in `plane-ctx`.
 
 **Two planes reconcile the same resources until step 6.** That window
 is safe by construction rather than by luck: both run the same
@@ -1725,7 +1725,7 @@ cluster.
 
 ### 6. Discard the boot plane
 
-`just gcp-boot-cluster-down`, and `just gcp-boot-seed-impersonate-revoke`. After this the
+`just boot-cluster-down`, and `just seed-impersonate-revoke`. After this the
 management cluster reconciles its own project and folder, which the
 liens are what make safe.
 
@@ -1776,7 +1776,7 @@ own, that grant is not ours to make. Asking for it means asking to be
 able to weaken any constraint anywhere in that organisation, for the
 sake of one HMAC key, and it should be treated as unavailable rather
 than as a request that might succeed. `sa-qw01-boot` does hold the role
-today, from `gcp-boot-seed-grant-org-roles`, so the exemption is reachable for
+today, from `seed-grant-org-roles`, so the exemption is reachable for
 this installation — from the disposable plane only, which makes it a
 property of our own organisation rather than of the design.
 
@@ -1974,23 +1974,21 @@ the zone question answered first. Whether an instance composes
 [ADR-0024](../adr/0024-instances-are-their-own-composites.md) left
 open, and the Argo path has now answered it in practice.
 
-**What is not yet true, and should not be assumed.** There is no
-external-secrets operator on an instance cluster, so a workload needing
-a real credential has nowhere to read one — which the FDB backup
-encryption key will need. (Built since, for Google sign-in: see
-*Picking this up cold*.) FDB backup stays off until the proxy above is
-built and a restore proven through it: an instance with no data loses
-nothing by waiting, and the HMAC path it would otherwise run on is the
-one being retired. `image.tag` is `latest`, which is the wrong
-tag for an environment: a mutable tag means two nodes can run different
-code and a rollback has nothing to return to, and the build publishes
-no versioned tag to use instead. The gateway is disabled, so nothing is
-reachable from outside the cluster.
+**Known limitations.** There is no external-secrets operator on an instance
+cluster, so a workload needing a real credential has nowhere to read one —
+which the FDB backup encryption key will need. (Built since, for Google
+sign-in: see *Picking this up cold*.) FDB backup stays off until the proxy
+above is built and a restore proven through it: an instance with no data loses
+nothing by waiting, and the HMAC path it would otherwise run on is the one
+being retired. `image.tag` is `latest`, which is the wrong tag for an
+environment: a mutable tag means two nodes can run different code and a
+rollback has nothing to return to, and the build publishes no versioned tag to
+use instead. The gateway is disabled, so nothing is reachable from outside the
+cluster.
 
-**The traps, all of one family** — something reports healthy while the
-thing that matters is stuck. The first three cost a day; the rest cost
-the first bring-up, and every one of them looked like a different
-problem than it was:
+**Known problems.** Something reports healthy while the thing that matters is
+stuck. The first three cost a day; the rest cost the first bring-up, and every
+one of them looked like a different problem than it was:
 
 - A **`ForceNew` change is refused, not performed.** Changing an IAM
   binding's role rewrote `spec` and left `atProvider` on the old value;
@@ -2148,9 +2146,9 @@ needed four manual steps — so that gap closes before this is built.
 ## Recipe by recipe
 
 **Already replaced.** `gcp-org-create`'s org-role half by
-`gcp-boot-seed-grant-org-roles`; `gcp-iam-bootstrap`'s identity by the
+`seed-grant-org-roles`; `gcp-iam-bootstrap`'s identity by the
 composition's `platform-identity`; `gcp-crossplane-login` by
-`gcp-boot-seed-impersonate` for the boot path and by Workload Identity for the
+`seed-impersonate` for the boot path and by Workload Identity for the
 durable one.
 
 **Becomes a managed resource.** `gcp-project-create`;
@@ -2212,7 +2210,7 @@ stays a console step for the same reason, and only its capture changes.
   follows the manifests into `installations`. It is the one piece of
   this documentation that reads better with real values in it.
 - Whether `pass` is retired at the pivot or kept for the boot path.
-  Nothing in the durable design reads it, but `gcp-boot-seed-impersonate` runs before
+  Nothing in the durable design reads it, but `seed-impersonate` runs before
   any of it exists.
 - Whether the management cluster stays publicly reachable, which
   [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)

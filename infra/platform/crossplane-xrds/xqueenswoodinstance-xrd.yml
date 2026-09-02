@@ -599,7 +599,7 @@ spec:
                     account rather than the composition granting it:
                     an account sits above the folder, so the grant is
                     made once by an administrator of it. See
-                    gcp-platform-billing-role.
+                    plane-billing-role.
             status:
               type: object
               properties:

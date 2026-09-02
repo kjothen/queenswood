@@ -35,12 +35,13 @@ data:
   #
   # The names are ours and the principals are the organisation's. One
   # that hands you a folder may name its groups nothing like these, and
-  # a capability may be answered by a user or a principalSet instead.
+  # a capability may be answered by a user or a principalSet instead --
+  # which is why these arrive resolved rather than being assembled here.
   access:
-    platformViewer: ["group:${PLATFORM_VIEWER_GROUP}@${DOMAIN}"]
-    platformAdmin: ["group:${PLATFORM_ADMIN_GROUP}@${DOMAIN}"]
-    clusterAdmin: ["group:${CLUSTER_ADMIN_GROUP}@${DOMAIN}"]
-    secretsAdmin: ["group:${SECRETS_ADMIN_GROUP}@${DOMAIN}"]
+    platformViewer: ["${PLATFORM_VIEWER}"]
+    platformAdmin: ["${PLATFORM_ADMIN}"]
+    clusterAdmin: ["${CLUSTER_ADMIN}"]
+    secretsAdmin: ["${SECRETS_ADMIN}"]
   # Which folder this installation is, and whether we made it. folderId
   # adopts an existing one and takes precedence: the composite then
   # observes it and never writes to it, so its name and its place are

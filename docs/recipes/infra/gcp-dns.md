@@ -119,7 +119,7 @@ The zone is created by a service account rather than by you, and a
 service account is never a verified owner by default. Print its address:
 
 ```bash
-just gcp-platform-sa
+just plane-identity
 ```
 
 An email ending `.iam.gserviceaccount.com`, which is what goes in the
@@ -229,7 +229,7 @@ composed one.
 - Verify the domain before a public zone is created, as the operator
   account in its own right.
 - Add the property as a Domain property, not a URL prefix.
-- Add the automation identity — `just gcp-platform-sa` prints its
+- Add the automation identity — `just plane-identity` prints its
   address — as an **Owner** of the property. Full and Restricted confer
   no ownership.
 - Add the DNS TXT verification method explicitly where the domain was

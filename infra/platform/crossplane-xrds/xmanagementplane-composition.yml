@@ -1283,7 +1283,7 @@ spec:
           # which is what GCP granted the boot identity for creating the
           # folder and is more than this should hold. Billing is not
           # here at all: the account sits above the folder, so
-          # gcp-platform-billing-role binds it as a person.
+          # plane-billing-role binds it as a person.
           #
           # The member is spelled rather than referenced, as the
           # Workload Identity binding above spells it, and for the same

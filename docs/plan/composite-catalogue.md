@@ -51,12 +51,12 @@ That is roughly 700 lines, and none of it needs a new kind.
 
 It does need one thing outside the composition, and nothing links the
 two today. `XManagementPlane` currently composes managed resources and
-no other composite, which is why `gcp-boot-cluster-up` applies one XRD
+no other composite, which is why `boot-cluster-up` applies one XRD
 — its own — onto the boot cluster. Composing `XNetwork` and `XCluster`
 from the plane makes those kinds a prerequisite of bootstrapping, so
 that recipe has to apply their XRDs and Compositions too, and
-`gcp-boot-cluster-up` narrows its providers on the same rule. Without
-it, `gcp-boot-mgmt-apply` fails with `no matches for kind`, which stops
+`boot-cluster-up` narrows its providers on the same rule. Without
+it, `boot-mgmt-apply` fails with `no matches for kind`, which stops
 the whole pipeline rather than one resource — and only on the next
 bootstrap, which is rare enough that it will not be the person who made
 the change. See
