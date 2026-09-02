@@ -145,6 +145,13 @@ kubectl -n argocd patch app <app> --type json \
   -p '[{"op":"remove","path":"/status/operationState"}]'
 ```
 
+**`NotFound` on an Application that plainly exists.** The patch carried
+`--subresource=status`, and this CRD declares none, so kubectl asks for
+an endpoint the API server does not serve and reports the object as
+missing. It reads as a permission problem, and holding cluster-admin at
+the time makes that reading more convincing. Neither patch above takes
+`--subresource`: `status` is part of the object.
+
 **An Application that stays failed after the drift was corrected.**
 `selfHeal` corrects drift and does not retry a failed sync. One that
 has exhausted its retry budget stops until the revision changes or
@@ -234,7 +241,9 @@ value and keeps it by reading the live object back with Helm's
   same way.
 - Remove `.operation` to cancel a queued sync, with a JSON patch, and
   terminate one already in flight by setting
-  `status.operationState.phase` to `Terminating`.
+  `status.operationState.phase` to `Terminating`. Both are plain
+  patches: the Application CRD declares no status subresource, and
+  `--subresource=status` reports the object as not found.
 - Terminate before removing `.operation`, never after. Operation
   processing is driven by that field, so removing it first leaves
   nothing to act on the phase and the state sits `Terminating` for

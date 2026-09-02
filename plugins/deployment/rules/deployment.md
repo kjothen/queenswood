@@ -677,31 +677,30 @@ See [gcp-dns-delegation](../../../docs/recipes/infra/gcp-dns-delegation.md).
 
 ## A parent Application holds only kinds that already exist
 
-Keep concrete resources out of a parent Application: anything whose
-kind a child installs belongs in a child of its own. Sync waves do not
-resolve a missing kind, and `SkipDryRunOnMissingResource` skips the dry
-run and nothing else. Set `ServerSideApply=true` for charts with large
-CRDs, `prune: false` where pruning would delete something a missing
-file should not delete, and retry budgets that outlast an operator
-install — a merged fix does not reach an Application whose retries are
-already exhausted. When a sync is failing, read
-`.operation.sync.revisions` rather than `status.sync.revisions`: the
-first is what is being retried, the second only what would be synced
-next. Read `retryCount` before calling a stuck sync a retry loop, since
-unset means the operation is not failing at all. Merge the fix before
-cancelling anything, or the fresh sync hangs the same way; then remove
-`.operation` to cancel a queued sync, with a JSON patch, and terminate
-one already in flight by setting `status.operationState.phase` to
-`Terminating` — terminate before removing `.operation`, never after,
-since operation processing is driven by that field and removing it
-first leaves the state sitting `Terminating` for good. Strip
-`argocd.argoproj.io/tracking-id` from a resource handed from one
-Application to another. Merge a change before expecting Argo to apply
-it, and confirm it landed: Argo reads the revision an Application
-names, never a working tree. Never rely on Helm's `lookup` to keep a
-value a chart generated once — Argo renders with `helm template`, where
-it returns nothing, so the branch that mints a fresh one wins on every
-sync.
+Keep concrete resources out of a parent Application: anything whose kind a
+child installs belongs in a child of its own. Sync waves do not resolve a
+missing kind, and `SkipDryRunOnMissingResource` skips the dry run and nothing
+else. Set `ServerSideApply=true` for charts with large CRDs, `prune: false`
+where pruning would delete something a missing file should not delete, and
+retry budgets that outlast an operator install — a merged fix does not reach
+an Application whose retries are already exhausted. When a sync is failing,
+read `.operation.sync.revisions` rather than `status.sync.revisions`: the
+first is what is being retried, the second only what would be synced next.
+Read `retryCount` before calling a stuck sync a retry loop, since unset means
+the operation is not failing at all. Merge the fix before cancelling anything,
+or the fresh sync hangs the same way; then remove `.operation` to cancel a
+queued sync, with a JSON patch, and terminate one already in flight by setting
+`status.operationState.phase` to `Terminating` — terminate before removing
+`.operation`, never after, since operation processing is driven by that field
+and removing it first leaves the state sitting `Terminating` for good. Both
+are plain patches: the Application CRD declares no status subresource, and
+`--subresource=status` reports the object as not found. Strip
+`argocd.argoproj.io/tracking-id` from a resource handed from one Application
+to another. Merge a change before expecting Argo to apply it, and confirm it
+landed: Argo reads the revision an Application names, never a working tree.
+Never rely on Helm's `lookup` to keep a value a chart generated once — Argo
+renders with `helm template`, where it returns nothing, so the branch that
+mints a fresh one wins on every sync.
 Commands: `just argo-apps-sync-policy`, `just argo-apps-operation`,
 `just argo-apps-status`.
 See [argocd-apps](../../../docs/recipes/infra/argocd-apps.md).
