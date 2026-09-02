@@ -1072,7 +1072,13 @@ spec:
                    rebuilt changes name when it is, which is a backup
                    nobody can find under the name they recorded. */}}
             {{- $suffix := last (splitList "-" $project) }}
-            {{- $location := dig "location" $xr.spec.region $recovery }}
+            {{- /* The region off the environment where the manifest
+                   states none, which is where an instance takes it from
+                   now: a patch reaches a composed resource, and this
+                   step reads the composite. */}}
+            {{- $env := index .context "apiextensions.crossplane.io/environment" | default dict }}
+            {{- $region := dig "region" (dig "region" "" $env) $xr.spec }}
+            {{- $location := dig "location" $region $recovery }}
             {{- $bucket := printf "bkt-%s-backups-%s" $name $suffix }}
             {{- /* No suffix: a Secret Manager entry is scoped to its
                    project, and its name is reusable after deletion. */}}
