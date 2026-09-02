@@ -186,13 +186,20 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.projectId
                 toFieldPath: spec.projectId
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.region
+              # The installation's region, then this instance's if it
+              # names one: the same later-patch-wins ordering as the
+              # billing account above. Neither is Required -- an
+              # environment rendered before the region moved into it
+              # leaves the XRD's default standing rather than failing.
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: region
                 toFieldPath: spec.region
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.regionCode
+              - fromFieldPath: spec.region
+                toFieldPath: spec.region
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: regionCode
+                toFieldPath: spec.regionCode
+              - fromFieldPath: spec.regionCode
                 toFieldPath: spec.regionCode
               - policy:
                   fromFieldPath: Required
@@ -272,13 +279,15 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.projectId
                 toFieldPath: spec.projectId
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.zone
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: zone
                 toFieldPath: spec.zone
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.regionCode
+              - fromFieldPath: spec.zone
+                toFieldPath: spec.zone
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: regionCode
+                toFieldPath: spec.regionCode
+              - fromFieldPath: spec.regionCode
                 toFieldPath: spec.regionCode
               - policy:
                   fromFieldPath: Required
@@ -601,9 +610,10 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.projectId
                 toFieldPath: spec.projectId
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.region
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: region
+                toFieldPath: spec.region
+              - fromFieldPath: spec.region
                 toFieldPath: spec.region
               - policy:
                   fromFieldPath: Required
@@ -733,9 +743,10 @@ spec:
                   fromFieldPath: Required
                 fromFieldPath: spec.projectId
                 toFieldPath: spec.projectId
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.region
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: region
+                toFieldPath: spec.region
+              - fromFieldPath: spec.region
                 toFieldPath: spec.region
               - policy:
                   fromFieldPath: Required

@@ -184,6 +184,10 @@ because pods with no requests read as uncommitted to the scheduler.
   never inside the unit's folder.
 - State `ingress.domain` distinct from every other instance's, with
   `zone.name` and `zone.project` naming the installation's zone.
+- Let an instance take its region from the installation's
+  `environment.yml`. Setting `region`, `regionCode` or `zone` on the
+  instance overrides it for that one, which is what putting a single
+  instance elsewhere costs.
 - Create the OAuth client in the console, in the instance's own
   project, one per environment.
 - Merge the composite and the Applications separately, the composite

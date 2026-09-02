@@ -16,9 +16,6 @@ spec:
   # Minted once and carried here. A project id is consumed permanently.
   projectId: "${PROJECT}"
   state: "up"
-  region: ${REGION}
-  regionCode: ${REGION_CODE}
-  zone: ${GCP_ZONE}
   # Identical in every instance, which is safe while the VPCs are
   # isolated. State them per instance before two of them peer, not
   # after: a range is immutable.

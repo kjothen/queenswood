@@ -113,7 +113,10 @@ spec:
                   type: string
                   default: europe-west2
                   description: |
-                    Where this environment runs. Defaulted so an
+                    Where this environment runs. Taken from the
+                    installation's EnvironmentConfig, which states it
+                    once for every instance; set here only to put one
+                    instance somewhere else. Defaulted so an
                     existing manifest keeps validating, and stated in
                     every manifest regardless: a name carries the
                     region abbreviation and moving it rebuilds the
@@ -132,12 +135,16 @@ spec:
                   description: |
                     The region, abbreviated, as it appears in the name
                     of anything regional. GCP publishes no short form,
-                    so the manifest states it and nothing derives it.
+                    so it is stated rather than derived -- in the
+                    installation's EnvironmentConfig, and here only to
+                    override it for one instance.
                 zone:
                   type: string
                   default: europe-west2-a
                   description: |
                     Where the cluster's control plane and its nodes sit.
+                    Taken from the installation's EnvironmentConfig; set
+                    here only to put one instance elsewhere.
                     Zonal rather than regional: a regional cluster
                     replicates the node count into every zone it spans,
                     so the same pool costs three times as much, and an

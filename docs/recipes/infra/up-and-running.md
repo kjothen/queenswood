@@ -40,7 +40,7 @@ rights are opened for a bootstrap and closed after it.
 
 [contract-install](contract-install.md). `environment.yml`, committed,
 naming the installation's folder, its manifests repository, its billing
-account, and a principal for each capability.
+account, the region it runs in, and a principal for each capability.
 
 ### 3. The boundary
 

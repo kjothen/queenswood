@@ -154,6 +154,7 @@ queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" bill
 
     CODE="{{ CODE }}" BILLING="$BILLING" \
     MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
+    REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" ZONE="{{ ZONE }}" \
     DOMAIN="$DOMAIN" FOLDER_BLOCK="$FOLDER_BLOCK" \
     PLATFORM_VIEWER="$PLATFORM_VIEWER" \
     PLATFORM_ADMIN="$PLATFORM_ADMIN" \
@@ -428,8 +429,7 @@ queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
       fi
       CODE="{{ CODE }}" ENV="{{ env }}" LABEL="{{ label }}" \
       INSTANCE="$INSTANCE" PROJECT="$PROJECT" \
-      REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
-      GCP_ZONE="{{ ZONE }}" DOMAIN="$DOMAIN" ZONE_NAME="$ZONE_NAME" \
+      REGION="{{ REGION }}" DOMAIN="$DOMAIN" ZONE_NAME="$ZONE_NAME" \
       MGMT="$MGMT" RECOVERY="$RECOVERY" \
       BACKUP_BUCKET="bkt-$INSTANCE-backups-$RECOVERY_SUFFIX" \
       BACKUP_GENERATION="fdb/continuous/$(date +%Y-%m-%d)" \

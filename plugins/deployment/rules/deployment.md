@@ -182,44 +182,41 @@ more than one installation.
 See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
 
 ## An instance is a unit, and its secrets are written while it builds
-
 Render an instance's unit with `just queenswood-instance-manifest`, which
-mints the project id once and writes it into every file carrying it,
-and never render one over a unit that has been committed — the id is
-minted per call, and a committed unit may already be built, leaving the
-file as the only record of the one GCP consumed; an uncommitted one a
-plane never read is free to re-render. Where a
-file is written by hand instead, the ids have to agree: a wrong one in
-the external-secrets annotation is a service account nothing is bound
-to rather than an error. Put the unit declaration at the top of the
+mints the project id once and writes it into every file carrying it, and never
+render one over a unit that has been committed — the id is minted per call,
+and a committed unit may already be built, leaving the file as the only record
+of the one GCP consumed; an uncommitted one a plane never read is free to
+re-render. Where a file is written by hand instead, the ids have to agree: a
+wrong one in the external-secrets annotation is a service account nothing is
+bound to rather than an error. Put the unit declaration at the top of the
 installation's directory, never inside the unit's folder, since the
-installation's Application is not recursive and a declaration filed
-inside is never applied at all. Give the instance its own `access`
-mapping and let it reconcile before writing any secret version: the
-installation's `secretsAdmin` binds on the management project, writes
-nothing here, and the denial is reported as a container that does not
-exist. State `ingress.domain` distinct from every other instance's,
-naming the installation's zone in `zone.name` and `zone.project`, and
-never share a domain between two instances — both compose a record for
-the one name and each reconciles it to its own address. Merge the composite
-and the Applications separately, the composite first: Keycloak honours a
-bootstrap admin only while the master realm is absent, and nothing
-automatic holds that gap open, where a folder with no Applications in
-it does. Create the OAuth client in the console, in the instance's own
-project, one per environment. Write the Keycloak bootstrap admin before
-the bank first starts and name it in the unit's values as
-`keycloak.bootstrapAdmin.secretName`, or the entry is inert; write the
-other two versions the same way, letting each strip the trailing
-newline, and never add a second version to the FDB backup key. Never
-create an instance with `state: down` — Cloud SQL refuses to create an
-already-stopped database, so an instance is built up and stopped
-afterwards. An instance may lean on the
-XRD's defaults, which `QW_DEFAULTS=true` does, but state them with
-`QW_DEFAULTS=false` for anything long-lived, since the blocks it writes
-out are immutable or nearly so and a default that moves under a live
-instance is refused rather than applied. An instance may be taken down
-once it is up, and one stood up with no `ingress` answers on no name at
-all.
+installation's Application is not recursive and a declaration filed inside is
+never applied at all. Give the instance its own `access` mapping and let it
+reconcile before writing any secret version: the installation's `secretsAdmin`
+binds on the management project, writes nothing here, and the denial is
+reported as a container that does not exist. Let an instance take its region
+from the installation's `environment.yml`, since setting `region`,
+`regionCode` or `zone` on the instance overrides it for that one alone. State
+`ingress.domain` distinct from every other instance's, naming the
+installation's zone in `zone.name` and `zone.project`, and never share a
+domain between two instances — both compose a record for the one name and each
+reconciles it to its own address. Merge the composite and the Applications
+separately, the composite first: Keycloak honours a bootstrap admin only while
+the master realm is absent, and nothing automatic holds that gap open, where a
+folder with no Applications in it does. Create the OAuth client in the
+console, in the instance's own project, one per environment. Write the
+Keycloak bootstrap admin before the bank first starts and name it in the
+unit's values as `keycloak.bootstrapAdmin.secretName`, or the entry is inert;
+write the other two versions the same way, letting each strip the trailing
+newline, and never add a second version to the FDB backup key. Never create an
+instance with `state: down` — Cloud SQL refuses to create an already-stopped
+database, so an instance is built up and stopped afterwards. An instance may
+lean on the XRD's defaults, which `QW_DEFAULTS=true` does, but state them with
+`QW_DEFAULTS=false` for anything long-lived, since the blocks it writes out
+are immutable or nearly so and a default that moves under a live instance is
+refused rather than applied. An instance may be taken down once it is up, and
+one stood up with no `ingress` answers on no name at all.
 Commands: `just queenswood-instance-manifest`, `just
 queenswood-instance-keycloak-admin`, `just
 queenswood-instance-google-secret`, `just
@@ -481,58 +478,56 @@ per installation.
 See [up-and-running](../../../docs/recipes/infra/up-and-running.md).
 
 ## A foundation produces capabilities, not groups
-
-Set recovery email and phone on the super admin, and 2-step
-verification: it has no mailbox and no one above it, and a second super
-admin, unused, means one lost device is not the end of the
-organisation. Read the subscription in the Admin console rather than
-trusting the sign-up confirmation, since Cloud Identity Free and a
-Workspace trial confirm identically and the trial expires taking the
-organisation with it. Create every access group without an owner or a
-manager, since both are members, and set Restricted before Only invited
+Set recovery email and phone on the super admin, and 2-step verification: it
+has no mailbox and no one above it, and a second super admin, unused, means
+one lost device is not the end of the organisation. Read the subscription in
+the Admin console rather than trusting the sign-up confirmation, since Cloud
+Identity Free and a Workspace trial confirm identically and the trial expires
+taking the organisation with it. Create every access group without an owner or
+a manager, since both are members, and set Restricted before Only invited
 users or the join rule is discarded. Bind from no active project, the
-organisation's groups and an installation's separately, since each
-fails before its own groups exist. Never script the creation: every
-Cloud Identity write attributes quota to a project and at foundation
-time none exists, which is also why `gcloud identity groups describe`
-answers that a group plainly present does not exist.
+organisation's groups and an installation's separately, since each fails
+before its own groups exist. Never script the creation: every Cloud Identity
+write attributes quota to a project and at foundation time none exists, which
+is also why `gcloud identity groups describe` answers that a group plainly
+present does not exist.
 
-Bind groups where humans hold access and principals directly where
-automation does. Create the billing account as a user on your own
-domain rather than as the super admin, never in a private window since
-3-D Secure needs an ordinary one, and never sign up in a browser
-already signed in to a Google account. Keep one direct human
-administrator on the billing account, which may be an existing one
-reused rather than created, and revoke the super admin's local
+Bind groups where humans hold access and principals directly where automation
+does. Create the billing account as a user on your own domain rather than as
+the super admin, never in a private window since 3-D Secure needs an ordinary
+one, and never sign up in a browser already signed in to a Google account.
+Keep one direct human administrator on the billing account, which may be an
+existing one reused rather than created, and revoke the super admin's local
 credentials and its direct organisation binding together once the group
-carries the role — either one left standing still reaches super admin.
-Never leave anybody standing in a break-glass group —
-`grp-gcp-org-admin@`, `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
+carries the role — either one left standing still reaches super admin. Never
+leave anybody standing in a break-glass group — `grp-gcp-org-admin@`,
+`grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
 `grp-gcp-<code>-platform-admin@`, `grp-gcp-<code>-cluster-admin@`,
 `grp-gcp-<code>-secrets-admin@`.
 
 Create a group as a super admin, in the directory, and join
 `grp-gcp-org-admin@` for the bind alone, leaving again — binding at the
-organisation is the one act in either recipe that is not a directory
-act. The organisation's capabilities outlive every installation and are
-bound at the organisation; an installation's are coded to it, created
-before the manifest that names them, and only `platform-viewer` is bound at
-the organisation, taking Browser there because tooling cannot reach a
-folder without resolving the organisation above it. The rest is folder
-and project scoped and reaches them through the manifest. Put the
-people who operate an installation in `platform-viewer` and nothing
-else, on accounts in your own domain, never with a direct organisation
-binding. What either recipe produces is capabilities rather than
-groups: an established organisation answers the same capabilities its own
-way, so skip the organisation's foundation entirely and read the
-installation's rather than follow it. An installation may be stood up
-with no groups at all and an empty `access` mapping, which reconciles
-correctly and which nobody can reach, and a capability may be answered
-by a user or a `principalSet://` rather than a group. Declare an
-organisation-scoped role in `infra/access/organisation-roles.json`,
-never in the recipe that binds it, and read what a capability grants
-and why with `just gcp-roles` — everything folder or project scoped is
-in the compositions under `infra/platform/crossplane-xrds/`.
+organisation is the one act in either recipe that is not a directory act. The
+organisation's capabilities outlive every installation and are bound at the
+organisation; an installation's are coded to it, created before the manifest
+that names them, and only `platform-viewer` is bound at the organisation,
+taking Browser there because tooling cannot reach a folder without resolving
+the organisation above it. The rest is folder and project scoped and reaches
+them through the manifest. Put the people who operate an installation in
+`platform-viewer` and nothing else, on accounts in your own domain, never with
+a direct organisation binding. What either recipe produces is capabilities
+rather than groups: an established organisation answers the same capabilities
+its own way, so skip the organisation's foundation entirely and read the
+installation's rather than follow it. An installation may be stood up with no
+groups at all and an empty `access` mapping, which reconciles correctly and
+which nobody can reach, and a capability may be answered by a user or a
+`principalSet://` rather than a group. State the region in the contract too,
+as `region`, `regionCode` and `zone`: every instance reads them, and a
+manifest that restates one is a second place for it to be wrong. Declare an
+organisation-scoped role in `infra/access/organisation-roles.json`, never in
+the recipe that binds it, and read what a capability grants and why with `just
+gcp-roles` — everything folder or project scoped is in the compositions under
+`infra/platform/crossplane-xrds/`.
 Commands: `just gcp-groups-bind-org`, `just
 gcp-groups-bind-installation`, `just gcp-roles`.
 See [organisation-foundation](../../../docs/recipes/infra/organisation-foundation.md) and
