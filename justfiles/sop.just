@@ -231,7 +231,7 @@ _sop-backup-bucket env label:
     # By prefix, because the suffix belongs to the recovery project and
     # is not derivable from the instance. Empty rather than an error
     # where there is none, so a caller can say what that means.
-    PROJECT=$(just _gcp-recovery-project || true)
+    PROJECT=$(just _recovery-project || true)
     if [[ -z "$PROJECT" ]]; then
       exit 0
     fi

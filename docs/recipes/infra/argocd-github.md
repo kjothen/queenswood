@@ -101,7 +101,7 @@ export INSTALL_ID=<installation-id>
 `grp-gcp-<code>-secrets-admin@` — join for this step, then leave.
 
 ```bash
-just gcp-github-app-secret "$PEM" "$APP_ID" "$INSTALL_ID"
+just argo-github-app-secret "$PEM" "$APP_ID" "$INSTALL_ID"
 ```
 
 > [!WARNING]
@@ -180,7 +180,7 @@ the rotation no longer looks like the cause.
   name resolves to Kubernetes' own Secret and reports the object as not
   found.
 - Store the App ID, the Installation ID and the private key together,
-  in `sec-<code>-c-github-app`, with `just gcp-github-app-secret`. It
+  in `sec-<code>-c-github-app`, with `just argo-github-app-secret`. It
   reads the key with `--rawfile`, so it never reaches a command line.
 - Let the chart's `ExternalSecret` place the Secret, and keep the key
   in the secret store.

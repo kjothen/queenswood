@@ -56,13 +56,12 @@ waves that put the store ahead of what reads from it.
 ### Putting a version in
 
 ```
-just gcp-secret-version <secret> [project] [file]
+just gcp-secret-version <secret> <project> [file]
 ```
 
-It finds the project from the entry's name where the name carries one,
-refuses to create a container the composite has not made, and keeps the
-value off the command line. With no `file` it prompts and does not echo,
-so the value reaches Secret Manager without being written down.
+It refuses to create a container the composite has not made, and keeps
+the value off the command line. With no `file` it prompts and does not
+echo, so the value reaches Secret Manager without being written down.
 
 A typed or piped value loses its trailing newline, deliberately. Secret
 Manager stores the bytes it is given, and a consumer that reads the
@@ -126,7 +125,7 @@ laptop.
 **`sec-<code>-c-github-app`**, on the management plane. The App id, the
 installation id and the private key as one JSON object, so the
 identifiers travel with the key rather than through a second channel.
-It arrives through `gcp-github-app-secret`, which composes that object
+It arrives through `argo-github-app-secret`, which composes that object
 and pipes it in. File-shaped, because GitHub hands you a download rather
 than something to type. Rotatable, and an App may hold two keys at once
 — add the new one, update the entry, then delete the old. See
@@ -176,8 +175,8 @@ because it has to survive whatever loses the instance: a key in the
 project whose data it protects is not a second copy of anything. So it
 is the one entry whose name and whose home disagree — named for the
 instance that owns it, living where that instance does not. `just
-gcp-secret-version` looks there when the derived project does not have
-it, and says which one it used.
+queenswood-recovery-backup-key` writes it, and names the recovery
+project itself.
 
 It holds **32 raw bytes, not the base64 text of them**, and the
 difference is invisible until a restore. `fdbbackup` reads

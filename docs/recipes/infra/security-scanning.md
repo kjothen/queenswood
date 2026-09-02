@@ -31,7 +31,7 @@ Two things are worth knowing before reading a report:
 
 - **It authenticates through application-default credentials**, not
   through `gcloud`'s own login. Where ADC impersonates the bootstrap
-  identity — which `gcp-boot-seed-impersonate` arranges — the scan runs as that
+  identity — which `seed-impersonate` arranges — the scan runs as that
   identity rather than as you, and stops working the moment you leave
   the group that permits the impersonation.
 - **Discovery is the Asset API.** Without `cloudasset.viewer` the scan

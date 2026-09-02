@@ -64,14 +64,13 @@ organisation-only, though the policy it sets is applied per project.
 The refusal is a 400 declining the scope, not a permission the caller
 lacks, so no upstream grant fixes it.
 
-Reading them is scoped the same way, and nothing else holds it: no
-capability in [ADR-0023](../../adr/0023-installation-naming-and-access.md)
-carries `orgpolicy.policyViewer`, not even the viewer that reads
-everything else, so a person cannot list the constraints binding their
-own installation. `just gcp-policy-status` asks the seed identity
-instead, and is worth running before assuming a constraint is on: the
-management plane's composition says a default network is prevented by
-one, and it was not.
+Reading them is scoped the same way, and only `securityReviewer` holds
+it — not `platformViewer`, which reads everything else — so a person
+outside that capability cannot list the constraints binding their own
+installation. See
+[ADR-0023](../../adr/0023-installation-naming-and-access.md). Read them
+before assuming a constraint is on: the management plane's composition
+says a default network is prevented by one, and it was not.
 
 `roles/container.viewer` does not carry `container.pods.getLogs`, and
 the only predefined role that does also grants exec and every write. A

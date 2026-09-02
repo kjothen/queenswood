@@ -148,10 +148,11 @@ The secret itself is written by hand into one Secret Manager entry,
 creates as a container and never fills:
 
 ```
-just gcp-secret-version sec-<code>-<env>-<label>-google-oauth
+just queenswood-instance-google-secret
 ```
 
-It prompts, does not echo, and never puts the value on a command line.
+It names the entry and its project from the instance, prompts, does not
+echo, and never puts the value on a command line.
 An `ExternalSecret` on the instance cluster then materialises it into
 the vault Keycloak mounts, under the filename that vault expects:
 `<realm>_<key>`, so `${vault.google-client-secret}` in realm

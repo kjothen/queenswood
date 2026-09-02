@@ -172,29 +172,28 @@ topic.
   either direction, and why groups are bound here and created
   elsewhere. See
   [ADR-0027](docs/adr/0027-the-folder-is-a-subsidiary.md).
-- **Declaring the boundary** — the contract agreed before anything is
-  built, which folder this installation is as a field rather than a
-  path, and why the manifest carries only the code. See
-  [boundary-install.md](docs/recipes/infra/boundary-install.md).
-- **Up and running** — every recipe from an empty Google
-  account to a bank serving traffic, in order, and what each leaves for
-  the next.
-  See [up-and-running](docs/recipes/infra/up-and-running.md).
+- **An installation's boundary** — the folder declared as its own kind,
+  composed or adopted by one field, and why the manifest carries only
+  the code. See
+  [boundary-install](docs/recipes/infra/boundary-install.md).
+- **Up and running** — every recipe from an empty Google account to a
+  bank serving traffic, in order, and what each produces. See
+  [up-and-running](docs/recipes/infra/up-and-running.md).
 - **An organisation's secure foundation** — Cloud Identity, the
   organisation, a billing account, and capabilities nobody holds by
   default; skipped entirely in an established organisation. See
   [organisation-foundation](docs/recipes/infra/organisation-foundation.md).
-- **The contract an installation is built to** — the capabilities its
-  manifest names, answered by principals created before the file that
-  names them, since IAM rejects a binding to one that does not exist.
-  See
+- **An installation's contract** — the folder, manifests repository,
+  billing account and principals its `environment.yml` names, created
+  before the file that names them since IAM rejects a binding to a
+  principal that does not exist. See
   [contract-install](docs/recipes/infra/contract-install.md).
 - **The identity that builds installations** — the seed project and the
   organisation-scoped rights it holds for a bootstrap and no longer,
   and why creating a folder is checked on the parent. See
   [organisation-bootstrap.md](docs/recipes/infra/organisation-bootstrap.md).
-- **The management plane** — why a plane of the wrong kind cannot
-  install this at all, what the composite builds, the path from a
+- **An installation's management plane** — why a plane of the wrong kind
+  cannot install this at all, what the composite builds, the path from a
   throwaway plane to a durable one, the four identities, and the
   credential and zone that finish it. See
   [management-plane-install](docs/recipes/infra/management-plane-install.md).
@@ -265,8 +264,9 @@ topic.
   [cloud-naming.md](docs/recipes/practices/cloud-naming.md) and
   [ADR-0023](docs/adr/0023-installation-naming-and-access.md).
 - **Justfile recipes** — the `set -e` shapes that abort silently,
-  capturing before piping, and not rediscovering what the caller
-  supplied. See
+  capturing before piping, taking the identity rather than discovering
+  it, where a constant or a helper is declared, and what a comment in a
+  body is for. See
   [justfile-recipes.md](docs/recipes/practices/justfile-recipes.md).
 - **Pre-commit hooks** — zprint, clj-kondo, before-commit
   formatting. See

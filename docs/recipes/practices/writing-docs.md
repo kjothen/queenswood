@@ -36,19 +36,52 @@ one:
   Optional, and often the longest.
 - **`## References`** — the related recipes and ADRs.
 
+A fact belongs under one of them. Where the same fact is in the
+Problem, the Prerequisites and a Rules bullet, two of the three are
+copies and they drift apart.
+
 The test is a reader who does not care why: they should be able to stop
 at the end of the Rules with everything they need. Where they cannot,
 the how is carrying a why, and the why belongs one section further
 down where somebody has chosen to read it.
 
-### Steps are followed, not read
+### Writing steps
 
 A Solution made of steps is copied into a terminal by somebody who is
 partway through something and not reading around it. It opens with a
 `### Prerequisites` heading holding two things: what must already exist
 and who you must be to run each step — one line each, led by the step
 it applies to, and no rationale — then the shell the steps assume, as
-`export` lines with an example value. Then:
+`export` lines with an example value.
+
+Keep it to what no step supplies. A value a step's own recipe names is
+that step's — a capability the contract asks for, a folder id, an
+installation code — and a second copy here drifts from it. What belongs
+is what the reader has to turn up holding, and what a later step needs
+that nothing before it creates, led by that step.
+
+Where a recipe has more than one way in, say where each starts, in a
+sentence. Splitting the block into a section per reader writes
+everything they both need twice.
+
+```
+;; Bad — a block per reader, and the shared lines in both
+**From nothing.** Start at step 1, and you need:
+- A domain, a payment method, somewhere for a private repository.
+**From an established organisation.** Start at step 2. You need the
+domain and the repository above, and:
+- An IAM member string per capability, a folder id, a four-character
+  code.
+
+;; OK — one list, and the entry in a sentence
+- Somewhere to keep a private git repository, for the manifests.
+- Step 1 — a domain, and a payment method for the billing account.
+
+Start at step 1 to create the organisation. Start at step 2 where one
+exists already and can give you a folder.
+```
+
+Then:
 
 - Let no command carry a placeholder. A command carrying `<code>` has
   to be edited before it runs, which is how one gets run against the
@@ -76,8 +109,8 @@ as a callout and is hard to skim past:
 > Delete the key file once the secret store holds it.
 ```
 
-`[!WARNING]` is the only type used. A second invites a third, and a
-document where four things are highlighted highlights nothing.
+`[!WARNING]` is the only type used, so that a callout still stands
+out.
 
 ### A Solution instructs, a Discussion explains
 
@@ -140,20 +173,20 @@ usually stays inline, where the reader sees what it will do before it
 does it — unless the recipe is itself what makes the write safe: `just
 gcp-secret-version` refuses to create a container the composite has not
 made and strips the trailing newline a pasted command would send as
-part of the credential. Brevity alone does not earn it.
+part of the credential. Brevity alone is not a reason.
 
 Where the recipe lives and what it is called are
 [justfile-recipes](justfile-recipes.md)'s: the justfile for the domain
 it acts on, carrying that domain's prefix.
 
-### A failure earns its entry by misleading
+### Failures are for misleading messages
 
 `## Failures` is an index of the ways this goes wrong that a reader
 cannot work out from what they are looking at. The test is one line:
 **the message names something other than its cause.**
 
 `verifyManagedZoneDnsNameOwnership` says exactly what is wrong and
-earns no entry — the reader will fix it without you. `401
+gets no entry — the reader will fix it without you. `401
 invalid_client` on a rebuilt environment, `Ready: True` over an empty
 Secret, a repository reported unreachable because nobody wrote the
 version: each points somewhere other than where the fault is, and
@@ -179,8 +212,7 @@ Three things look alike here and belong in three places:
 - **A recovery action that undoes a step you just ran** stays in the
   Solution, beside that step. Where the recovery is for the procedure
   having failed rather than for one step, it belongs in Failures, keyed
-  on how you know — which is the discipline a section called "if it
-  goes wrong" escapes.
+  on how you know.
 - **A failure that reports as something else** goes in Failures.
 - **Why the system can fail that way at all** goes in Discussion.
 
@@ -212,7 +244,7 @@ A recipe or ADR distilled into a plugin rule carries
 before the first section. Anywhere in that window is found; the exact
 line is not load-bearing.
 
-That is deliberate rather than lax. A markdown formatter puts a blank
+A markdown formatter puts a blank
 line after a heading, so a label pinned to line 2 moves to line 3 the
 first time somebody saves the file, and a parser reading a fixed line
 then reports the doc as unlabelled — indistinguishable from one nobody
@@ -338,10 +370,8 @@ of how the document got to be right.
 
 Being run and being followed are different things: a procedure written
 up after the act is `Untested` until somebody works from the document.
-That is the distinction the word is carrying, and it is worth the
-pedantry — the defects a walkthrough finds are in the writing rather
-than in the acts, so a document nobody has followed has not been tested
-at all.
+The defects a walkthrough finds are in the writing rather than in the
+acts, so a document nobody has followed has not been tested at all.
 
 ### Mermaid diagrams
 
@@ -371,6 +401,90 @@ arrow text that reads more clearly as a single line at, say,
 90 chars should stay one line — don't insert `<br/>` purely to
 hit 80. Use `<br/>` only when the label *should* render on two
 lines in the diagram.
+
+### Write plainly
+
+Give the reader the facts and the instructions, in the fewest words
+that stay precise. Six constructions to cut on sight.
+
+**Merit.** Nothing earns, deserves, or is worth its place. Say what
+the thing is or does.
+
+```
+;; Bad
+A failure earns its entry by misleading.
+Brevity alone does not earn it.
+That is the seam worth knowing about.
+
+;; OK
+A failure gets an entry when its message misleads.
+Brevity alone is not a reason.
+That is where the work stops being performed and starts being
+recorded.
+```
+
+**An objection nobody made.** "Not arbitrary", "deliberate rather
+than lax", "never a step done differently" — each raises a doubt in
+order to answer it, and the reader did not have the doubt.
+
+```
+;; Bad
+The order is not arbitrary and the dependencies run one way.
+
+;; OK
+The dependencies run one way.
+```
+
+**The closing aphorism.** A last sentence that generalises what was
+just said and carries no fact: "a second invites a third, and a
+document where four things are highlighted highlights nothing."
+Delete it.
+
+**A second phrasing.** Restating a point in other words reads as
+emphasis and lands as padding. Say it once.
+
+**A gesture where a name exists.** "What pays for it" is a billing
+account. "Where its manifests live" is a repository. Name the thing,
+and stop the sentence where the naming stops.
+
+```
+;; Bad
+who holds which capability, which folder the installation is, what
+pays for it, and where its manifests live
+
+the seed identity that creates folders and projects on behalf of all
+of it
+
+;; OK
+the installation's folder, its manifests repository, its billing
+account, and a principal for each capability
+
+the seed identity that creates folders and projects
+```
+
+**An epigram where a label belongs.** A `###` heading and a bold
+paragraph label are index entries. Name the thing in the words
+somebody would search for.
+
+```
+;; Bad
+**What is not yet true, and should not be assumed.**
+**The traps, all of one family**
+
+;; OK
+**Known limitations.**
+**Known problems.**
+```
+
+A Failures entry is the exception. It is keyed on what the reader is
+looking at, so its label is an observation — "a repository reported
+unreachable" — rather than a category.
+
+Do not narrate the writing. A recipe describes the system as it
+stands — never what the page used to say, never which recipes it
+replaces, never that a section reads as something it is not. That is
+what `## Status` already says of itself, applied to the whole page: it
+belongs in the commit that changed it.
 
 ### Tone
 
@@ -538,11 +652,16 @@ without naming the operation.
 - Open a step-based Solution with `### Prerequisites`.
 - Export a value a step produces at that step. `### Prerequisites`
   carries what is known before step 1.
+- Keep `### Prerequisites` to what no step supplies. A value a step's
+  own recipe names is that step's.
+- Say where each way into a recipe starts, in a sentence.
 - Keep a step to its instruction, its command, and what the output
   should say.
 - Open a Discussion with a short unbolded summary of what was done.
 - Keep rationale out of the Solution. A reader following steps has
   not asked for it.
+- Write in the fewest words that stay precise — the facts and the
+  instructions, and nothing else.
 - Name a `just` recipe in the Rules bullet whose action it performs.
   The Rules block is the only part of a recipe distilled into agent
   context, so a command named only in a step reaches nobody.
@@ -568,6 +687,21 @@ without naming the operation.
 - Give a failure an entry where the message already names its cause.
 - Explain a step inside the step. Mechanism and rationale are the
   Discussion's.
+- Split `### Prerequisites` into a block per reader.
+- State the same fact under two headings.
+- Say that anything earns, deserves, or is worth its place.
+- Raise an objection nobody made in order to answer it — "not
+  arbitrary", "deliberate rather than lax".
+- Close a passage with a sentence that generalises what was just said
+  and carries no fact.
+- Say the same thing twice in other words.
+- Gesture at a thing that has a name — "what pays for it" for a
+  billing account, "where its manifests live" for a repository.
+- Title a section or a bold paragraph label with an epigram. Name it
+  in the words somebody would search for — "Known limitations", not
+  "What is not yet true, and should not be assumed".
+- Narrate the writing: what the page used to say, which recipes it
+  replaces, or how a section reads now.
 - Wrap a step that writes in a `just` recipe for brevity alone. A
   write stays inline, where the reader sees it before running it,
   unless the recipe is what makes the write safe.
@@ -617,6 +751,11 @@ drives the no-semicolon rule. They're surface-quality rules,
 but ignoring them produces visibly broken pages, and the
 fixes are easy to land at write time.
 
+The plain-prose rules are a list of constructions rather than an
+instruction to be concise, because concision is not what goes wrong.
+Ornament is: a sentence that sounds like a conclusion, in a place
+where there was nothing left to say.
+
 The tone rules — no maturity overclaim, no competitor names —
 exist because the docs may end up public (in the GitHub repo,
 on a docs site, in a published OpenAPI). Naming a competitor,
@@ -632,7 +771,7 @@ audience it's meant to serve can't read it without
 translation. Forcing the register keeps the documents distinct
 and readable to their respective audiences. The TDD covers the
 same ground, names the operations, and is the engineering
-contract — a PRD has earned the right to be product-shaped.
+contract, which leaves the PRD free to be product-shaped.
 
 The aspiration-over-enforcement framing matters because the
 project's quality rules are not always enforceable in CI. A

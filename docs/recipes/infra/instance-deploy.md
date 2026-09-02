@@ -4,11 +4,9 @@
 
 ## Status
 
-**Untested as written.** One instance exists and it accreted across a
-dozen changes rather than being created from nothing, so every step
-below has been performed and the sequence has not. Expect the first run
-to find an ordering this page states wrongly rather than a step it
-omits.
+**Untested.** One instance exists, accreted across many changes rather
+than created from nothing, so every step below has been performed and
+the sequence has not.
 
 ## Problem
 
@@ -30,18 +28,6 @@ You want to add a Queenswood instance to an installation.
 - Headroom on the plane.
 - The capability each step names. Ours is a Google group; yours may differ.
 
-### 1. Render the instance unit
-
-**As the installation's platform viewer.** Ours is
-`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
-
-Exports follow [cloud-naming](../practices/cloud-naming.md)'s `<code>`,
-`<env>` and `<label>` convention, which every composed name is built
-from —
-they are stated once here and carried through every step below.
-Everything else the render needs is read from the installation's
-own manifest and from the running management plane.
-
 ```bash
 # the installation code, e.g.
 export QW_CODE=qw01
@@ -50,6 +36,11 @@ export QW_ENV=n QW_LABEL=dev
 # the instance's private manifests repository, e.g.
 export QW_INSTALLATIONS_REPO=../installations
 ```
+
+### 1. Render the instance unit
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
 just queenswood-instance-manifest
@@ -66,12 +57,11 @@ QW_SPEC=full just queenswood-instance-manifest
 
 ### 2. Read what it wrote
 
-In the `QW_INSTALLATIONS_REPO`, check the domain, which is the one thing
-the render cannot know is wrong: it must differ from every other instance's,
-or both compose a record for the same name.
+In the `QW_INSTALLATIONS_REPO`, check the domain: it must differ from
+every other instance's, or both compose a record for the same name.
 
-If you rendered with `QW_SPEC=full`, now is the opportunity to
-change settings to a better fit for your instance.
+If you rendered with `QW_SPEC=full`, change any setting that should
+differ for this instance.
 
 ### 3. Merge the instance, and wait for it
 
@@ -183,11 +173,11 @@ because pods with no requests read as uncommitted to the scheduler.
 
 **MUST:**
 
-- Render the unit with `just queenswood-instance-manifest`, which mints the
-  project id once and writes it into every file that carries it. Where
-  one is written by hand instead, they have to agree: a wrong id in the
-  external-secrets annotation is a service account nothing is bound to,
-  not an error.
+- Render the unit with `just queenswood-instance-manifest`, which mints
+  the project id once and writes it into every file that carries it.
+  Where one is written by hand instead, they have to agree: a wrong id
+  in the external-secrets annotation is a service account nothing is
+  bound to, not an error.
 - Give the instance its own `access` mapping, and let it reconcile
   before writing any secret version.
 - Put the unit declaration at the top of the installation's directory,
@@ -201,14 +191,15 @@ because pods with no requests read as uncommitted to the scheduler.
   is absent, and nothing automatic holds that gap open — a folder with
   no Applications in it does.
 - Write the Keycloak bootstrap admin with
-  `just queenswood-instance-keycloak-admin` before the bank first starts, and
-  name it in the unit's values as `keycloak.bootstrapAdmin.secretName`.
+  `just queenswood-instance-keycloak-admin` before the bank first
+  starts, and name it in the unit's values as
+  `keycloak.bootstrapAdmin.secretName`.
 - Write the other versions with `just queenswood-instance-google-secret`
   and `just queenswood-recovery-backup-key`, and let each strip the
   trailing newline.
 - Read the build back with `just crossplane-unready` and the workloads
   with `just argo-apps-status`, and reach the cluster with
-  `just gcp-instance-cluster-ctx`.
+  `just queenswood-instance-ctx`.
 
 **MUST NOT:**
 
@@ -238,82 +229,70 @@ because pods with no requests read as uncommitted to the scheduler.
 ## Discussion
 
 An instance is a unit: one declaration at the top of the installation's
-directory and a folder of manifests beneath it. The declaration is what
-the plane reads, the folder is what the declaration's own Application
-reads, and the split is what keeps a unit's sync waves out of the
-installation's.
+directory and a folder of manifests beneath it. The declaration is what the
+plane reads, the folder is what the declaration's own Application reads, and
+the split is what keeps a unit's sync waves out of the installation's.
 
-**Why the unit is in two places.** The plane's `installation`
-Application syncs the installation's directory with no `directory`
-block, which makes it non-recursive on purpose: it applies the
-installation's own manifests and one declaration per unit, all of which
-sit at the top, while a unit's contents are installed by the
-Application that unit composes. An `include` cannot narrow it instead —
-Argo compiles those globs with no separator, so `*` crosses `/` and any
-pattern admitting the top level admits the whole tree, bringing the
-unit's Applications back into the installation's sync carrying their
-waves.
+**The unit's two places.** The plane's `installation` Application syncs the
+installation's directory with no `directory` block, which makes it
+non-recursive on purpose: it applies the installation's own manifests and one
+declaration per unit, all of which sit at the top, while a unit's contents are
+installed by the Application that unit composes. An `include` cannot narrow it
+instead — Argo compiles those globs with no separator, so `*` crosses `/` and
+any pattern admitting the top level admits the whole tree, bringing the unit's
+Applications back into the installation's sync carrying their waves.
 
-**What the composite builds, and what waits behind it.** The project,
-the network, the cluster, the identities, the database, the endpoint
-and the three empty Secret Manager entries — then it registers the
-cluster with Argo, which is what makes the unit's Applications able to
-target it by name. The merge is what starts it, since the plane reads
-the revision its Application names rather than a working tree, and
-nothing on the plane reacts to a file that is only local.
+**What the composite builds.** The project, the network, the cluster, the
+identities, the database, the endpoint and the three empty Secret Manager
+entries — then it registers the cluster with Argo, which is what makes the
+unit's Applications able to target it by name. The merge is what starts it,
+since the plane reads the revision its Application names rather than a working
+tree, and nothing on the plane reacts to a file that is only local.
 
-**Why it is two merges.** Keycloak honours a bootstrap admin only
-while the master realm is absent, and the OAuth client cannot be
-created before the project holding it exists — so a secret has to be
-written after the project is built and before the bank first starts.
-Nothing automatic can hold that gap open. Sync waves order one sync;
-they cannot wait for somebody to visit a console.
+**Two merges.** Keycloak honours a bootstrap admin only while the master realm
+is absent, and the OAuth client cannot be created before the project holding
+it exists — so a secret has to be written after the project is built and
+before the bank first starts. Nothing automatic can hold that gap open. Sync
+waves order one sync; they cannot wait for somebody to visit a console.
 
-Leaving the unit's Applications out of the first merge is what holds it
-open instead. The folder the unit points at contains only the
-composite until step 6, so there is nothing to install and no clock
-running, and the second merge starts the bank with every secret already
-in place. Doing it in one merge would be a race against the build:
-the composite reporting `Ready` is what releases the Applications, and
-an entry with no version does not fail an `ExternalSecret` — it syncs
-green and empty, which is how an instance arrives green everywhere and
-unable to sign anybody in. The unit's Application carries
-`prune: false`, so adding files to a folder it already syncs takes
-nothing away.
+Leaving the unit's Applications out of the first merge is what holds it open
+instead. The folder the unit points at contains only the composite until step
+6, so there is nothing to install and no clock running, and the second merge
+starts the bank with every secret already in place. Doing it in one merge
+would be a race against the build: the composite reporting `Ready` is what
+releases the Applications, and an entry with no version does not fail an
+`ExternalSecret` — it syncs green and empty, which is how an instance arrives
+green everywhere and unable to sign anybody in. The unit's Application carries
+`prune: false`, so adding files to a folder it already syncs takes nothing
+away.
 
-**Why `down` is not a starting state.** Down is a declared state and
-reconciling toward it is ordinary, but it describes a database that
-exists and is stopped. Cloud SQL will not create one already stopped,
-so the first reconcile of a new instance has to build what later
-reconciles may stop.
+**`down` is not a starting state.** Down is a declared state and reconciling
+toward it is ordinary, but it describes a database that exists and is stopped.
+Cloud SQL will not create one already stopped, so the first reconcile of a new
+instance has to build what later reconciles may stop.
 
-**What the installation supplies, and what the instance states.** The
-folder, the platform identity, the recovery project and the public zone
-belong to the installation, and the instance reaches them by naming
-them rather than by referring to the plane's composite — the zone
-explicitly, because two composites have to spell one name and only one
-of them makes it. What the instance owns is its project and everything
-in it, which is why `down` stops an environment rather than emptying
-one.
+**What the installation supplies.** The folder, the platform identity, the
+recovery project and the public zone belong to the installation, and the
+instance reaches them by naming them rather than by referring to the plane's
+composite — the zone explicitly, because two composites have to spell one name
+and only one of them makes it. What the instance owns is its project and
+everything in it, which is why `down` stops an environment rather than
+emptying one.
 
-Two of those are supplied by absence as much as by presence. Where the
-plane composed no recovery project, this instance finds none, composes
-neither a backups bucket nor a backup key entry, and `just
-queenswood-recovery-backup-key` refuses.
-The domain needs no act here at all: a Search Console Domain property
-covers every subdomain, so an instance under one is neither verified
-nor delegated again.
+Two of them may be absent. Where the plane composed no recovery project, this
+instance finds none, composes neither a backups bucket nor a backup key entry,
+and `just queenswood-recovery-backup-key` refuses. The domain needs no act
+here at all: a Search Console Domain property covers every subdomain, so an
+instance under one is neither verified nor delegated again.
 
 No step needs a cluster admin either. That capability is what `kubectl`
-against the new cluster takes, and that is debugging rather than any
-part of standing an instance up.
+against the new cluster takes, and that is debugging rather than any part of
+standing an instance up.
 
 ## References
 
-- [management-plane-install](management-plane-install.md) — building the plane
-  this runs on.
-- [management-plane-install](management-plane-install.md) — the manifest
-  the plane reads, and changing it by merge.
+- [management-plane-install](management-plane-install.md) — building
+  the plane this runs on, and the manifest it reads.
 - [google-sign-in](google-sign-in.md) — the console acts and the Admin
   API call behind step 4.
 - [external-secrets](external-secrets.md) — the declared container and

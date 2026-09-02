@@ -173,7 +173,7 @@ produces exactly the same diff for the next installation.
 **One kind now spans two suppliers.** An `XSubsidiary` may be reconciled
 by our plane or by somebody else's, and only the second case has been
 designed rather than run. Nothing verifies that a folder handed over
-actually meets the contract; `just gcp-boot-preflight` is where that
+actually meets the contract; `just seed-preflight` is where that
 check belongs.
 
 ## Future
