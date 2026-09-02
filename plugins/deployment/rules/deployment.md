@@ -98,9 +98,8 @@ throwaway plane is gone, since it outlives the plane, the terminal and the
 reboot otherwise. Never grant a person `serviceAccountTokenCreator` on the
 platform identity or create a key for any of the four. Ask for
 `compute.skipDefaultNetworkCreation` before the first project is created, and
-never fix a default VPC in a composition — it cannot be undone there. The
-manifest derives the region from the committed contract, so that comes first.
-Commit the manifest before applying it and push it before any plane takes over
+never fix a default VPC in a composition — it cannot be undone there. Commit
+the manifest before applying it and push it before any plane takes over
 reading it from git, and pivot the composite off a throwaway plane before
 discarding that plane. Never render a manifest over one that already exists:
 the management project id is minted per call, so the second render replaces

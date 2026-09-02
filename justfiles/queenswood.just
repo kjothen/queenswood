@@ -258,19 +258,6 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
 
     DOMAIN=$(just _gcp-domain)
 
-    # From the environment rather than the justfile: the contract is
-    # committed first and states the region, so a plane and every
-    # instance under it read one answer.
-    if ! REGION=$(just _environment-value region); then
-      exit 1
-    fi
-    if ! REGION_CODE=$(just _environment-value regionCode); then
-      exit 1
-    fi
-    if ! ZONE=$(just _environment-value zone); then
-      exit 1
-    fi
-
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
       FOLDER="folders/$FOLDER"
@@ -280,8 +267,7 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
       ADOPT="folderId: \"$FOLDER\""
     fi
 
-    CODE="{{ CODE }}" REGION="$REGION" REGION_CODE="$REGION_CODE" \
-    ZONE="$ZONE" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
+    CODE="{{ CODE }}" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
     RECOVERY_BLOCK="$RECOVERY_BLOCK" MGMT="$MGMT" MGMT_ADOPT="$MGMT_ADOPT" \
     SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
     SOURCE_PATH_PREFIX="{{ SOURCE_PATH_PREFIX }}" \

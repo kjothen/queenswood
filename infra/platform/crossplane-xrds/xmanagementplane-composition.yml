@@ -613,9 +613,10 @@ spec:
                       fmt: "vpc-%s-c-mgmt"
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.region
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: region
+                toFieldPath: spec.forProvider.region
+              - fromFieldPath: spec.region
                 toFieldPath: spec.forProvider.region
               - policy:
                   fromFieldPath: Required
@@ -718,9 +719,10 @@ spec:
                 toFieldPath: spec.forProvider.subnetworkRef.name
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.zone
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: zone
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.zone
                 toFieldPath: spec.forProvider.location
               # Workload Identity, so the platform's own service account
               # is assumed by a pod rather than held as a key.
@@ -794,9 +796,10 @@ spec:
               # NodePool, so the same absent zone fails the first
               # loudly and leaves the second holding a pool the
               # provider can no longer observe.
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.zone
+              - type: FromEnvironmentFieldPath
+                fromFieldPath: zone
+                toFieldPath: spec.forProvider.location
+              - fromFieldPath: spec.zone
                 toFieldPath: spec.forProvider.location
               - policy:
                   fromFieldPath: Required

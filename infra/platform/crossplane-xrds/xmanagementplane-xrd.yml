@@ -74,9 +74,10 @@ spec:
                   type: string
                   default: europe-west2
                   description: |
-                    Where the installation runs. Rendered from its
-                    committed environment, which states it once for the
-                    plane and every instance.
+                    Where the installation runs. Taken from the
+                    installation's EnvironmentConfig, which states it
+                    once for the plane and every instance; the default
+                    here is what stands until one does.
                 regionCode:
                   type: string
                   default: euw2
@@ -84,6 +85,13 @@ spec:
                     The region, abbreviated, for names that carry one --
                     a subnet is per-region and says so. Separate from
                     region because GCP publishes no short form.
+
+                    Taken from the EnvironmentConfig like the other two,
+                    except where a name is built from it: the subnet's
+                    combines this with the code, and a combine cannot
+                    read the environment. So an installation outside the
+                    default region states it here as well, or its subnet
+                    is named for a region it is not in.
                 zone:
                   type: string
                   default: europe-west2-a
