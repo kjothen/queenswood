@@ -72,15 +72,15 @@ spec:
                     untouched rather than unsetting it.
                 region:
                   type: string
-                  default: europe-west2
                   description: |
                     Where the installation runs. Taken from the
                     installation's EnvironmentConfig, which states it
-                    once for the plane and every instance; the default
-                    here is what stands until one does.
+                    once for the plane and every instance. Not
+                    defaulted: a default is indistinguishable from a
+                    deliberate value, so it would silently win over the
+                    environment.
                 regionCode:
                   type: string
-                  default: euw2
                   description: |
                     The region, abbreviated, for names that carry one --
                     a subnet is per-region and says so. Separate from
@@ -89,12 +89,12 @@ spec:
                     Taken from the EnvironmentConfig like the other two,
                     except where a name is built from it: the subnet's
                     combines this with the code, and a combine cannot
-                    read the environment. So an installation outside the
-                    default region states it here as well, or its subnet
-                    is named for a region it is not in.
+                    read the environment. So the plane's manifest states
+                    it as well wherever the subnet's name has to carry
+                    it, or the subnet is named for a region it is not
+                    in.
                 zone:
                   type: string
-                  default: europe-west2-a
                   description: |
                     The cluster is zonal, not regional: one zonal control
                     plane falls under the free allowance, and a plane

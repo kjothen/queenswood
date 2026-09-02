@@ -519,8 +519,9 @@ installation's rather than follow it. An installation may be stood up with no
 groups at all and an empty `access` mapping, which reconciles correctly and
 which nobody can reach, and a capability may be answered by a user or a
 `principalSet://` rather than a group. State the region in the contract too,
-as `region`, `regionCode` and `zone`: every instance reads them, and a
-manifest that restates one is a second place for it to be wrong. Declare an
+as `region`, `regionCode` and `zone`: the plane and every instance read them,
+nothing defaults them, and a manifest that restates one is a second place for
+it to be wrong. Declare an
 organisation-scoped role in `infra/access/organisation-roles.json`, never in
 the recipe that binds it, and read what a capability grants and why with `just
 gcp-roles` — everything folder or project scoped is in the compositions under

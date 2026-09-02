@@ -101,9 +101,9 @@ correct.
 
 - Create an installation's groups before the manifest that names them
   is rendered.
-- State the region here, as `region`, `regionCode` and `zone`. Every
-  instance reads them, and a manifest that restates one is a second
-  place for it to be wrong.
+- State the region here, as `region`, `regionCode` and `zone`. The
+  plane and every instance read them, nothing defaults them, and a
+  manifest that restates one is a second place for it to be wrong.
 - Name them for the installation's code, which is chosen here and never
   changed.
 - Create each without an owner or a manager, Restricted before Only

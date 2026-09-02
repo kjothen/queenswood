@@ -188,9 +188,10 @@ spec:
                 toFieldPath: spec.projectId
               # The installation's region, then this instance's if it
               # names one: the same later-patch-wins ordering as the
-              # billing account above. Neither is Required -- an
-              # environment rendered before the region moved into it
-              # leaves the XRD's default standing rather than failing.
+              # billing account above, and neither field is defaulted in
+              # the XRD, because a default is indistinguishable from a
+              # deliberate value and would silently win over the
+              # environment.
               - type: FromEnvironmentFieldPath
                 fromFieldPath: region
                 toFieldPath: spec.region
