@@ -2,8 +2,8 @@ CODE := env_var_or_default("QW_CODE", "qw01")
 MGMT_CTX := CODE + "-mgmt"
 INSTALLATIONS_REPO := env_var_or_default("QW_INSTALLATIONS_REPO", "../installations")
 
-# One region, said three ways, and the three must agree. GCP publishes
-# no short form, so REGION_CODE is ours.
+# Seeds for an installation's environment.yml, which is where the
+# region is stated. GCP publishes no short form, so REGION_CODE is ours.
 REGION := "europe-west2"
 REGION_CODE := "euw2"
 ZONE := REGION + "-a"

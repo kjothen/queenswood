@@ -16,12 +16,6 @@ spec:
   # Minted once and carried here. A project id is consumed permanently.
   projectId: "${PROJECT}"
   state: "up"
-  region: ${REGION}
-  regionCode: ${REGION_CODE}
-  zone: ${GCP_ZONE}
-  # Identical in every instance, which is safe while the VPCs are
-  # isolated. State them per instance before two of them peer, not
-  # after: a range is immutable.
   # The zone is the installation's, in the management project, so it is
   # named rather than derived. The domain must differ from every other
   # instance's: both would compose a record for the one name.

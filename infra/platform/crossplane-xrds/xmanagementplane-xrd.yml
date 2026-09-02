@@ -42,13 +42,6 @@ spec:
                     below derives from it, so nothing needs a lookup to
                     place a resource and a second installation cannot
                     collide with the first. See ADR-0023.
-                regionCode:
-                  type: string
-                  default: euw2
-                  description: |
-                    The region, abbreviated, for names that carry one --
-                    a subnet is per-region and says so. Separate from
-                    region because GCP publishes no short form.
 
                 # Folder only, for now. The management project, the
                 # durable tier and the instances join this spec as they
@@ -77,6 +70,35 @@ spec:
                     late-initialisation owns forProvider.billingAccount,
                     so neither source being present leaves billing
                     untouched rather than unsetting it.
+                region:
+                  type: string
+                  description: |
+                    Where the installation runs. Taken from the
+                    installation's EnvironmentConfig, which states it
+                    once for the plane and every instance. Not
+                    defaulted: a default is indistinguishable from a
+                    deliberate value, so it would silently win over the
+                    environment.
+                regionCode:
+                  type: string
+                  description: |
+                    The region, abbreviated, for names that carry one --
+                    a subnet is per-region and says so. Separate from
+                    region because GCP publishes no short form.
+
+                    Taken from the EnvironmentConfig like the other two,
+                    except where a name is built from it: the subnet's
+                    combines this with the code, and a combine cannot
+                    read the environment. So the plane's manifest states
+                    it as well wherever the subnet's name has to carry
+                    it, or the subnet is named for a region it is not
+                    in.
+                zone:
+                  type: string
+                  description: |
+                    The cluster is zonal, not regional: one zonal control
+                    plane falls under the free allowance, and a plane
+                    running Crossplane and Argo does not need three.
                 access:
                   type: object
                   description: |
@@ -125,21 +147,11 @@ spec:
                         secretmanager.admin on the management project.
                         Break-glass.
                       items: *member
-                region:
-                  type: string
-                  default: europe-west2
-                zone:
-                  type: string
-                  default: europe-west2-a
-                  description: |
-                    The cluster is zonal, not regional: one zonal control
-                    plane falls under the free allowance, and a plane
-                    running Crossplane and Argo does not need three.
                 machineType:
                   type: string
                   default: e2-standard-4
                   description: |
-                    What the nodes are. Beside zone rather than under
+                    What the nodes are. Top-level rather than under
                     management, because management says which project
                     and where its configuration comes from, and this is
                     the shape of the cluster -- the same half of the

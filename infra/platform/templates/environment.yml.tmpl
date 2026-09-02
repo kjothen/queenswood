@@ -25,6 +25,14 @@ data:
   # repository. A fork, a mirror or a moved organisation is one edit
   # here.
   manifestRepoURL: "${MANIFEST_REPO_URL}"
+  # Where the installation runs, said three ways because GCP publishes
+  # no short form and a name carries the abbreviation. Stated here so an
+  # instance restates none of it, and immutable in practice: a subnet
+  # and a cluster are rebuilt by a move, which upjet refuses rather than
+  # performs.
+  region: "${REGION}"
+  regionCode: "${REGION_CODE}"
+  zone: "${ZONE}"
   # Capability -> principal, for the whole installation. Whole IAM
   # member strings, because the principal need not be a group, and a
   # capability left out binds nothing. Read by the subsidiary, the plane

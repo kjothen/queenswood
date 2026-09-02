@@ -89,40 +89,34 @@ See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle
 
 ## Build the plane before a merge can install anything
 
-Build the plane before expecting a merge to install anything: a control
-plane running another toolchain cannot apply this kind. Read what you
-can reach before choosing between creating a folder and adopting one.
-Grant the seed identity its rights on the folder or the parent, never a
-key; impersonate it rather than holding a credential, and revoke the
-impersonation once the throwaway plane is gone, since it outlives the
-plane, the terminal and the reboot otherwise. Never grant a person
-`serviceAccountTokenCreator` on the platform identity or create a key
-for any of the four. Ask for `compute.skipDefaultNetworkCreation` before
-the first project is created, and never fix a default VPC in a
-composition — it cannot be undone there. Commit the manifest before
-applying it and push it before any plane takes over reading it from
-git, and pivot the composite off a throwaway plane before discarding
-that plane. Never render a manifest over one that already exists: the
-management project id is minted per call, so the second render replaces
-the recorded id with one no project answers to, and the redirect
-truncates before the renderer runs. Close the seed identity once the
-bootstrap is done and reopen it for the next one: its organisation
-grants otherwise stand for ever, and the plane needs none of them. Never
-assume you can create a folder — ids are required, and one may be
-handed to you instead — and
-never delete a project as a side effect of an edit. Standing the
-installation up with no instance at all is valid, since an instance is
-its own composite applied afterwards, asking a platform team for the
-folder and the identity shortens the path without changing it, and
-another XRD and composition loaded onto the plane deploys something
-else the same way.
-Commands: `just boot-cluster-up`, `just seed-preflight`, `just
-seed-create`, `just seed-grant-org-roles`, `just
-seed-impersonate`, `just seed-impersonate-revoke`,
-`just queenswood-installation-manifest`, `just boot-mgmt-apply`,
-`just gcp-org-enforce-constraints`, `just
-boot-cluster-down`, `just seed-close`, `just
-seed-open`.
+Build the plane before expecting a merge to install anything: a control plane
+running another toolchain cannot apply this kind. Read what you can reach
+before choosing between creating a folder and adopting one. Grant the seed
+identity its rights on the folder or the parent, never a key; impersonate it
+rather than holding a credential, and revoke the impersonation once the
+throwaway plane is gone, since it outlives the plane, the terminal and the
+reboot otherwise. Never grant a person `serviceAccountTokenCreator` on the
+platform identity or create a key for any of the four. Ask for
+`compute.skipDefaultNetworkCreation` before the first project is created, and
+never fix a default VPC in a composition — it cannot be undone there. Commit
+the manifest before applying it and push it before any plane takes over
+reading it from git, and pivot the composite off a throwaway plane before
+discarding that plane. Never render a manifest over one that already exists:
+the management project id is minted per call, so the second render replaces
+the recorded id with one no project answers to, and the redirect truncates
+before the renderer runs. Close the seed identity once the bootstrap is done
+and reopen it for the next one: its organisation grants otherwise stand for
+ever, and the plane needs none of them. Never assume you can create a folder —
+ids are required, and one may be handed to you instead — and never delete a
+project as a side effect of an edit. Standing the installation up with no
+instance at all is valid, since an instance is its own composite applied
+afterwards, asking a platform team for the folder and the identity shortens
+the path without changing it, and another XRD and composition loaded onto the
+plane deploys something else the same way.
+Commands: `just boot-cluster-up`, `just seed-impersonate`, `just
+seed-impersonate-revoke`, `just queenswood-installation-manifest`,
+`just boot-mgmt-apply`, `just gcp-org-enforce-constraints`, `just
+boot-cluster-down`, `just seed-close`.
 See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
 
 ## The identity that builds installations is opened and closed
@@ -134,18 +128,19 @@ it is retained rather than deleted. Hold `folderCreator` and
 `folderIamAdmin` on the parent, never `folderAdmin`, so it cannot
 delete a folder, and grant them there because creating a folder is
 checked on the parent rather than on the folder. Impersonate it rather
-than holding a credential, never create a key for it, and never grant a
-person `serviceAccountTokenCreator` on it outside a bootstrap. Close it
-once a bootstrap is done and reopen it for the next: its organisation
-grants otherwise stand for ever, and the plane that succeeds it needs
-none of them. Read an instant exit with no output from
-`seed-preflight` as `set -e` aborting before the first echo rather
-than as a check that passed. Skip this entirely where an organisation
+than holding a credential, never create a key for it or for any
+identity an installation composes, and never grant a person
+`serviceAccountTokenCreator` on it outside a bootstrap. Read what you
+can reach before choosing between creating a folder and adopting one.
+Close it once a bootstrap is done and reopen it for the next: its
+organisation grants otherwise stand for ever, and the plane that
+succeeds it needs none of them. Never delete the seed project — its id
+is consumed and it is reused. Skip this entirely where an organisation
 hands you a folder and an identity able to create projects in it --
 this is how we produce one, not what an installation requires.
 Commands: `just seed-preflight`, `just seed-create`, `just
-seed-grant-org-roles`, `just seed-close`, `just
-seed-open`.
+seed-grant-org-roles`, `just seed-close`, `just seed-open`, `just
+seed-impersonate`.
 See [organisation-bootstrap](../../../docs/recipes/infra/organisation-bootstrap.md).
 
 ## An installation is one file, and changing it is a merge
@@ -181,49 +176,44 @@ added later, which on a first installation is the only order available;
 an existing recovery project may be adopted by passing its id; and one
 manifest per folder allows
 more than one installation.
-Commands: `just queenswood-environment-manifest`, `just
-queenswood-dns-manifest-snippet`.
 See [management-plane-install](../../../docs/recipes/infra/management-plane-install.md).
 
 ## An instance is a unit, and its secrets are written while it builds
-
 Render an instance's unit with `just queenswood-instance-manifest`, which
-mints the project id once and writes it into every file carrying it,
-and never render one over a unit that has been committed — the id is
-minted per call, and a committed unit may already be built, leaving the
-file as the only record of the one GCP consumed; an uncommitted one a
-plane never read is free to re-render. Where a
-file is written by hand instead, the ids have to agree: a wrong one in
-the external-secrets annotation is a service account nothing is bound
-to rather than an error. Put the unit declaration at the top of the
+mints the project id once and writes it into every file carrying it, and never
+render one over a unit that has been committed — the id is minted per call,
+and a committed unit may already be built, leaving the file as the only record
+of the one GCP consumed; an uncommitted one a plane never read is free to
+re-render. Where a file is written by hand instead, the ids have to agree: a
+wrong one in the external-secrets annotation is a service account nothing is
+bound to rather than an error. Put the unit declaration at the top of the
 installation's directory, never inside the unit's folder, since the
-installation's Application is not recursive and a declaration filed
-inside is never applied at all. Give the instance its own `access`
-mapping and let it reconcile before writing any secret version: the
-installation's `secretsAdmin` binds on the management project, writes
-nothing here, and the denial is reported as a container that does not
-exist. State `ingress.domain` distinct from every other instance's,
-naming the installation's zone in `zone.name` and `zone.project`, and
-never share a domain between two instances — both compose a record for
-the one name and each reconciles it to its own address. Merge the composite
-and the Applications separately, the composite first: Keycloak honours a
-bootstrap admin only while the master realm is absent, and nothing
-automatic holds that gap open, where a folder with no Applications in
-it does. Create the OAuth client in the console, in the instance's own
-project, one per environment. Write the Keycloak bootstrap admin before
-the bank first starts and name it in the unit's values as
-`keycloak.bootstrapAdmin.secretName`, or the entry is inert; write the
-other two versions the same way, letting each strip the trailing
-newline, and never add a second version to the FDB backup key. Never
-create an instance with `state: down` — Cloud SQL refuses to create an
-already-stopped database, so an instance is built up and stopped
-afterwards. An instance may lean on the
-XRD's defaults, which `QW_DEFAULTS=true` does, but state them with
-`QW_DEFAULTS=false` for anything long-lived, since the blocks it writes
-out are immutable or nearly so and a default that moves under a live
-instance is refused rather than applied. An instance may be taken down
-once it is up, and one stood up with no `ingress` answers on no name at
-all.
+installation's Application is not recursive and a declaration filed inside is
+never applied at all. Give the instance its own `access` mapping and let it
+reconcile before writing any secret version: the installation's `secretsAdmin`
+binds on the management project, writes nothing here, and the denial is
+reported as a container that does not exist. Let an instance take its region
+from the installation's `environment.yml`, since setting `region`,
+`regionCode` or `zone` on the instance overrides it for that one alone. State
+`ingress.domain` distinct from every other instance's, naming the
+installation's zone in `zone.name` and `zone.project`, and never share a
+domain between two instances — both compose a record for the one name and each
+reconciles it to its own address. Merge the composite and the Applications
+separately, the composite first: Keycloak honours a bootstrap admin only while
+the master realm is absent, and nothing automatic holds that gap open, where a
+folder with no Applications in it does. Create the OAuth client in the
+console, in the instance's own project, one per environment. Write the
+Keycloak bootstrap admin before the bank first starts and name it in the
+unit's values as `keycloak.bootstrapAdmin.secretName`, or the entry is inert;
+write the other two versions the same way, letting each strip the trailing
+newline, and never add a second version to the FDB backup key. Never create an
+instance with `state: down` — Cloud SQL refuses to create an already-stopped
+database, so an instance is built up and stopped afterwards. An instance may
+lean on the XRD's defaults, which `QW_DEFAULTS=true` does, but state them with
+`QW_DEFAULTS=false` for anything long-lived, since the blocks it writes out
+are immutable or nearly so and a default that moves under a live instance is
+refused rather than applied. An instance may be taken down once it is up, and
+one stood up with no `ingress` answers on no name at all.
 Commands: `just queenswood-instance-manifest`, `just
 queenswood-instance-keycloak-admin`, `just
 queenswood-instance-google-secret`, `just
@@ -269,29 +259,20 @@ See [ADR-0027](../../../docs/adr/0027-the-folder-is-a-subsidiary.md).
 
 ## The contract is agreed before the boundary is built
 
-Commit the installation's `environment.yml` before applying its
-boundary: the composite reads `access` and `folder` from it and
-composes neither the bindings nor the folder without them, and IAM
-rejects a binding to a principal that does not exist, so the principals
-come before the file that names them. Which folder, and whether we made
-it, is a field there rather than a procedure — `folder.folderId` adopts
-and takes precedence, `folder.parent` with `folder.displayName`
-composes — so a folder handed over changes one field rather than a
-manifest and a path through the recipe. Never state the other two
+Commit the installation's contract before applying its boundary: the
+composite reads `access` and `folder` from it and composes neither the
+bindings nor the folder without them, and a principal named there that
+does not exist has IAM rejecting the binding rather than the file.
+Render the manifest at the top of the installation's directory, never
+inside a subdirectory of it. Never state `parent` and `displayName`
 beside a `folderId` and expect them to apply: they are ignored, and
-deleting that one line later leaves them behind to compose a second
-folder, which GCP permits under one parent and nothing else refuses.
-Prove an adoption by counting folders under the parent rather than by
-reading the composite, which reports healthy either way. Put the
-manifest at the top of the installation's directory, never inside a
-subdirectory, since the Application that syncs it does not recurse. The
-manifest itself carries the code alone and may be re-rendered freely,
-holding nothing generated, which the contract beside it does not — that
-one carries the folder id. Read `Unsynced resources: folder` against a
-folder reporting `Synced` as a rejected apply rather than a broken
-folder, and read the composite's events for the reason.
-Commands: `just queenswood-subsidiary-manifest`, `just
-queenswood-environment-manifest`.
+removing that line later leaves them to compose a second folder. Prove
+an adoption by counting folders under the parent rather than by reading
+the composite, which reports healthy either way. This manifest may be
+re-rendered at any time, holding nothing generated, and a boundary may
+be declared with an empty `access` mapping, which reconciles correctly
+and which nobody can reach.
+Commands: `just queenswood-subsidiary-manifest`.
 See [boundary-install](../../../docs/recipes/infra/boundary-install.md).
 
 ## A composite builds what an instance is, Argo installs what runs there
@@ -390,8 +371,8 @@ different kind, named for what it is and adopted deliberately — and
 never set `compositionUpdatePolicy: Manual` on an XR, since pinning
 divides an estate into the XRs that took an edit and the ones that did
 not, which is the problem versioning would have caused.
-Commands: `just crossplane-kinds`, `just crossplane-slots`,
-`just crossplane-policies`.
+Commands: `just crossplane-kinds`, `just crossplane-slots`, `just
+crossplane-policies`.
 See [crossplane-design](../../../docs/recipes/infra/crossplane-design.md).
 
 ## Debug from what is not ready, not from what was named
@@ -451,8 +432,8 @@ and delete the Composition alongside, because nothing links them but a
 before treating a deletion from the repository as a removal from the
 plane, and merge a change before expecting it there — Argo reads the
 revision an Application names, never a working tree.
-Commands: `just crossplane-slots`, `just crossplane-owners`,
-`just crossplane-conditions`.
+Commands: `just crossplane-owners`, `just crossplane-slots`, `just
+crossplane-conditions`.
 See [crossplane-live](../../../docs/recipes/infra/crossplane-live.md).
 
 ## Provider resources are Terraform underneath
@@ -481,85 +462,72 @@ and point the pod at it with `deploymentTemplate`; never pin a name in
 `serviceAccountTemplate`, since the package manager takes controller
 ownership and the next claimant — another provider, or this provider's
 next revision — fails its runtime hook.
-Commands: `just crossplane-explain`, `just crossplane-owners`,
-`just crossplane-external-names`.
+Commands: `just crossplane-explain`, `just crossplane-owners`, `just
+crossplane-external-names`.
 See [crossplane-providers](../../../docs/recipes/infra/crossplane-providers.md).
 
 ## Do it in order, and each recipe leaves what the next reads
 
-An organisation's foundation, an installation's, the installation's
-plane, the installation in service, then an instance. Two paths through
-it: from nothing, all five in order; from an organisation that manages
-its own groups, start at the plane, since the first two are its to do
-however it does them.
-Choose the installation's code before the plane and never change it,
-since every name derives from it and nothing else on the second path
-chooses one, and answer every one of an installation's capabilities
-before the manifest that names them, since IAM rejects a binding to a
-principal that does not exist. Stopping after the installation is
-valid — that is one with no instance on it, and what a platform team
-hands over — and the organisation's own foundation is done once however
-many installations follow. The first two are a browser and have no API
-at all; from the plane onwards everything is a file in a repository,
-which is where the work stops being performed and starts being
-recorded.
+Do these in order. Start at step 2 where the organisation is already
+established, stop after step 4 — an installation with no instance on
+it — and run step 1 once for an organisation, with steps 2 to 5 once
+per installation.
 See [up-and-running](../../../docs/recipes/infra/up-and-running.md).
 
 ## A foundation produces capabilities, not groups
-
-Set recovery email and phone on the super admin, and 2-step
-verification: it has no mailbox and no one above it, and a second super
-admin, unused, means one lost device is not the end of the
-organisation. Read the subscription in the Admin console rather than
-trusting the sign-up confirmation, since Cloud Identity Free and a
-Workspace trial confirm identically and the trial expires taking the
-organisation with it. Create every access group without an owner or a
-manager, since both are members, and set Restricted before Only invited
+Set recovery email and phone on the super admin, and 2-step verification: it
+has no mailbox and no one above it, and a second super admin, unused, means
+one lost device is not the end of the organisation. Read the subscription in
+the Admin console rather than trusting the sign-up confirmation, since Cloud
+Identity Free and a Workspace trial confirm identically and the trial expires
+taking the organisation with it. Create every access group without an owner or
+a manager, since both are members, and set Restricted before Only invited
 users or the join rule is discarded. Bind from no active project, the
-organisation's groups and an installation's separately, since each
-fails before its own groups exist. Never script the creation: every
-Cloud Identity write attributes quota to a project and at foundation
-time none exists, which is also why `gcloud identity groups describe`
-answers that a group plainly present does not exist.
+organisation's groups and an installation's separately, since each fails
+before its own groups exist. Never script the creation: every Cloud Identity
+write attributes quota to a project and at foundation time none exists, which
+is also why `gcloud identity groups describe` answers that a group plainly
+present does not exist.
 
-Bind groups where humans hold access and principals directly where
-automation does. Create the billing account as a user on your own
-domain rather than as the super admin, never in a private window since
-3-D Secure needs an ordinary one, and never sign up in a browser
-already signed in to a Google account. Keep one direct human
-administrator on the billing account, which may be an existing one
-reused rather than created, and revoke the super admin's local
+Bind groups where humans hold access and principals directly where automation
+does. Create the billing account as a user on your own domain rather than as
+the super admin, never in a private window since 3-D Secure needs an ordinary
+one, and never sign up in a browser already signed in to a Google account.
+Keep one direct human administrator on the billing account, which may be an
+existing one reused rather than created, and revoke the super admin's local
 credentials and its direct organisation binding together once the group
-carries the role — either one left standing still reaches super admin.
-Never leave anybody standing in a break-glass group —
-`grp-gcp-org-admin@`, `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
+carries the role — either one left standing still reaches super admin. Never
+leave anybody standing in a break-glass group — `grp-gcp-org-admin@`,
+`grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
 `grp-gcp-<code>-platform-admin@`, `grp-gcp-<code>-cluster-admin@`,
 `grp-gcp-<code>-secrets-admin@`.
 
 Create a group as a super admin, in the directory, and join
 `grp-gcp-org-admin@` for the bind alone, leaving again — binding at the
-organisation is the one act in either recipe that is not a directory
-act. The organisation's capabilities outlive every installation and are
-bound at the organisation; an installation's are coded to it, created
-before the manifest that names them, and only `platform-viewer` is bound at
-the organisation, taking Browser there because tooling cannot reach a
-folder without resolving the organisation above it. The rest is folder
-and project scoped and reaches them through the manifest. Put the
-people who operate an installation in `platform-viewer` and nothing
-else, on accounts in your own domain, never with a direct organisation
-binding. What either recipe produces is capabilities rather than
-groups: an established organisation answers the same capabilities its own
-way, so skip the organisation's foundation entirely and read the
-installation's rather than follow it. An installation may be stood up
-with no groups at all and an empty `access` mapping, which reconciles
-correctly and which nobody can reach, and a capability may be answered
-by a user or a `principalSet://` rather than a group. Declare an
-organisation-scoped role in `infra/access/organisation-roles.json`,
-never in the recipe that binds it, and read what a capability grants
-and why with `just gcp-roles` — everything folder or project scoped is
-in the compositions under `infra/platform/crossplane-xrds/`.
-Commands: `just gcp-roles`, `just gcp-groups-bind-org`,
-`just gcp-groups-bind-installation`, `just gcp-groups-bind`.
+organisation is the one act in either recipe that is not a directory act. The
+organisation's capabilities outlive every installation and are bound at the
+organisation; an installation's are coded to it, created before the manifest
+that names them, and only `platform-viewer` is bound at the organisation,
+taking Browser there because tooling cannot reach a folder without resolving
+the organisation above it. The rest is folder and project scoped and reaches
+them through the manifest. Put the people who operate an installation in
+`platform-viewer` and nothing else, on accounts in your own domain, never with
+a direct organisation binding. What either recipe produces is capabilities
+rather than groups: an established organisation answers the same capabilities
+its own way, so skip the organisation's foundation entirely and read the
+installation's rather than follow it. An installation may be stood up with no
+groups at all and an empty `access` mapping, which reconciles correctly and
+which nobody can reach, and a capability may be answered by a user or a
+`principalSet://` rather than a group. State the region in the contract too,
+as `region`, `regionCode` and `zone`: the plane and every instance read them,
+nothing defaults them, and a manifest that restates one is a second place for
+it to be wrong. Declare an
+organisation-scoped role in `infra/access/organisation-roles.json`, never in
+the recipe that binds it, and read what a capability grants and why with `just
+gcp-roles` — everything folder or project scoped is in the compositions under
+`infra/platform/crossplane-xrds/`.
+Commands: `just gcp-groups-bind-org`, `just
+gcp-groups-bind-installation`, `just gcp-roles`.
 See [organisation-foundation](../../../docs/recipes/infra/organisation-foundation.md) and
 [contract-install](../../../docs/recipes/infra/contract-install.md).
 
@@ -616,7 +584,8 @@ restarting whatever reads the value at startup. A value that is not
 something to type — a key, a certificate — may be passed as a file, and
 several fields that identify each other may be held in one entry as
 JSON.
-Commands: `just queenswood-recovery-backup-key`, `just gcp-secret-version`.
+Commands: `just queenswood-recovery-backup-key`, `just
+gcp-secret-version`.
 See [external-secrets](../../../docs/recipes/infra/external-secrets.md).
 
 ## Google sign-in is two console acts and an Admin API call
@@ -684,8 +653,7 @@ change with it, the registrar does not follow, and each fresh zone
 draws from a finite per-domain pool. Move the apex once rather than
 delegating a subdomain per environment. Moving the delegation itself is
 the section below.
-Commands: `just plane-identity`, `just dns-records`, `just
-dns-carried`.
+Commands: `just plane-identity`, `just dns-records`, `just dns-carried`.
 See [gcp-dns](../../../docs/recipes/infra/gcp-dns.md).
 
 ## A delegation moves only once the new zone answers
@@ -704,6 +672,7 @@ there — they are the way back — and never re-enable DNSSEC at the
 registrar afterwards. Set a CAA record naming the issuing CA. Done in
 this order the propagation window is a no-op, since both authorities
 answer the same and no resolver holding either one is wrong.
+Commands: `just dns-records`.
 See [gcp-dns-delegation](../../../docs/recipes/infra/gcp-dns-delegation.md).
 
 ## A parent Application holds only kinds that already exist
@@ -944,6 +913,8 @@ composite reports `Synced` while nothing happens, so read
 `LastAsyncOperation`. `fdb.restore` may stay set indefinitely after a
 recovery, being a target rather than a mode, and a test environment may
 restore in place.
+Commands: `just sop-fdb-list-backups`, `just sop-fdb-version-at`, `just
+sop-fdb-describe`, `just crossplane-unready`.
 See [fdb-recovery](../../../docs/recipes/infra/fdb-recovery.md),
 [instance-rebuild-cluster](../../../docs/recipes/infra/instance-rebuild-cluster.md)
 and
@@ -966,19 +937,27 @@ See [security-scanning](../../../docs/recipes/infra/security-scanning.md).
 
 ## A recipe fails loudly or not at all
 
-Under `set -e`, `cmd && break`, `[[ test ]] && cmd` and a bare
-`VAR=$(cmd)` whose command may fail each end the recipe rather than the
-line, so never write them there, and never read an instant exit with no
-output as anything other than `set -e` aborting before the recipe's
-first `echo`. Consume a failure you expect instead — `if cmd; then
-break; fi`, or `|| true` where emptiness is handled explicitly — and
-capture a command's output into a variable before piping it, so a
-denial is not read as an empty result. Use whatever the caller supplied
-and discover only what they did not: never add a lookup for a value the
-caller already named, since discovery fails where an argument would
-have worked. Declare an overridable variable with
-`env_var_or_default`, and put a recipe in the justfile for the domain
-it acts on, prefixed with that domain's name — the prefix is what
-groups it in `just --list`, and the file is where somebody looks for
-one they half-remember.
+Under `set -e`, `cmd && break`, `[[ test ]] && cmd` and a bare `VAR=$(cmd)`
+whose command may fail each end the recipe rather than the line, so never
+write them there, and never read an instant exit with no output as anything
+other than `set -e` aborting before the recipe's first `echo`. Consume a
+failure you expect instead — `if cmd; then break; fi`, or `|| true` where
+emptiness is handled explicitly — and capture a command's output into a
+variable before piping it, so a denial is not read as an empty result. Use
+whatever the caller supplied and discover only what they did not: never add a
+lookup for a value the caller already named, since discovery fails where an
+argument would have worked. Pass the identity a recipe acts as rather than
+discovering it, and stop rather than guessing where none is given. Declare an
+overridable variable with `env_var_or_default`, and put a recipe in the
+justfile for the domain it acts on, prefixed with that domain's name — the
+prefix is what groups it in `just --list`, and the file is where somebody
+looks for one they half-remember. Declare a constant in the file that reads
+it, and in `vars.just` where more than one does or where it has to agree with
+one already there; put a private helper with the domain it is about, whoever
+calls it. Order a file as constants, private helpers, then recipes in the
+order they are run, with the ad-hoc ones last, and give every recipe a
+one-line comment naming its parameters and the values a fixed parameter takes
+— that line is what `just --list` shows. Never comment a recipe body except
+where a reader would otherwise make an edit that breaks it: why it is that way
+belongs in the recipe under `docs/`.
 See [justfile-recipes](../../../docs/recipes/practices/justfile-recipes.md).

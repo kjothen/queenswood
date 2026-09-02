@@ -111,42 +111,41 @@ spec:
                     a newly required field invalidates them all at once.
                 region:
                   type: string
-                  default: europe-west2
                   description: |
-                    Where this environment runs. Defaulted so an
-                    existing manifest keeps validating, and stated in
-                    every manifest regardless: a name carries the
-                    region abbreviation and moving it rebuilds the
-                    subnet and the cluster, so a default that changed
-                    underneath a live instance would move it silently.
+                    Where this environment runs. Taken from the
+                    installation's EnvironmentConfig, which states it
+                    once for every instance; set here only to put one
+                    instance somewhere else. Not defaulted: a default
+                    is indistinguishable from a deliberate value, so it
+                    would silently win over the environment.
 
-                    Per instance rather than per installation for the
-                    same reason. An installation-wide default would
-                    edit every environment at once, and the plane's
-                    region has no authority over an environment's --
-                    what the plane reconciles is API calls, which are
-                    not regional.
+                    The plane's region has no authority over an
+                    instance's -- what the plane reconciles is API
+                    calls, which are not regional -- so both read the
+                    installation's rather than one reading the other.
                 regionCode:
                   type: string
-                  default: euw2
                   description: |
                     The region, abbreviated, as it appears in the name
                     of anything regional. GCP publishes no short form,
-                    so the manifest states it and nothing derives it.
+                    so it is stated rather than derived -- in the
+                    installation's EnvironmentConfig, and here only to
+                    override it for one instance.
                 zone:
                   type: string
-                  default: europe-west2-a
                   description: |
                     Where the cluster's control plane and its nodes sit.
+                    Taken from the installation's EnvironmentConfig; set
+                    here only to put one instance elsewhere.
                     Zonal rather than regional: a regional cluster
                     replicates the node count into every zone it spans,
                     so the same pool costs three times as much, and an
                     environment that survives a zone going away is not
                     what a test instance is for.
 
-                    Stated in every manifest for the same reason region
-                    is, even though no name carries it: moving it
-                    rebuilds the cluster.
+                    Not defaulted for the same reason region is not,
+                    even though no name carries it: moving it rebuilds
+                    the cluster, so it is stated rather than assumed.
                 access:
                   type: object
                   default: {}

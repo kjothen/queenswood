@@ -77,8 +77,9 @@ nothing else — not a break-glass group, and not the billing group.
 just queenswood-environment-manifest <parent-or-blank> "" <folder-id>
 ```
 
-Four keys under `data`: the access mapping naming the principals above,
-the folder, the billing account and the manifests repository.
+Under `data`: the access mapping naming the principals above, the
+folder, the billing account, the manifests repository, and the region
+the installation runs in, said three ways.
 
 > [!WARNING]
 > Re-render as often as you like until it is committed. Once it is, that
@@ -100,6 +101,9 @@ correct.
 
 - Create an installation's groups before the manifest that names them
   is rendered.
+- State the region here, as `region`, `regionCode` and `zone`. The
+  plane and every instance read them, nothing defaults them, and a
+  manifest that restates one is a second place for it to be wrong.
 - Name them for the installation's code, which is chosen here and never
   changed.
 - Create each without an owner or a manager, Restricted before Only
