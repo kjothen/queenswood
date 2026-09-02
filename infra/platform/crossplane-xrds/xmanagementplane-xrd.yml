@@ -70,6 +70,27 @@ spec:
                     late-initialisation owns forProvider.billingAccount,
                     so neither source being present leaves billing
                     untouched rather than unsetting it.
+                region:
+                  type: string
+                  default: europe-west2
+                  description: |
+                    Where the installation runs. Rendered from its
+                    committed environment, which states it once for the
+                    plane and every instance.
+                regionCode:
+                  type: string
+                  default: euw2
+                  description: |
+                    The region, abbreviated, for names that carry one --
+                    a subnet is per-region and says so. Separate from
+                    region because GCP publishes no short form.
+                zone:
+                  type: string
+                  default: europe-west2-a
+                  description: |
+                    The cluster is zonal, not regional: one zonal control
+                    plane falls under the free allowance, and a plane
+                    running Crossplane and Argo does not need three.
                 access:
                   type: object
                   description: |
@@ -118,32 +139,11 @@ spec:
                         secretmanager.admin on the management project.
                         Break-glass.
                       items: *member
-                region:
-                  type: string
-                  default: europe-west2
-                  description: |
-                    Where the installation runs. Rendered from its
-                    committed environment, which states it once for the
-                    plane and every instance.
-                regionCode:
-                  type: string
-                  default: euw2
-                  description: |
-                    The region, abbreviated, for names that carry one --
-                    a subnet is per-region and says so. Separate from
-                    region because GCP publishes no short form.
-                zone:
-                  type: string
-                  default: europe-west2-a
-                  description: |
-                    The cluster is zonal, not regional: one zonal control
-                    plane falls under the free allowance, and a plane
-                    running Crossplane and Argo does not need three.
                 machineType:
                   type: string
                   default: e2-standard-4
                   description: |
-                    What the nodes are. Beside zone rather than under
+                    What the nodes are. Top-level rather than under
                     management, because management says which project
                     and where its configuration comes from, and this is
                     the shape of the cluster -- the same half of the
