@@ -33,6 +33,25 @@ _instance-project env label:
     fi
     printf '%s\n' "$ID"
 
+# Print `key` from the installation's committed environment.
+[private]
+_environment-value key:
+    #!/usr/bin/env zsh
+    set -e
+    FILE={{ INSTALLATIONS_REPO }}/{{ CODE }}/environment.yml
+    if [[ ! -f "$FILE" ]]; then
+      echo "no environment at $FILE" >&2
+      echo "the contract is committed before anything reads it -- see" >&2
+      echo "docs/recipes/infra/contract-install.md" >&2
+      exit 1
+    fi
+    VALUE=$(sed -n 's/^  {{ key }}: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$FILE" | head -1)
+    if [[ -z "$VALUE" ]]; then
+      echo "no {{ key }} in $FILE; re-render it" >&2
+      exit 1
+    fi
+    printf '%s\n' "$VALUE"
+
 # Validate an instance's env and label, and print <code>-<env>-<label>.
 [private]
 _queenswood-instance env label:
@@ -237,12 +256,20 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
       esac
     fi
 
-    PARENT="{{ parent }}"
-    ORG_ARG=""
-    if [[ "$PARENT" == organizations/* ]]; then
-      ORG_ARG="${PARENT#organizations/}"
+    DOMAIN=$(just _gcp-domain)
+
+    # From the environment rather than the justfile: the contract is
+    # committed first and states the region, so a plane and every
+    # instance under it read one answer.
+    if ! REGION=$(just _environment-value region); then
+      exit 1
     fi
-    DOMAIN=$(just _gcp-domain "$ORG_ARG")
+    if ! REGION_CODE=$(just _environment-value regionCode); then
+      exit 1
+    fi
+    if ! ZONE=$(just _environment-value zone); then
+      exit 1
+    fi
 
     FOLDER="{{ folder }}"
     if [[ -n "$FOLDER" && "$FOLDER" != folders/* ]]; then
@@ -253,8 +280,8 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
       ADOPT="folderId: \"$FOLDER\""
     fi
 
-    CODE="{{ CODE }}" REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" \
-    ZONE="{{ ZONE }}" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
+    CODE="{{ CODE }}" REGION="$REGION" REGION_CODE="$REGION_CODE" \
+    ZONE="$ZONE" BILLING_LINE="$BILLING_LINE" DOMAIN="$DOMAIN" \
     RECOVERY_BLOCK="$RECOVERY_BLOCK" MGMT="$MGMT" MGMT_ADOPT="$MGMT_ADOPT" \
     SOURCE_REPO="{{ SOURCE_REPO }}" SOURCE_REVISION="{{ SOURCE_REVISION }}" \
     SOURCE_PATH_PREFIX="{{ SOURCE_PATH_PREFIX }}" \
@@ -385,6 +412,10 @@ queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
       echo ">>> naming the project $PROJECT" >&2
     fi
 
+    if ! REGION=$(just _environment-value region); then
+      exit 1
+    fi
+
     INSTALLATION="$ROOT/installation.yml"
     DNS_BLOCK=$(grep -A1 '^  dns:' "$INSTALLATION" || true)
     APEX=$(printf '%s\n' "$DNS_BLOCK" \
@@ -429,7 +460,7 @@ queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
       fi
       CODE="{{ CODE }}" ENV="{{ env }}" LABEL="{{ label }}" \
       INSTANCE="$INSTANCE" PROJECT="$PROJECT" \
-      REGION="{{ REGION }}" DOMAIN="$DOMAIN" ZONE_NAME="$ZONE_NAME" \
+      REGION="$REGION" DOMAIN="$DOMAIN" ZONE_NAME="$ZONE_NAME" \
       MGMT="$MGMT" RECOVERY="$RECOVERY" \
       BACKUP_BUCKET="bkt-$INSTANCE-backups-$RECOVERY_SUFFIX" \
       BACKUP_GENERATION="fdb/continuous/$(date +%Y-%m-%d)" \

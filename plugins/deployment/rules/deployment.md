@@ -89,33 +89,31 @@ See [ADR-0022](../../../docs/adr/0022-cloud-foundation-and-environment-lifecycle
 
 ## Build the plane before a merge can install anything
 
-Build the plane before expecting a merge to install anything: a control
-plane running another toolchain cannot apply this kind. Read what you
-can reach before choosing between creating a folder and adopting one.
-Grant the seed identity its rights on the folder or the parent, never a
-key; impersonate it rather than holding a credential, and revoke the
-impersonation once the throwaway plane is gone, since it outlives the
-plane, the terminal and the reboot otherwise. Never grant a person
-`serviceAccountTokenCreator` on the platform identity or create a key
-for any of the four. Ask for `compute.skipDefaultNetworkCreation` before
-the first project is created, and never fix a default VPC in a
-composition — it cannot be undone there. Commit the manifest before
-applying it and push it before any plane takes over reading it from
-git, and pivot the composite off a throwaway plane before discarding
-that plane. Never render a manifest over one that already exists: the
-management project id is minted per call, so the second render replaces
-the recorded id with one no project answers to, and the redirect
-truncates before the renderer runs. Close the seed identity once the
-bootstrap is done and reopen it for the next one: its organisation
-grants otherwise stand for ever, and the plane needs none of them. Never
-assume you can create a folder — ids are required, and one may be
-handed to you instead — and
-never delete a project as a side effect of an edit. Standing the
-installation up with no instance at all is valid, since an instance is
-its own composite applied afterwards, asking a platform team for the
-folder and the identity shortens the path without changing it, and
-another XRD and composition loaded onto the plane deploys something
-else the same way.
+Build the plane before expecting a merge to install anything: a control plane
+running another toolchain cannot apply this kind. Read what you can reach
+before choosing between creating a folder and adopting one. Grant the seed
+identity its rights on the folder or the parent, never a key; impersonate it
+rather than holding a credential, and revoke the impersonation once the
+throwaway plane is gone, since it outlives the plane, the terminal and the
+reboot otherwise. Never grant a person `serviceAccountTokenCreator` on the
+platform identity or create a key for any of the four. Ask for
+`compute.skipDefaultNetworkCreation` before the first project is created, and
+never fix a default VPC in a composition — it cannot be undone there. The
+manifest derives the region from the committed contract, so that comes first.
+Commit the manifest before applying it and push it before any plane takes over
+reading it from git, and pivot the composite off a throwaway plane before
+discarding that plane. Never render a manifest over one that already exists:
+the management project id is minted per call, so the second render replaces
+the recorded id with one no project answers to, and the redirect truncates
+before the renderer runs. Close the seed identity once the bootstrap is done
+and reopen it for the next one: its organisation grants otherwise stand for
+ever, and the plane needs none of them. Never assume you can create a folder —
+ids are required, and one may be handed to you instead — and never delete a
+project as a side effect of an edit. Standing the installation up with no
+instance at all is valid, since an instance is its own composite applied
+afterwards, asking a platform team for the folder and the identity shortens
+the path without changing it, and another XRD and composition loaded onto the
+plane deploys something else the same way.
 Commands: `just boot-cluster-up`, `just seed-impersonate`, `just
 seed-impersonate-revoke`, `just queenswood-installation-manifest`,
 `just boot-mgmt-apply`, `just gcp-org-enforce-constraints`, `just

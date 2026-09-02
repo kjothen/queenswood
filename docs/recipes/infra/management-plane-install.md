@@ -22,8 +22,9 @@ You want to build an installation's management plane.
   organisation and billing account behind it.
 - The boundary this plane is built inside, from
   [boundary-install](boundary-install.md).
-- The installation's contract, from
-  [contract-install](contract-install.md).
+- The installation's contract committed, from
+  [contract-install](contract-install.md). The render reads the region
+  out of it.
 - Steps 2 and 5 — write access to the manifests repository, and a
   merge.
 - The capability each step names. Ours is a Google group; yours may differ.
@@ -242,7 +243,8 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   otherwise — the terminal and the reboot too.
 - Render the manifest with `just queenswood-installation-manifest` and
   commit it before applying it with `just boot-mgmt-apply`, and
-  push it before any plane takes over reading it from git.
+  push it before any plane takes over reading it from git. It derives
+  the region from the committed contract, so that comes first.
 - Ask for `compute.skipDefaultNetworkCreation` before the first project
   is created. `just gcp-org-enforce-constraints` enforces them, as the
   identity you name — during a bootstrap, the seed.
