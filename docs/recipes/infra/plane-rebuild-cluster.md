@@ -446,8 +446,10 @@ binding Crossplane authenticates with, taken away halfway through taking
 it away.
 
 `plane-ctx` now fetches the successor and renames its context to
-`MGMT_CTX`, so every recipe and every habit points at the plane in
-charge again.
+`MGMT_CTX`, so every recipe and every habit points at the plane in charge
+again. What that name pointed at is kept as `MGMT_CTX-previous`, which is
+how the cluster being retired stays reachable — step 9 needs it, and so
+does going back.
 
 ### 9. Delete what it replaced
 
@@ -479,9 +481,13 @@ reconciles nothing. What replaces it afterwards is a boot plane and an
 adopt, which the prerequisite about `adopt` is what makes possible.
 
 ```bash
+kubectl --context "$QW_CODE-mgmt-previous" get nodes -o name | head -1
 gcloud container clusters delete <the cluster it replaced> \
   --project="$PROJECT" --zone=<zone>
 ```
+
+The first line is the check that the name still means what you think:
+`gke-gke-…` is the cluster being deleted.
 
 The node pool goes with it, and so does the kubeconfig `Secret` it wrote.
 
