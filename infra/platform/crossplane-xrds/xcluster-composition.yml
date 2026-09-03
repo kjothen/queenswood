@@ -167,6 +167,12 @@ spec:
               metadata:
                 namespace: crossplane-system
               spec:
+                # The list an XR that predates retain composes: a
+                # default reaches an XR when something writes it, and
+                # one stored before the field existed carries nothing
+                # there. So the common value is here and the patch
+                # below flips it, rather than the patch being Required
+                # and every existing XR failing to render.
                 managementPolicies:
                   - Observe
                   - Create
@@ -236,9 +242,10 @@ spec:
               # Both cases are spelled, so retain: false is as explicit
               # as leaving it out. map takes a string key, and the field
               # is a boolean, so it is converted first.
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.retain
+              #
+              # Deliberately not Required: absent means an XR written
+              # before the field existed, which is what base carries.
+              - fromFieldPath: spec.retain
                 toFieldPath: spec.managementPolicies
                 transforms:
                   - type: convert
@@ -352,11 +359,16 @@ spec:
             {{- fail (printf "spec.cluster.%s is absent" $f) }}
             {{- end }}
             {{- end }}
-            {{- range $f := list "code" "env" "label" "state" "retain" "zone" "projectId" }}
+            {{- range $f := list "code" "env" "label" "state" "zone" "projectId" }}
             {{- if not (hasKey $xr.spec $f) }}
             {{- fail (printf "spec.%s is absent" $f) }}
             {{- end }}
             {{- end }}
+            {{- /* Absent on an XR stored before the field existed, and
+                   false is what such an XR means: a default reaches an
+                   object when something writes it, never on the way
+                   out. */}}
+            {{- $retain := $xr.spec.retain | default false }}
             {{- $name := printf "%s-%s-%s" $xr.spec.code $xr.spec.env $xr.spec.label }}
             {{- $count := 0 }}
             {{- if eq $xr.spec.state "up" }}
@@ -374,7 +386,7 @@ spec:
                 - Observe
                 - Create
                 - Update
-                {{- if not $xr.spec.retain }}
+                {{- if not $retain }}
                 - Delete
                 {{- end }}
                 - LateInitialize

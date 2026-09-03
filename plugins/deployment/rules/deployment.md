@@ -355,7 +355,11 @@ resource's `- name:` to rebuild it under a new `metadata.name` —
 deleting the object alone rebuilds the old one. Set
 `policy.fromFieldPath: Required` where a missing source is a mistake
 rather than a meaning, and on every patch reading a field the XRD
-defaults; never expect a Composition to withhold a field. Use
+defaults -- except in the change that adds the field to a kind with live
+XRs, since a default is applied when an object is written and never on
+the way out, so absent there means an XR older than the field: put its
+value in `base`, leave the patch unrequired, and read it in a template
+with a fallback. Never expect a Composition to withhold a field. Use
 `function-go-templating` where the number of composed resources varies
 with the caller, and never compose a cluster-scoped kind from a
 namespaced XR. Carry `Delete` in `managementPolicies` only where a

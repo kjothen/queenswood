@@ -93,6 +93,14 @@ a moment after both are applied when the default is not yet in force —
 `Required` makes the resource wait for it rather than compose without
 the field.
 
+That is for a field the kind has always had. A field added to a kind
+with live XRs is the opposite case: a default is applied when an object
+is written and never on the way out, so every XR stored before the
+field existed carries nothing there until something writes it. Put the
+value such an XR means in `base` and let an unrequired patch override
+it — absent then means an XR older than the field, which is a meaning
+rather than a mistake.
+
 ### 5. What each part is called
 
 The kind first. Name the thing itself, at the most specific level that
@@ -222,6 +230,15 @@ composition rendered rather than whether every resource took its
 change. Changing it at all is
 [crossplane-live](crossplane-live.md)'s.
 
+**Every live XR of a kind stops rendering the moment a field is added
+to it.** `spec.<field> is absent`, from a `Required` patch or from a
+`fail` in a templated step, on composites that were reconciling a
+minute earlier — and on a plane mid-sync it arrives with the merge that
+added the field. The XRD's default is not retrospective, so the absence
+has to be given a meaning rather than treated as an error: the value in
+`base`, the patch unrequired, and the template reading the field with a
+fallback.
+
 **A kind named after what reads it.** One that registers a cluster with
 Argo, called `XArgoCluster`, parses as a cluster belonging to Argo —
 and the cluster already has a kind. A name borrowed from a reader also
@@ -281,7 +298,10 @@ are different paths.
   `metadata.name`. Deleting the object alone rebuilds the old one.
 - Set `policy.fromFieldPath: Required` where a missing source is a
   mistake rather than a meaning, and on every patch reading a field the
-  XRD defaults.
+  XRD defaults — except in the change that adds the field to a kind with
+  live XRs, where absent means an XR older than the field: put its value
+  in `base`, leave the patch unrequired, and read it in a template with
+  a fallback.
 - Put constants in `base`.
 - Use `function-go-templating` where the number of composed resources
   varies with the caller.
