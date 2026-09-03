@@ -42,7 +42,8 @@ was the proving ground; the instance was the proof.
   with no rename — the names those two fields render are the ones the
   plane built by hand — plus the proxy subnet it has never had, which
   is what the `network` block's `proxyCidr` is for. The cluster is a
-  rename of three live resources, so the merge composes them under
+  rename of four live resources — the cluster, the pool, the node
+  identity and the binding naming it — so the merge composes them under
   their new names beside the live ones and the plane swaps onto the
   cluster it built.
   `XCluster` gained a `retain` field for the one thing that differs: an

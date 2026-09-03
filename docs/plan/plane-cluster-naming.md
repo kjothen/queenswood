@@ -135,7 +135,12 @@ plane.
                 today               after
 node identity   sa-<code>-c-nodes   sa-<code>-c-mgmt-nodes
 node pool       np-<code>-c-mgmt    np-<code>-c-mgmt-primary
+node binding    <code>-nodes-…      <code>-c-mgmt-nodes-…
 ```
+
+The binding is the `defaultNodeServiceAccount` grant, which follows the
+identity it names. It is a new binding rather than a moved one, since
+the member is a different account.
 
 Check both against `XCluster` rather than trusting this table: they are
 what a rebuild gets right for free and a migration would have to

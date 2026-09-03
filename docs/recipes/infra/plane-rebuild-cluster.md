@@ -228,7 +228,18 @@ name and adopts it.
 The identities need nothing. Workload Identity's pool is per project
 rather than per cluster, and the Kubernetes service account names are
 pinned by the runtime configuration, so the successor's pods
-authenticate as the same identities the plane's did.
+authenticate as the same identities the plane's did. An access binding
+adopts whatever its object is called, because an IAM member's external
+name is the project, the role and the member rather than the name of
+the resource holding it.
+
+Two of an instance's records adopt on a second pass rather than the
+first. Their names carry a value GCP generated — the ACME challenge
+label, and the address the A records point at — so the composition
+reads them from another resource's observed status and the templated
+step composes nothing at all until it is there. On a plane that has
+never seen them that is one reconcile with those records missing, not a
+reconcile that composes them wrong.
 
 Both planes are reconciling the estate at this point, from the same
 revision and to the same desired state. That is expected, and step 8 is
@@ -434,10 +445,12 @@ the composed object for the same reason.
 on the plane is the source of anything: the folder id is in the
 environment, the project ids are in the manifest as `adopt`, and every
 other name the composition derives from the code. A successor observes
-each of them and takes them over. The corollary is that a name that
-cannot be derived cannot be adopted, which is why
+each of them and takes them over. The corollary is that a name which
+can be neither derived nor re-observed cannot be adopted — which is why
 `crossplane.io/external-name` is for a name Kubernetes cannot express
-rather than one that is merely tidier.
+rather than one that is merely tidier, and why the resources whose
+names come from another's status are composed by a guarded template
+rather than a patch.
 
 **The slot is what makes this a one-off rather than a routine.** A
 successor needs a new slot, and slots are written in the composition, so
