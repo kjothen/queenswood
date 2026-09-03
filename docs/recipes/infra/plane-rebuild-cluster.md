@@ -401,6 +401,15 @@ the plane in charge sets is one late-initialisation filled there and the
 composition does not state: the successor cannot learn it, and whatever
 the provider does with it absent is what it will do from now on.
 
+A `down` instance's servers are stopped, and a stopped Cloud SQL server
+refuses every write — so anything the successor tries to *change* there
+fails with `Invalid request since instance is not running`. Adoption
+itself needs no write: a resource whose desired state already matches is
+observed, taken over, and late-initialised from what came back. So that
+error does not mean waiting for the instance; it means an update is being
+attempted at all, and the fix is to make it unnecessary rather than to
+start a server.
+
 The instances are the half nobody thinks of. The successor reapplies
 each unit's composite from the manifests repository, so every instance's
 project, cluster, database, buckets, zone and secrets are adopted by
@@ -601,6 +610,16 @@ diff, and is refused for ever. The fix is in the composition — state the
 field, matching what the cloud already assigned — and the way to find
 the rest is `just crossplane-drift`.
 
+**`Invalid request since instance is not running`, on a database of an
+instance that is `down`.** `state: down` sets Cloud SQL
+`activationPolicy: NEVER` and a stopped server refuses every write, so
+this says an update is being attempted — not that the instance has to
+come up. Find what the update is for and remove the reason: here it was
+the empty `charset` of the entry above, and stating it left no diff to
+apply, after which the resource went `Synced` against a stopped server
+and late-initialised the rest. One refusal replacing another is progress,
+so read the message rather than the condition.
+
 **A project reports `Error 409: Requested entity already exists`, and
 everything in that project waits behind it.** The manifest declaring it
 carries no `adopt`, so the successor composed a `Project` with no
@@ -649,7 +668,9 @@ successor before scaling anything again.
 - Install Crossplane before Argo, and read the release names from each
   object's `crossplane.io/external-name` rather than from its Kubernetes
   name.
-- Prove the instances adopted, not only the plane, before swapping.
+- Prove the instances adopted, not only the plane, before swapping —
+  counting a `down` instance's stopped servers as adopted, since nothing
+  about them can reconcile until it is up.
 - Scale the old plane's Crossplane core down before its provider pods —
   the core puts a provider back — and only after the successor is
   holding the estate.
