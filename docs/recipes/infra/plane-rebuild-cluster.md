@@ -59,6 +59,18 @@ plane and install, which adopts the folder, the projects and the
 identities that survived; see
 [management-plane-install](management-plane-install.md).
 
+Every step below reads these, and a `just` recipe defaults the code where
+the shell does not — which is why an unset one shows up as a context
+called `-mgmt` rather than as an error:
+
+```bash
+# the installation code, e.g. qw01
+export QW_CODE=qw01
+export WORK=$(mktemp -d)
+```
+
+`NEXT` joins them in step 4, once the plane has said what it built.
+
 Nothing is restored here. The plane holds no state of its own: every
 fact it reconciles from is in GCP, in git or in Secret Manager, and the
 managed resources on it are a cache of what the cloud already says. What
@@ -72,14 +84,14 @@ load-bearing rather than tidy.
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
-WORK=$(mktemp -d)
 just crossplane-slots > "$WORK/slots-before.txt"
 just crossplane-external-names > "$WORK/names-before.txt"
 just crossplane-unready
 just argo-apps-status
 ```
 
-Outside the repository, and outside the installations repository too.
+`WORK` is a scratch directory rather than the working tree, and outside
+the installations repository too.
 Both files are the estate's own identifiers — folder ids, project ids,
 every principal — which belong in neither, and the hook that catches
 them reports after the fact.
@@ -169,21 +181,21 @@ For this composition that is `<code>-c-mgmt`, the general form being
 `<code>-<env>-<label>` with the plane's two fixed at `c` and `mgmt`.
 
 ```bash
-NEXT_CLUSTER=<the name that listed>
-PROJECT=$(just _mgmt-project)
-ZONE=$(gcloud container clusters list --project="$PROJECT" \
-         --filter="name=$NEXT_CLUSTER" --format='value(location)')
+export NEXT_CLUSTER=<the name that listed>
+export PROJECT=$(just _mgmt-project)
+export ZONE=$(gcloud container clusters list --project="$PROJECT" \
+                --filter="name=$NEXT_CLUSTER" --format='value(location)')
 gcloud container clusters get-credentials "$NEXT_CLUSTER" \
   --zone="$ZONE" --project="$PROJECT"
-NEXT="gke_${PROJECT}_${ZONE}_${NEXT_CLUSTER}"
+export NEXT="gke_${PROJECT}_${ZONE}_${NEXT_CLUSTER}"
 kubectl config use-context "$QW_CODE-mgmt"
 ```
 
 `get-credentials` makes its own context current, so put the plane in
 charge back before doing anything else.
 
-Export `NEXT`, and check it before every step that writes. An unset
-variable makes `--context ""` mean the current context, which is the
+Check `NEXT` before every step that writes. An unset variable makes
+`--context ""` mean the current context, which is the
 plane in charge, and nothing says so — a write meant for the successor
 lands on the estate instead. The nodes are the tell, and they are the
 tell because of the name this rebuild is for:
