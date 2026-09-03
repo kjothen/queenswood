@@ -34,6 +34,24 @@ A combine cannot read the EnvironmentConfig, so this is the one reason
 reason `installation.yml` still states a region field after the region
 moved into the installation's environment.
 
+## Where this starts
+
+The estate this is written against, so the reader needs nothing else:
+
+- One installation, one instance, and the instance is `state: down`.
+  Nothing serves anybody, which is what makes now the cheap moment.
+- The plane runs `gke-<code>-c-mgmt`, a zonal cluster in the management
+  project, reached as the `<code>-mgmt` kubectl context.
+- Its `Network`, `Subnetwork`, `Cluster`, `NodePool` and node identity
+  are composed directly by `XManagementPlane`, not through `XNetwork`
+  and `XCluster` as an instance's are.
+- Every DNS name now resolves through the apex, which the plane does
+  not own and this rebuild does not touch.
+
+Nothing outside the plane refers to the cluster by name except
+`MGMT_CTX` and the `plane-ctx` recipe that builds it, both of which
+spell `gke-<code>-c-mgmt` by hand.
+
 ## Why this waits for a rebuild
 
 Every part of it is a rename of a live resource, and a rename is a
@@ -148,17 +166,23 @@ way. Then:
   [contract-install](../recipes/infra/contract-install.md) already says
   the environment is for.
 
-## The zone is already gone by then
+## The zone was the blocker, and it is cleared
 
-[ADR-0028](../adr/0028-the-apex-belongs-to-no-installation.md) takes
-the apex out of the installation entirely: it belongs to no
-installation, lives in a project at the organisation, and is declared
-in git rather than composed by anything. So `XManagementPlane` composes
-no zone, and a plane rebuilt after that move has no zone to preserve.
+A plane could not be rebuilt while it composed the zone the registrar
+pointed at. That is no longer true.
+[ADR-0028](../adr/0028-the-apex-belongs-to-no-installation.md) put the
+apex in a project at the organisation, declared in git and composed by
+nothing, and
+[apex-dns-migration](apex-dns-migration.md) moved this estate onto it:
+the registrar delegates to the new apex, the apex delegates each
+environment's name to a zone the installation composes, and the one
+instance answers from its own.
 
-The move is [apex-dns-migration](apex-dns-migration.md) and it is not
-this plan's to sequence. It only has to happen first, which the
-ordering below states.
+What is left of the old arrangement is inert but still declared. The
+plane goes on composing the zone the registrar no longer points at,
+because `installation.yml` still carries a `dns` block. Removing it is
+the first thing below, and after it the plane composes no DNS at all —
+which is the state this rebuild wants to start from.
 
 ## What not to do
 
@@ -177,24 +201,38 @@ does.
 
 ## Ordering
 
-Against a rebuild, in the order the recipes already run:
+**Finish the DNS tail first.** It is three merges and one deliberate
+delete, and none of it touches the cluster.
 
-1. Move the apex off the plane first, while the plane holding it is
-   still standing — [apex-dns-migration](apex-dns-migration.md).
-2. Make the changes above and merge them before the plane is built, so
-   `crossplane-xrds` carries them when the boot plane applies the
-   composite.
-3. Build the plane from
+1. Remove the `dns` block from `<code>/installation.yml`. The plane
+   drops the zone and its two record objects; all three survive in GCP,
+   because neither carries `Delete`.
+2. Remove the `dns` step and the `dns` field from `XManagementPlane` —
+   its composition and its XRD — now that no manifest sets it. A field
+   cannot leave the schema while a manifest still carries it, or Argo
+   diffs for ever.
+3. Delete the old apex zone, deliberately and on its own. Until then it
+   is the way back from the delegation move, so there is no hurry.
+
+**Then the rebuild.**
+
+4. Make the changes under *What to change* and merge them before the
+   plane is built, so `crossplane-xrds` carries them when the boot
+   plane applies the composite. `boot-cluster-up` also has to apply the
+   `XNetwork` and `XCluster` XRDs and compositions, or `boot-mgmt-apply`
+   fails with `no matches for kind` — see
+   [composite-catalogue](composite-catalogue.md), and note that the
+   apex work hit exactly this by merging a manifest before its kind.
+5. Build the plane from
    [management-plane-install](../recipes/infra/management-plane-install.md).
-   The names are right from the first create.
-4. Render an instance and confirm nothing states a region field.
-5. Remove `regionCode` from `XManagementPlane`'s XRD, once no manifest
-   sets it — a field cannot leave the schema while a manifest still
-   carries it, or Argo diffs for ever.
+   The names are right from the first create, and there is no transfer.
+6. Render an instance and confirm nothing states a region field.
+7. Remove `regionCode` from `XManagementPlane`'s XRD, once no manifest
+   sets it.
 
-Against a live plane, if it is ever done that way instead: 1 and 2,
-then the `XNetwork` move as two merges with `Delete` withheld first,
-then the cluster rename as a plane rebuild and pivot, then 5.
+Against a live plane, if it is ever done that way instead: 1 to 4, then
+the `XNetwork` move as two merges with `Delete` withheld first, then the
+cluster rename as a plane rebuild and pivot, then 7.
 
 ## References
 

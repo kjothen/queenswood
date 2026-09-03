@@ -46,13 +46,20 @@ the registrar, and only then hands them down to a zone of qw01's own.
 
 ## Traps
 
-**A record's zone is its identity.** `managedZoneRef` is ForceNew, so
-repointing an instance's `ingress.zone` is refused rather than
-performed. The composite goes on reporting `Synced` and the refusal
-sits in `LastAsyncOperation` — see
-[crossplane-providers](../recipes/infra/crossplane-providers.md). The
-four `rs-qw01-n-test-*` managed resources are therefore deleted and
-recomposed, not edited.
+**A record's zone is its identity, and nothing says so.** The managed
+zone sits inside a `RecordSet`'s external name, so repointing an
+instance's `ingress.zone` leaves the spec naming one resource while
+upjet goes on observing another. It finds the fields it knows about
+equal and reconciles successfully: `Synced`, `Ready` and
+`LastAsyncOperation` all read healthy, and the records stay where they
+were. There is no refusal, because nothing is attempted.
+
+`crossplane.io/external-name` against the spec is the only place the
+disagreement shows — see
+[crossplane-providers](../recipes/infra/crossplane-providers.md). So
+the four `rs-qw01-n-test-*` managed resources are deleted and
+recomposed rather than edited, and nothing will tell you that is
+needed.
 
 **The address carries `Delete`.** Rebuilding the endpoint composite
 releases the IP and takes a different one, which makes every record

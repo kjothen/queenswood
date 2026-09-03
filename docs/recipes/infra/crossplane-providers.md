@@ -103,7 +103,9 @@ committing a literal.
 **`SYNCED` `False` on a resource whose spec looks right.** A field
 Terraform marks ForceNew. upjet declines rather than replacing, and
 says so in `LastAsyncOperation` — `Synced` alone describes something
-else entirely. Changing it is
+else entirely. That holds where the field is on the resource; where it
+is part of the external name, see below, and there is no refusal to
+find. Changing it is
 [crossplane-live](crossplane-live.md); keeping callers away from it is
 [crossplane-design](crossplane-design.md).
 
@@ -117,6 +119,21 @@ are identity the same way, and a list that reads as extensible is the
 easiest of the three to misjudge. Compose a second `Certificate`
 instead: one `DNSAuthorization` covers a domain and its wildcard, so
 the two share it rather than needing one each.
+
+**Every condition green, and the change simply absent.** Where the
+identity field is part of the external name — a `RecordSet`'s managed
+zone, which sits in the middle of
+`projects/<p>/managedZones/<zone>/rrsets/<name>/<type>` — a changed
+reference points the spec at one resource while upjet goes on observing
+another. It compares the fields it knows about, finds them equal, and
+reconciles successfully. There is no diff, so no update is attempted, so
+nothing is refused: `Synced`, `Ready` and `LastAsyncOperation` all read
+healthy and the edit is nowhere.
+
+Compare `crossplane.io/external-name` against the spec, which is the
+only place the disagreement shows. The fix is the same as for a refusal
+— delete the managed resource so the composition recreates it — but
+nothing will tell you it is needed.
 
 **A resource that never completes, on a create that succeeded.** The
 external name is empty immediately after create for some kinds — a
@@ -165,6 +182,9 @@ first failing its post-establish hook. Crossplane 2.3 tolerated it and
 - Expect a ForceNew change to replace a resource. It is refused.
 - Diagnose from `Synced` alone. The refusal is in
   `LastAsyncOperation`.
+- Believe a changed reference applied because every condition is green.
+  Where the field is part of the external name there is no refusal at
+  all — compare `crossplane.io/external-name` against the spec.
 - Treat a list-shaped field as extensible without checking. A
   `Certificate`'s `managed.domains` is identity, so a second domain is
   refused rather than appended.
