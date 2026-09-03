@@ -288,10 +288,11 @@ next one reads.
    person rather than as any service account — Cloud DNS refuses a
    create by an identity that does not own the name, and the apex is
    the one name no service account is made an owner of. A recipe, not a
-   console: `just gcp-dns-zone-create` is the existing shape, and it
-   already opens Search Console where the operator turns out not to be
-   verified. It draws the nameserver set once and permanently, so the
-   recipe refuses rather than creating a second.
+   console: `just dns-apex-zone-create`, which opens Search Console
+   where the operator turns out not to be verified. It draws the
+   nameserver set once and permanently, so the recipe refuses rather
+   than creating a second, and stops rather than guessing where it
+   cannot tell an absence from a denial.
 4. Write `apex.yml` — the domain, the project, the verification token,
    SPF and DMARC — and apply it. No delegations yet, because nothing is
    delegated.
