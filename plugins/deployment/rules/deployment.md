@@ -189,7 +189,14 @@ wrong one in the external-secrets annotation is a service account nothing is
 bound to rather than an error. Put the unit declaration at the top of the
 installation's directory, never inside the unit's folder, since the
 installation's Application is not recursive and a declaration filed inside is
-never applied at all. Give the instance its own `access` mapping and let it
+never applied at all. Add `adopt` beside the project's `projectId` once the project exists and
+merge it, since upjet records a project's external name after its own
+create and nothing else can find it afterwards -- a plane that did not
+create the project composes a `Project` with no external name, tries to
+create one already there, and is answered `409 Requested entity already
+exists` for ever; never before the create, where an external name on a
+project that does not exist makes the first observation fail and creation
+never follow. Give the instance its own `access` mapping and let it
 reconcile before writing any secret version: the installation's `secretsAdmin`
 binds on the management project, writes nothing here, and the denial is
 reported as a container that does not exist. Let an instance take its region
@@ -932,7 +939,11 @@ is created rather than altered, and is the only way the plane's cluster
 acquires an immutable field it was built without. Install Crossplane and Argo onto the successor by hand,
 Crossplane first, with the release name, namespace, chart version and
 values the composed `Release`s carry and never without `-f`, since
-`extraObjects` holds the Application that pulls everything else. Read
+`extraObjects` holds the Application that pulls everything else -- and
+Argo in two passes where the cluster has never had it, the first with
+`extraObjects` emptied, because the chart's CRDs are templates and helm
+builds every object before applying any, so an `Application` cannot ride
+in the release that installs its own kind. Read
 the release names from each object's `crossplane.io/external-name`
 rather than from its Kubernetes name.
 
