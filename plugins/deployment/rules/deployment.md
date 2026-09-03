@@ -949,8 +949,11 @@ rather than from its Kubernetes name.
 
 Record the slot list and the external names before and diff them after,
 writing both outside every repository since they are the estate's own
-identifiers, and prove the instances adopted as well as the plane
-before swapping:
+identifiers, compare the two planes field by field with `just
+crossplane-drift` -- a field only the creating plane sets is one
+late-initialisation filled there, which an adopting plane has no way to
+learn and only the composition can supply -- and prove the instances
+adopted as well as the plane before swapping:
 adoption is the whole procedure and nothing else reports whether it
 happened. Scale the old plane's Crossplane core down before its
 provider pods, and only once the successor holds the estate; never

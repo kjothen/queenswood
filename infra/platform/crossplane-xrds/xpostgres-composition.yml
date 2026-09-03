@@ -739,6 +739,22 @@ spec:
                 project: {{ $xr.spec.projectId | quote }}
                 instanceRef:
                   name: {{ printf "sql-%s" $name | quote }}
+                # What Cloud SQL gives a Postgres database anyway, stated
+                # because an update request carrying neither is refused:
+                # "charset and collation cannot both be empty for update
+                # request". A database this composition created has these
+                # values in its spec through late-initialisation and
+                # never sends such a request; one adopted by a plane that
+                # did not create it has an empty spec, converges the
+                # Terraform state with an update, and is refused for ever
+                # -- Ready, because the database is there, and never
+                # Synced.
+                #
+                # In base rather than a field: both are ForceNew, so a
+                # value that merely differed would replace the database
+                # and everything in it.
+                charset: UTF8
+                collation: en_US.UTF8
             {{- end }}
     # =======================================================================
     # Composite readiness. patch-and-transform sets it for the resources

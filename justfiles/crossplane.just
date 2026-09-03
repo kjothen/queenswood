@@ -197,3 +197,53 @@ crossplane-owners obj ctx=MGMT_CTX:
            | (.fieldsV1["f:spec"]["f:forProvider"] // {} | keys[])
            | [$owner, ltrimstr("f:")]) | @tsv' <<< "$JSON" \
       | column -t -s $'\t'
+
+# Fields two planes' managed resources disagree on, as forProvider paths.
+crossplane-drift ctx-a ctx-b:
+    #!/usr/bin/env zsh
+    set -e
+    # Dumps go in files rather than variables: two planes' worth of
+    # managed resources is megabytes, and an environment that size makes
+    # python3 fail to start at all.
+    WORK=$(mktemp -d)
+    trap 'rm -rf "$WORK"' EXIT
+    for PAIR in "a:{{ ctx-a }}" "b:{{ ctx-b }}"; do
+      SIDE="${PAIR%%:*}"
+      CTX="${PAIR#*:}"
+      if ! ERR=$(kubectl --context "$CTX" -n crossplane-system get managed \
+                   -o json 2>&1 > "$WORK/$SIDE.json"); then
+        echo "cannot read managed resources on $CTX:" >&2
+        printf '%s\n' "$ERR" | sed 's/^/  /' >&2
+        exit 1
+      fi
+    done
+
+    python3 - "$WORK/a.json" "$WORK/b.json" <<'PY'
+    import json, sys
+    def load(path):
+        with open(path) as f:
+            return {(o["kind"], o["metadata"]["name"]): o for o in json.load(f)["items"]}
+    def flat(d, p=""):
+        out = {}
+        if isinstance(d, dict):
+            for k, v in d.items():
+                out.update(flat(v, f"{p}.{k}" if p else k))
+        elif isinstance(d, list):
+            out[p] = f"[{len(d)}]"
+        else:
+            out[p] = d
+        return out
+    a, b = load(sys.argv[1]), load(sys.argv[2])
+    fp = lambda o: flat(o.get("spec", {}).get("forProvider", {}))
+    print(f"{len(a)} managed resources against {len(b)}")
+    for label, only in (("only on the first", set(a) - set(b)),
+                        ("only on the second", set(b) - set(a))):
+        for k in sorted(only):
+            print(f"{label}: {k[0]} {k[1]}")
+    for k in sorted(set(a) & set(b)):
+        x, y = fp(a[k]), fp(b[k])
+        for f in sorted(set(x) - set(y)):
+            print(f"only the first sets: {k[0]} {k[1]} {f}")
+        for f in sorted(set(y) - set(x)):
+            print(f"only the second sets: {k[0]} {k[1]} {f}")
+    PY
