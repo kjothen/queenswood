@@ -474,11 +474,27 @@ gcloud container clusters delete <the cluster it replaced> \
   --project="$PROJECT" --zone=<zone>
 ```
 
-The node pool goes with it, and so does the kubeconfig `Secret` it
-wrote. Then whatever else the change renamed and nothing now holds — a
-node identity and its two bindings, for a rename that moved them. They
-are reported by nothing and reconciled by nothing, and they go on
-costing.
+The node pool goes with it, and so does the kubeconfig `Secret` it wrote.
+
+Then whatever else the change renamed and nothing now holds — a node
+identity and its two bindings, for a rename that moved them. Reported by
+nothing, reconciled by nothing, and still there.
+
+**As the installation's platform admin** for that part, which is a
+different capability: no human one holds `iam.serviceAccountAdmin`, the
+platform identity does, and `platformAdmin` is `serviceAccountTokenCreator`
+on it. So the delete is made as that identity rather than as you:
+
+```bash
+PLATFORM="sa-$QW_CODE-platform@$PROJECT.iam.gserviceaccount.com"
+
+gcloud iam service-accounts delete \
+  "sa-$QW_CODE-c-nodes@$PROJECT.iam.gserviceaccount.com" \
+  --project="$PROJECT" --impersonate-service-account="$PLATFORM"
+```
+
+The flag rather than ADC impersonation, so nothing outlives the command.
+Deleting the account takes its bindings with it.
 
 ### 10. Record what happened
 
