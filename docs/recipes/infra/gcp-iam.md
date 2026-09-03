@@ -54,7 +54,16 @@ which is narrower than the four-role list older guidance gives and
 carries `autoscaling.sites.writeMetrics`, which none of them do.
 
 Attaching a service account to anything requires
-`iam.serviceAccounts.actAs` on it.
+`iam.serviceAccounts.actAs` on it — the default compute service account
+included, whether or not anything of yours ever runs as it. Creating a
+cluster creates a default node pool first, and that pool runs as this
+account whatever `removeDefaultNodePool` does to it a moment later. So
+an identity that creates clusters needs `actAs` on it, and an identity
+that created the project already has it by being owner there. The
+refusal reads *the user does not have access to service account
+`<project-number>-compute@…`*, and lands in the managed resource's
+`LastAsyncOperation` while the composite above goes on reporting
+`Synced`.
 
 ### Roles and scopes
 
@@ -176,7 +185,11 @@ permission and is meant for a project.
   writes you do not want, and name it with underscores: a custom role
   id takes no hyphens.
 - Grant `iam.serviceAccounts.actAs` on any service account something
-  must attach to a resource.
+  must attach to a resource, the default compute service account
+  included where the thing creates clusters: a cluster's initial node
+  pool runs as it even when `removeDefaultNodePool` deletes the pool
+  immediately. An identity that created the project holds this already
+  and one granted rights inside it does not.
 
 **MUST NOT:**
 

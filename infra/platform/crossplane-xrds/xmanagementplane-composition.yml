@@ -159,6 +159,13 @@ spec:
               - type: ToCompositeFieldPath
                 fromFieldPath: metadata.annotations[crossplane.io/external-name]
                 toFieldPath: status.managementProjectId
+              # The project's number, which the default compute service
+              # account's address carries and nothing else derives.
+              # Assigned by GCP, so it is pivoted up here and composed
+              # from below rather than stated anywhere.
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.atProvider.number
+                toFieldPath: status.managementProjectNumber
           # ===================================================================
           # APIs the management project needs before anything runs in it.
           # projectRef names the composed Project, so each waits for it
@@ -1595,6 +1602,62 @@ spec:
           # under a new metadata.name -- the composite records the old
           # one, and deleting the object just rebuilds it from that
           # record.
+          #
+          # The default compute service account gets the same right, and
+          # for a reason that only shows up when a cluster is created
+          # from this plane rather than from a boot plane: creating one
+          # creates a default node pool first, whatever
+          # removeDefaultNodePool does to it immediately afterwards, and
+          # that pool runs as this account. Attaching it is an actAs, so
+          # without this GCP refuses the create -- "the user does not
+          # have access to service account <number>-compute@..." -- and
+          # the refusal is in the managed resource's LastAsyncOperation
+          # while the composite reads Synced.
+          #
+          # An instance never needs it: the platform identity created
+          # that project, so it is owner there and holds actAs on
+          # everything in it already. It did not create this one, the
+          # seed did.
+          - name: management-default-compute-user
+            base:
+              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
+              kind: ServiceAccountIAMMember
+              metadata:
+                namespace: crossplane-system
+              spec:
+                managementPolicies:
+                  - Observe
+                  - Create
+                  - Update
+                  - LateInitialize
+                providerConfigRef:
+                  kind: ClusterProviderConfig
+                  name: default
+                forProvider:
+                  role: roles/iam.serviceAccountUser
+            patches:
+              - fromFieldPath: spec.code
+                toFieldPath: metadata.name
+                transforms:
+                  - type: string
+                    string:
+                      type: Format
+                      fmt: "sa-%s-c-default-compute-user"
+              # Required, so the binding is not composed at all until
+              # the number is observed. A skipped patch would otherwise
+              # name a service account that does not exist.
+              - policy:
+                  fromFieldPath: Required
+                type: CombineFromComposite
+                combine:
+                  variables:
+                    - fromFieldPath: spec.management.projectId
+                    - fromFieldPath: status.managementProjectNumber
+                  strategy: string
+                  string:
+                    fmt: "projects/%s/serviceAccounts/%s-compute@developer.gserviceaccount.com"
+                toFieldPath: spec.forProvider.serviceAccountId
+              - *platform-member
           - name: management-nodes-user
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
