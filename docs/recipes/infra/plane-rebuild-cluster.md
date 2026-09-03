@@ -4,10 +4,8 @@
 
 ## Status
 
-**Untested.** Every step below is derived from the compositions, the
-chart and the provider's own behaviour rather than from having done it,
-and the first person to follow it should correct it as they go. The
-timings are unknown.
+**Verified**, against one installation with one instance, the instance
+`state: down`. Step 10 carries that run's timings.
 
 ## Problem
 
@@ -435,9 +433,29 @@ charge again.
 **As the installation's cluster admin.** Ours is
 `grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
 
-Not until the successor has held the estate long enough to trust,
-because until this runs there is a way back: scale the old plane's
-controllers up, revert the merge, and it resumes.
+Three things make it safe, and they are conditions rather than a waiting
+period. `crossplane-drift` accounts for every resource; the Application
+reading the private manifests repository is `Synced`, which is what
+proves the credential rather than the chart; and the retired cluster
+holds nothing that exists nowhere else:
+
+```bash
+for NS in crossplane-system argocd external-secrets; do
+  diff <(kubectl --context "$QW_CODE-mgmt-previous" -n $NS get secret -o name \
+           | sort) \
+       <(kubectl --context "$QW_CODE-mgmt" -n $NS get secret -o name | sort)
+done
+```
+
+`sh.helm.release.v1.*` on the retired side only is the expected answer
+and nothing else should be: it is Helm's rollback history for the two
+charts, which goes with the cluster it belongs to. Anything else listed
+is state to move before deleting.
+
+Deleting it ends the way back — scaling those controllers up and
+reverting the merge — so weigh that against paying for a cluster that
+reconciles nothing. What replaces it afterwards is a boot plane and an
+adopt, which the prerequisite about `adopt` is what makes possible.
 
 ```bash
 gcloud container clusters delete <the cluster it replaced> \
@@ -453,11 +471,27 @@ costing.
 ### 10. Record what happened
 
 - **RTO** — wall clock from the merge to the successor reconciling the
-  estate. Nothing has measured it, and no service is down for any of it.
+  estate, and no service down for any of it.
 - **That adoption held.** Until a plane has adopted an estate, that it
   can is an assumption about every external name at once.
-- **Anything here that was wrong**, which is likely, since nobody has
-  run it.
+- **Anything here that was wrong**, which is likely.
+
+The first run, for comparison. One installation, one instance, the
+instance `down`:
+
+- **1m21s** from the merge to the plane having applied the composition.
+- **21m** for GKE to build the cluster and its pool, timed from the merge
+  that granted `actAs` on the default compute service account — until
+  that landed the create was refused rather than slow.
+- **6m** to install the two charts by hand.
+- **15m** for the four waves, nearly all of it wave 1 pulling twelve
+  provider images, during which the API server was unreachable for a
+  while as GKE resized the control plane.
+- **under a minute** for the estate to adopt once the installation's
+  manifest applied: 121 managed resources, each observing its own and
+  taking it over.
+- **2h34m** end to end, of which the mechanical path is about an hour.
+  The rest was four merges fixing what the run found.
 
 ## Failures
 
