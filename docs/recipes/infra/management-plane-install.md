@@ -109,6 +109,16 @@ kubectl --context kind-boot-mgmt -n crossplane-system \
 `status` carries the folder id, the management project and the platform
 identity. Those are what everything later is named and bound against.
 
+Then add `adopt` under `recovery` in the manifest, beside its
+`projectId`, spelled `projects/<id>`, and merge it. The management
+project's is already there — the renderer writes it — and the recovery
+project's cannot be, since a project that does not exist yet answers an
+external name with a failed observation and never gets created. After
+the create it is the only record of how to find that project again: a
+plane that did not create one composes a `Project` with no external
+name, tries to create it, and is answered `409 Requested entity already
+exists` for ever.
+
 ### 5. Pivot onto the cluster it built
 
 Push the manifest first, then move the composite onto the management
@@ -260,6 +270,9 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   a credential, and revoke it once the throwaway plane is gone with
   `just seed-impersonate-revoke`. It outlives the plane
   otherwise — the terminal and the reboot too.
+- Add `adopt` under `recovery` once that project exists, as the manifest
+  already carries for the management project. It is what lets any later
+  plane adopt it rather than try to create it.
 - Render the manifest with `just queenswood-installation-manifest` and
   commit it before applying it with `just boot-mgmt-apply`, and
   push it before any plane takes over reading it from git.

@@ -119,6 +119,25 @@ Everything on the plane still building, this instance's resources
 among them. A header line with nothing under it is the finished
 answer.
 
+### 4b. Record the project as adoptable
+
+Once the project exists, add `adopt` beside its `projectId` in
+`units/<label>/instance.yml`, spelled `projects/<id>`, and merge that on
+its own.
+
+upjet records a project's external name after its own create, so the
+plane that made this one knows how to find it and nothing else does. A
+plane that did not create it composes a `Project` with no external name,
+tries to create one that is already there, and is answered `409
+Requested entity already exists` for ever — which is what a rebuilt
+plane does with every project the manifests leave unadoptable. Not
+before the create, though: an external name set on a project that does
+not exist yet makes the first observation fail and creation never
+follows.
+
+It changes nothing here. The managed resource already carries that
+external name, so the patch matches what is live.
+
 ### 5. Create the OAuth client
 
 **As the installation's platform admin.** Ours is
@@ -228,6 +247,11 @@ because pods with no requests read as uncommitted to the scheduler.
 ## Rules
 
 **MUST:**
+
+- Add `adopt` beside the project's `projectId` once the project exists,
+  and merge it. Without it no other plane can ever adopt the project,
+  and the day one has to it is answered `409 Requested entity already
+  exists`.
 
 - Render the unit with `just queenswood-instance-manifest`, which mints
   the project id once and writes it into every file that carries it.

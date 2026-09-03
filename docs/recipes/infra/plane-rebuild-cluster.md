@@ -37,6 +37,23 @@ folder can act before the folder does, which is not the case here.
   differ.
 - Nothing in flight on an instance: for the length of this two planes
   reconcile one estate, and then one of them stops.
+- Every project in the estate carrying `adopt` in the manifest that
+  declares it, which is the one precondition a rebuild has that nothing
+  else does. upjet records a project's external name after its own
+  create, so a plane that never created one has nothing to record, tries
+  to create it, and is answered `409 Requested entity already exists`
+  for ever. `just queenswood-installation-manifest` writes the
+  management project's; an instance's and the recovery project's are
+  added by hand once those projects exist, and nothing has ever needed
+  them before a rebuild:
+
+  ```bash
+  grep -rn 'projectId' "$QW_INSTALLATIONS_REPO/$QW_CODE" | grep -v adopt
+  ```
+
+  Every id that lists wants an `adopt` beside it, spelled
+  `projects/<id>`, merged before the swap. It is a no-op for the plane in
+  charge, whose managed resources already carry that external name.
 
 Where no plane is running at all — its cluster already gone — this is
 not the procedure. Nothing is left to build a successor, so raise a boot
@@ -480,10 +497,20 @@ Kubernetes service account name has to land before the pods that name
 it. Persisting past that, the name is wrong and Workload Identity is
 bound to something nothing runs as.
 
+**A project reports `Error 409: Requested entity already exists`, and
+everything in that project waits behind it.** The manifest declaring it
+carries no `adopt`, so the successor composed a `Project` with no
+external name and tried to create one that already exists. Nothing is
+damaged — GCP refused — but the project never goes Ready and every
+`ProjectService` and binding referencing it stalls behind it. Add
+`adopt` and merge; see the prerequisite above.
+
 **An instance's resource is created rather than adopted.** Its external
 name is not what the composition derives, so a fresh managed resource
 observed nothing and built a second one. Stop before it finishes: the
-first is still there, and two of them is worse than either.
+first is still there, and two of them is worse than either. A project is
+the one case where this is harmless, because a project id is globally
+unique and the create is refused rather than duplicated.
 
 **The plane you scaled down comes back.** Something is reconciling those
 `Deployment`s that should not be — the composite's `Release` is meant to
@@ -500,6 +527,9 @@ successor before scaling anything again.
 - Record the slot list and the external names before, and diff them
   after. Adoption is the whole procedure, and nothing else reports
   whether it happened.
+- Merge an `adopt` for every project in the estate before swapping. One
+  whose manifest lacks it cannot be adopted by any plane that did not
+  create it.
 - Install Crossplane and Argo onto the successor with the release name,
   namespace, chart version and values the composed `Release`s carry, and
   never without `-f`: `extraObjects` holds the Application that pulls
