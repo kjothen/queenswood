@@ -243,21 +243,42 @@ helm --kube-context "$NEXT" upgrade --install crossplane \
   -n crossplane-system --create-namespace -f "$WORK/$CP.values.json"
 ```
 
-Then Argo:
+Then Argo, in two passes. The chart renders its CRDs as templates
+rather than shipping them in a `crds/` directory, so they are applied in
+the same pass as everything else — and helm resolves a REST mapping for
+every object in a manifest before applying any of it. The `Application`
+in `extraObjects` is a resource of a kind this release installs, so on a
+cluster that has never had Argo it cannot be built. The first pass
+leaves it out:
 
 ```bash
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
 helm --kube-context "$NEXT" upgrade --install argocd argo/argo-cd \
   --version "$ARGO_VER" -n argocd --create-namespace \
+  -f "$WORK/$ARGO.values.json" --set-json 'extraObjects=[]'
+
+kubectl --context "$NEXT" get crd applications.argoproj.io
+```
+
+The second passes the file unchanged, and is what puts
+`management-plane` on the cluster:
+
+```bash
+helm --kube-context "$NEXT" upgrade --install argocd argo/argo-cd \
+  --version "$ARGO_VER" -n argocd --create-namespace \
   -f "$WORK/$ARGO.values.json"
 ```
 
-Never without `-f`. The values file carries `extraObjects`, and the
-`management-plane` Application lives there — it is what pulls the
-providers, the provider configuration, this repository's XRDs and
-finally the installation's own manifest. Argo installed without it comes
-up reconciling nothing at all.
+Never without `-f`, on either pass. The values file carries
+`extraObjects`, and the `management-plane` Application lives there — it
+is what pulls the providers, the provider configuration, this
+repository's XRDs and finally the installation's own manifest. Argo
+installed without it comes up reconciling nothing at all, and the first
+pass empties that one key rather than dropping the file.
+
+What the composite observes afterwards is a release, not a history, so
+two passes and one leave the same thing behind.
 
 ### 6. Let the successor take the estate
 
@@ -430,6 +451,15 @@ found.** The helm release is named something other than the object's
 `crossplane.io/external-name`, or is in another namespace. An `Observe`
 release it cannot find is one it will never install.
 
+**`no matches for kind "Application" in version "argoproj.io/v1alpha1"`,
+and `ensure CRDs are installed first`, from the Argo install itself.**
+Nothing is applied — no CRDs, no namespace — so it is recoverable by
+doing it in two passes: the kind is one this release installs, and helm
+builds every object in a manifest before applying any of it. Only the
+first install of Argo on a cluster has this problem, which is why
+[argocd-upgrades](argocd-upgrades.md) says an upgrade must always carry
+the file.
+
 **Argo comes up on the successor with no Applications.** The values file
 was omitted or rebuilt by hand, so `extraObjects` went with it and the
 `management-plane` Application was never created.
@@ -464,6 +494,11 @@ successor before scaling anything again.
   namespace, chart version and values the composed `Release`s carry, and
   never without `-f`: `extraObjects` holds the Application that pulls
   everything else.
+- Install Argo in two passes on a cluster that has never had it, the
+  first with `extraObjects` emptied and the second with the file
+  unchanged. The chart's CRDs are templates, and helm builds every
+  object before applying any, so an `Application` cannot be part of the
+  release that installs its own kind.
 - Install Crossplane before Argo, and read the release names from each
   object's `crossplane.io/external-name` rather than from its Kubernetes
   name.

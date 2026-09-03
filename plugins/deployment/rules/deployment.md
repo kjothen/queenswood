@@ -932,7 +932,11 @@ is created rather than altered, and is the only way the plane's cluster
 acquires an immutable field it was built without. Install Crossplane and Argo onto the successor by hand,
 Crossplane first, with the release name, namespace, chart version and
 values the composed `Release`s carry and never without `-f`, since
-`extraObjects` holds the Application that pulls everything else. Read
+`extraObjects` holds the Application that pulls everything else -- and
+Argo in two passes where the cluster has never had it, the first with
+`extraObjects` emptied, because the chart's CRDs are templates and helm
+builds every object before applying any, so an `Application` cannot ride
+in the release that installs its own kind. Read
 the release names from each object's `crossplane.io/external-name`
 rather than from its Kubernetes name.
 
