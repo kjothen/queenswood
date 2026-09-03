@@ -69,8 +69,29 @@ plane-ctx project="":
 
     gcloud container clusters get-credentials "$CLUSTER" \
       --zone="$ZONE" --project="$PROJECT"
-    kubectl config rename-context \
-      "gke_${PROJECT}_${ZONE}_${CLUSTER}" "{{ MGMT_CTX }}" >/dev/null 2>&1 || true
+
+    NEW="gke_${PROJECT}_${ZONE}_${CLUSTER}"
+    HAVE=$(kubectl config view \
+             -o jsonpath="{.contexts[?(@.name=='{{ MGMT_CTX }}')].context.cluster}" \
+             2>/dev/null || true)
+    # A rename onto a name that exists fails, and swallowing that leaves
+    # the name pointing at the previous cluster while this recipe reports
+    # the new one. What it points at is moved aside rather than deleted:
+    # on a plane swap it is the only way back to the cluster being
+    # retired.
+    if [[ -n "$HAVE" && "$HAVE" != "$NEW" ]]; then
+      kubectl config delete-context "{{ MGMT_CTX }}-previous" >/dev/null 2>&1 || true
+      kubectl config rename-context "{{ MGMT_CTX }}" "{{ MGMT_CTX }}-previous" \
+        >/dev/null
+      echo ">>> {{ MGMT_CTX }} named $HAVE; kept as {{ MGMT_CTX }}-previous"
+    fi
+    if [[ "$HAVE" != "$NEW" ]]; then
+      if ! ERR=$(kubectl config rename-context "$NEW" "{{ MGMT_CTX }}" 2>&1); then
+        echo "cannot name the context {{ MGMT_CTX }}:" >&2
+        printf '%s\n' "$ERR" | sed 's/^/  /' >&2
+        exit 1
+      fi
+    fi
 
     if [[ -n "$WAS" && "$WAS" != "gke_${PROJECT}_${ZONE}_${CLUSTER}" ]]; then
       kubectl config use-context "$WAS" >/dev/null
