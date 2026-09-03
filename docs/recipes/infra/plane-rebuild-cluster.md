@@ -391,6 +391,15 @@ the plane in charge sets is one late-initialisation filled there and the
 composition does not state: the successor cannot learn it, and whatever
 the provider does with it absent is what it will do from now on.
 
+An instance that is `down` cannot reconcile whatever needs its servers
+running, and no amount of waiting changes it. A stopped Cloud SQL server
+refuses every write, so its databases stay `Ready: True` and
+`Synced: False` with `Invalid request since instance is not running`, and
+whatever late-initialisation would have filled on them stays absent until
+the instance is up. Read that as adopted rather than as outstanding: the
+resource exists, the composite is ready, and the update being refused is
+a convergence of Terraform state rather than a change anybody asked for.
+
 The instances are the half nobody thinks of. The successor reapplies
 each unit's composite from the manifests repository, so every instance's
 project, cluster, database, buckets, zone and secrets are adopted by
@@ -539,6 +548,14 @@ diff, and is refused for ever. The fix is in the composition — state the
 field, matching what the cloud already assigned — and the way to find
 the rest is `just crossplane-drift`.
 
+**`Invalid request since instance is not running`, on a database of an
+instance that is `down`.** Not an adoption failure and not fixable from
+here: `state: down` sets Cloud SQL `activationPolicy: NEVER`, and a
+stopped server refuses every database write. It converges when the
+instance is next up. This is also what the previous entry turns into once
+the composition states `charset` — one refusal replacing another is
+progress, so read the message rather than the condition.
+
 **A project reports `Error 409: Requested entity already exists`, and
 everything in that project waits behind it.** The manifest declaring it
 carries no `adopt`, so the successor composed a `Project` with no
@@ -587,7 +604,9 @@ successor before scaling anything again.
 - Install Crossplane before Argo, and read the release names from each
   object's `crossplane.io/external-name` rather than from its Kubernetes
   name.
-- Prove the instances adopted, not only the plane, before swapping.
+- Prove the instances adopted, not only the plane, before swapping —
+  counting a `down` instance's stopped servers as adopted, since nothing
+  about them can reconcile until it is up.
 - Scale the old plane's Crossplane core down before its provider pods —
   the core puts a provider back — and only after the successor is
   holding the estate.
