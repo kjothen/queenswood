@@ -263,9 +263,17 @@ up reconciling nothing at all.
 
 **As the installation's platform viewer.**
 
+Both releases first, since nothing below reports anything until they are
+there:
+
 ```bash
-just argo-apps-status "$NEXT"
-just crossplane-unready "$NEXT"
+helm --kube-context "$NEXT" list -A
+```
+
+Then the Applications, which arrive with Argo and not before:
+
+```bash
+kubectl --context "$NEXT" -n argocd get application
 ```
 
 Four waves, in order: the provider and function packages, the provider
@@ -274,6 +282,14 @@ installation's own manifest from the private repository. Crossplane on
 the successor then composes a fresh managed resource for everything the
 estate is made of, and each one observes its cloud resource by external
 name and adopts it.
+
+The composites answer only once the third wave has established the
+XRDs, which is when these two start being the right things to read:
+
+```bash
+just argo-apps-status "$NEXT"
+just crossplane-unready "$NEXT"
+```
 
 The identities need nothing. Workload Identity's pool is per project
 rather than per cluster, and the Kubernetes service account names are
@@ -397,6 +413,13 @@ predates the binding for it — the composite grants the platform
 identity `actAs` on the default compute service account, because a
 cluster's initial node pool runs as it, and a plane whose project the
 seed created is not owner there. Merge that and the create is retried.
+
+**`the server doesn't have a resource type "applications"`, or the same
+for `"composite"`.** Ahead of the waves rather than broken. The first
+kind arrives with Argo; `composite` is a category carried by the CRDs
+the XRDs generate, so it names nothing until the third wave establishes
+them. What reports before either is `helm list` and the pods in
+`crossplane-system`.
 
 **The successor is built and stays empty.** Expected until step 5. The
 `Release`s are `Observe` on whichever plane reconciles them, so nothing
