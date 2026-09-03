@@ -4,10 +4,8 @@
 
 ## Status
 
-**Untested.** Every step below is derived from the compositions, the
-chart and the provider's own behaviour rather than from having done it,
-and the first person to follow it should correct it as they go. The
-timings are unknown.
+**Verified**, against one installation with one instance, the instance
+`state: down`. Step 10 carries that run's timings.
 
 ## Problem
 
@@ -61,6 +59,18 @@ plane and install, which adopts the folder, the projects and the
 identities that survived; see
 [management-plane-install](management-plane-install.md).
 
+Every step below reads these, and a `just` recipe defaults the code where
+the shell does not — which is why an unset one shows up as a context
+called `-mgmt` rather than as an error:
+
+```bash
+# the installation code, e.g. qw01
+export QW_CODE=qw01
+export WORK=$(mktemp -d)
+```
+
+`NEXT` joins them in step 4, once the plane has said what it built.
+
 Nothing is restored here. The plane holds no state of its own: every
 fact it reconciles from is in GCP, in git or in Secret Manager, and the
 managed resources on it are a cache of what the cloud already says. What
@@ -74,14 +84,14 @@ load-bearing rather than tidy.
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
-WORK=$(mktemp -d)
 just crossplane-slots > "$WORK/slots-before.txt"
 just crossplane-external-names > "$WORK/names-before.txt"
 just crossplane-unready
 just argo-apps-status
 ```
 
-Outside the repository, and outside the installations repository too.
+`WORK` is a scratch directory rather than the working tree, and outside
+the installations repository too.
 Both files are the estate's own identifiers — folder ids, project ids,
 every principal — which belong in neither, and the hook that catches
 them reports after the fact.
@@ -171,21 +181,21 @@ For this composition that is `<code>-c-mgmt`, the general form being
 `<code>-<env>-<label>` with the plane's two fixed at `c` and `mgmt`.
 
 ```bash
-NEXT_CLUSTER=<the name that listed>
-PROJECT=$(just _mgmt-project)
-ZONE=$(gcloud container clusters list --project="$PROJECT" \
-         --filter="name=$NEXT_CLUSTER" --format='value(location)')
+export NEXT_CLUSTER=<the name that listed>
+export PROJECT=$(just _mgmt-project)
+export ZONE=$(gcloud container clusters list --project="$PROJECT" \
+                --filter="name=$NEXT_CLUSTER" --format='value(location)')
 gcloud container clusters get-credentials "$NEXT_CLUSTER" \
   --zone="$ZONE" --project="$PROJECT"
-NEXT="gke_${PROJECT}_${ZONE}_${NEXT_CLUSTER}"
+export NEXT="gke_${PROJECT}_${ZONE}_${NEXT_CLUSTER}"
 kubectl config use-context "$QW_CODE-mgmt"
 ```
 
 `get-credentials` makes its own context current, so put the plane in
 charge back before doing anything else.
 
-Export `NEXT`, and check it before every step that writes. An unset
-variable makes `--context ""` mean the current context, which is the
+Check `NEXT` before every step that writes. An unset variable makes
+`--context ""` mean the current context, which is the
 plane in charge, and nothing says so — a write meant for the successor
 lands on the estate instead. The nodes are the tell, and they are the
 tell because of the name this rebuild is for:
@@ -391,6 +401,15 @@ the plane in charge sets is one late-initialisation filled there and the
 composition does not state: the successor cannot learn it, and whatever
 the provider does with it absent is what it will do from now on.
 
+A `down` instance's servers are stopped, and a stopped Cloud SQL server
+refuses every write — so anything the successor tries to *change* there
+fails with `Invalid request since instance is not running`. Adoption
+itself needs no write: a resource whose desired state already matches is
+observed, taken over, and late-initialised from what came back. So that
+error does not mean waiting for the instance; it means an update is being
+attempted at all, and the fix is to make it unnecessary rather than to
+start a server.
+
 The instances are the half nobody thinks of. The successor reapplies
 each unit's composite from the manifests repository, so every instance's
 project, cluster, database, buckets, zone and secrets are adopted by
@@ -437,9 +456,29 @@ does going back.
 **As the installation's cluster admin.** Ours is
 `grp-gcp-<code>-cluster-admin@` — join for this step, then leave.
 
-Not until the successor has held the estate long enough to trust,
-because until this runs there is a way back: scale the old plane's
-controllers up, revert the merge, and it resumes.
+Three things make it safe, and they are conditions rather than a waiting
+period. `crossplane-drift` accounts for every resource; the Application
+reading the private manifests repository is `Synced`, which is what
+proves the credential rather than the chart; and the retired cluster
+holds nothing that exists nowhere else:
+
+```bash
+for NS in crossplane-system argocd external-secrets; do
+  diff <(kubectl --context "$QW_CODE-mgmt-previous" -n $NS get secret -o name \
+           | sort) \
+       <(kubectl --context "$QW_CODE-mgmt" -n $NS get secret -o name | sort)
+done
+```
+
+`sh.helm.release.v1.*` on the retired side only is the expected answer
+and nothing else should be: it is Helm's rollback history for the two
+charts, which goes with the cluster it belongs to. Anything else listed
+is state to move before deleting.
+
+Deleting it ends the way back — scaling those controllers up and
+reverting the merge — so weigh that against paying for a cluster that
+reconciles nothing. What replaces it afterwards is a boot plane and an
+adopt, which the prerequisite about `adopt` is what makes possible.
 
 ```bash
 kubectl --context "$QW_CODE-mgmt-previous" get nodes -o name | head -1
@@ -450,20 +489,52 @@ gcloud container clusters delete <the cluster it replaced> \
 The first line is the check that the name still means what you think:
 `gke-gke-…` is the cluster being deleted.
 
-The node pool goes with it, and so does the kubeconfig `Secret` it
-wrote. Then whatever else the change renamed and nothing now holds — a
-node identity and its two bindings, for a rename that moved them. They
-are reported by nothing and reconciled by nothing, and they go on
-costing.
+The node pool goes with it, and so does the kubeconfig `Secret` it wrote.
+
+Then whatever else the change renamed and nothing now holds — a node
+identity and its two bindings, for a rename that moved them. Reported by
+nothing, reconciled by nothing, and still there.
+
+**As the installation's platform admin** for that part, which is a
+different capability: no human one holds `iam.serviceAccountAdmin`, the
+platform identity does, and `platformAdmin` is `serviceAccountTokenCreator`
+on it. So the delete is made as that identity rather than as you:
+
+```bash
+PLATFORM="sa-$QW_CODE-platform@$PROJECT.iam.gserviceaccount.com"
+
+gcloud iam service-accounts delete \
+  "sa-$QW_CODE-c-nodes@$PROJECT.iam.gserviceaccount.com" \
+  --project="$PROJECT" --impersonate-service-account="$PLATFORM"
+```
+
+The flag rather than ADC impersonation, so nothing outlives the command.
+Deleting the account takes its bindings with it.
 
 ### 10. Record what happened
 
 - **RTO** — wall clock from the merge to the successor reconciling the
-  estate. Nothing has measured it, and no service is down for any of it.
+  estate, and no service down for any of it.
 - **That adoption held.** Until a plane has adopted an estate, that it
   can is an assumption about every external name at once.
-- **Anything here that was wrong**, which is likely, since nobody has
-  run it.
+- **Anything here that was wrong**, which is likely.
+
+The first run, for comparison. One installation, one instance, the
+instance `down`:
+
+- **1m21s** from the merge to the plane having applied the composition.
+- **21m** for GKE to build the cluster and its pool, timed from the merge
+  that granted `actAs` on the default compute service account — until
+  that landed the create was refused rather than slow.
+- **6m** to install the two charts by hand.
+- **15m** for the four waves, nearly all of it wave 1 pulling twelve
+  provider images, during which the API server was unreachable for a
+  while as GKE resized the control plane.
+- **under a minute** for the estate to adopt once the installation's
+  manifest applied: 121 managed resources, each observing its own and
+  taking it over.
+- **2h34m** end to end, of which the mechanical path is about an hour.
+  The rest was four merges fixing what the run found.
 
 ## Failures
 
@@ -545,6 +616,16 @@ diff, and is refused for ever. The fix is in the composition — state the
 field, matching what the cloud already assigned — and the way to find
 the rest is `just crossplane-drift`.
 
+**`Invalid request since instance is not running`, on a database of an
+instance that is `down`.** `state: down` sets Cloud SQL
+`activationPolicy: NEVER` and a stopped server refuses every write, so
+this says an update is being attempted — not that the instance has to
+come up. Find what the update is for and remove the reason: here it was
+the empty `charset` of the entry above, and stating it left no diff to
+apply, after which the resource went `Synced` against a stopped server
+and late-initialised the rest. One refusal replacing another is progress,
+so read the message rather than the condition.
+
 **A project reports `Error 409: Requested entity already exists`, and
 everything in that project waits behind it.** The manifest declaring it
 carries no `adopt`, so the successor composed a `Project` with no
@@ -593,7 +674,9 @@ successor before scaling anything again.
 - Install Crossplane before Argo, and read the release names from each
   object's `crossplane.io/external-name` rather than from its Kubernetes
   name.
-- Prove the instances adopted, not only the plane, before swapping.
+- Prove the instances adopted, not only the plane, before swapping —
+  counting a `down` instance's stopped servers as adopted, since nothing
+  about them can reconcile until it is up.
 - Scale the old plane's Crossplane core down before its provider pods —
   the core puts a provider back — and only after the successor is
   holding the estate.
