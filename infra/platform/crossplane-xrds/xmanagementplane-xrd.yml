@@ -87,12 +87,10 @@ spec:
                     region because GCP publishes no short form.
 
                     Taken from the EnvironmentConfig like the other two,
-                    except where a name is built from it: the subnet's
-                    combines this with the code, and a combine cannot
-                    read the environment. So the plane's manifest states
-                    it as well wherever the subnet's name has to carry
-                    it, or the subnet is named for a region it is not
-                    in.
+                    and stated here only to override it. The subnet's
+                    name carries it, and the kind composing that subnet
+                    takes it as a plain field, so no name is derived
+                    from it here.
                 zone:
                   type: string
                   description: |
@@ -209,6 +207,20 @@ spec:
                       default: 10.62.0.0/20
                       description: |
                         The secondary range for ClusterIP services.
+                    proxyCidr:
+                      type: string
+                      default: 10.63.0.0/24
+                      description: |
+                        Where a regional load balancer puts its proxies.
+                        Its own subnet because GCP requires one per
+                        region reserved for the purpose, and it holds
+                        nothing of ours.
+
+                        The plane serves nothing from outside yet, and
+                        the cluster carries the Gateway API channel that
+                        would use this, so the range is reserved with
+                        the other three rather than found to be missing
+                        by whatever first wants an address.
                 cluster:
                   type: object
                   default: {}

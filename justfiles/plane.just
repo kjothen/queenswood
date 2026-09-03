@@ -48,7 +48,7 @@ plane-billing-role billing="":
 plane-ctx project="":
     #!/usr/bin/env zsh
     set -e
-    CLUSTER="gke-{{ CODE }}-c-mgmt"
+    CLUSTER="{{ CODE }}-c-mgmt"
 
     PROJECT="{{ project }}"
     if [[ -z "$PROJECT" ]]; then

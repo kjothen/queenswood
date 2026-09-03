@@ -526,335 +526,151 @@ spec:
                       type: Format
                       fmt: "prj-%s-c-mgmt"
           # ===================================================================
-          # Network for the management cluster. Nothing else lives here,
-          # so one subnet with the two secondary ranges GKE needs.
-          # Network and Subnetwork take a project id rather than a ref,
-          # so it comes from the manifest, which always carries it.
+          # The network this plane runs in: one VPC, the subnet its nodes
+          # sit in with the secondary ranges GKE allocates pods and
+          # services from, and the proxy-only subnet a regional load
+          # balancer wants.
+          #
+          # The same kind an instance composes. env c and label mgmt
+          # render vpc-<code>-c-mgmt and sb-<code>-c-mgmt-<regionCode>,
+          # which are the names the plane's own VPC and subnet carry, so
+          # the composed kind adopts them rather than making a second
+          # pair.
           # ===================================================================
-          - name: management-vpc
+          - name: management-network
             base:
-              apiVersion: compute.gcp.m.upbound.io/v1beta1
-              kind: Network
+              apiVersion: platform.repldriven.com/v1alpha1
+              kind: XNetwork
               metadata:
                 namespace: crossplane-system
               spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  autoCreateSubnetworks: false
-                  routingMode: REGIONAL
+                env: c
+                label: mgmt
             patches:
-              - fromFieldPath: spec.code
+              - &plane-child-name
+                fromFieldPath: spec.code
                 toFieldPath: metadata.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "vpc-%s-c-mgmt"
-              - fromFieldPath: spec.management.projectId
-                toFieldPath: spec.forProvider.project
-          - name: management-subnet
-            base:
-              apiVersion: compute.gcp.m.upbound.io/v1beta1
-              kind: Subnetwork
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  privateIpGoogleAccess: true
-                  # Range names only. The ranges themselves are patched
-                  # from spec.network, which defaults to what this block
-                  # used to hold.
-                  secondaryIpRange:
-                    - rangeName: pods
-                    - rangeName: services
-            patches:
-              # Required, here and on every patch below whose source
-              # the XRD defaults rather than the manifest states. A
-              # default is absent for a window: Argo applies the XRD
-              # and this file in one sync, and the new composition can
-              # be selected before the API server serves the
-              # regenerated CRD. A skipped patch then composes a
-              # resource with a hole in it, which the provider may
-              # create and fail to observe -- and no later reconcile
-              # recovers that, because the resource exists and is
-              # wrong.
-              - policy:
+                      fmt: "%s-c-mgmt"
+              - &plane-child-code
+                policy:
                   fromFieldPath: Required
-                type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.regionCode
-                  strategy: string
-                  string:
-                    fmt: "sb-%s-c-mgmt-%s"
-                toFieldPath: metadata.name
-              - fromFieldPath: spec.code
-                toFieldPath: spec.forProvider.networkRef.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "vpc-%s-c-mgmt"
-              - fromFieldPath: spec.management.projectId
-                toFieldPath: spec.forProvider.project
+                fromFieldPath: spec.code
+                toFieldPath: spec.code
+              - &plane-child-project
+                policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.management.projectId
+                toFieldPath: spec.projectId
+              # The installation's region, then this plane's if it names
+              # one: the later patch wins, and neither field is defaulted
+              # in this XRD, because a default is indistinguishable from
+              # a deliberate value and would silently win over the
+              # environment. The composed kind defaults both, which is
+              # what a plane applied with no EnvironmentConfig falls
+              # back to.
               - type: FromEnvironmentFieldPath
                 fromFieldPath: region
-                toFieldPath: spec.forProvider.region
+                toFieldPath: spec.region
               - fromFieldPath: spec.region
-                toFieldPath: spec.forProvider.region
+                toFieldPath: spec.region
+              - &plane-child-region-code-env
+                type: FromEnvironmentFieldPath
+                fromFieldPath: regionCode
+                toFieldPath: spec.regionCode
+              - &plane-child-region-code
+                fromFieldPath: spec.regionCode
+                toFieldPath: spec.regionCode
+              # Required, here and on every patch below whose source the
+              # XRD defaults rather than the manifest states. A default
+              # is absent for a window: Argo applies the XRD and this
+              # file in one sync, and the new composition can be
+              # selected before the API server serves the regenerated
+              # CRD. A skipped patch then composes a resource with a
+              # hole in it, which the provider may create and fail to
+              # observe -- and no later reconcile recovers that, because
+              # the resource exists and is wrong.
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.network.subnetCidr
-                toFieldPath: spec.forProvider.ipCidrRange
-              # By index, which is what makes the rangeName entries in
-              # base load-bearing: the patch fills the range beside a
-              # name it does not set, and the two only line up because
-              # the order is fixed there.
+                toFieldPath: spec.subnetCidr
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.network.podsCidr
-                toFieldPath: spec.forProvider.secondaryIpRange[0].ipCidrRange
+                toFieldPath: spec.podsCidr
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.network.servicesCidr
-                toFieldPath: spec.forProvider.secondaryIpRange[1].ipCidrRange
+                toFieldPath: spec.servicesCidr
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.network.proxyCidr
+                toFieldPath: spec.proxyCidr
 
           # ===================================================================
-          # The cluster that will run Crossplane and Argo, and nothing
-          # else. Zonal, because one zonal control plane falls under the
-          # free allowance and a management plane does not need three.
+          # The cluster Crossplane and Argo run on, the pool that carries
+          # them, and the identity that pool runs as. The same kind an
+          # instance composes.
           #
-          # The default node pool is removed and replaced, which costs
-          # about ten minutes here but makes every later change of
-          # machine type a pool replacement rather than a cluster one --
-          # and the right size for this is not yet known.
+          # retain, so the cluster and the pool keep Delete withheld: an
+          # instance's cluster is the disposable tier ADR-0022 leaves
+          # fully managed, and this one is the ground the controller
+          # doing the deleting stands on. Deleting the composite orphans
+          # it instead, which is what lets the next composite adopt what
+          # the last one built.
+          #
+          # No state. ADR-0024 makes state an instance's property, so
+          # the plane takes the composed kind's default of up and
+          # nothing here can scale the pool to zero.
+          #
+          # The serviceAccountUser binding on the node identity stays
+          # below rather than moving into the composed kind: it is a
+          # fact about who created this project, not about clusters.
           # ===================================================================
-          - name: management-cluster
+          - name: management-gke
             base:
-              apiVersion: container.gcp.m.upbound.io/v1beta1
-              kind: Cluster
+              apiVersion: platform.repldriven.com/v1alpha1
+              kind: XCluster
               metadata:
                 namespace: crossplane-system
               spec:
-                # Withheld Delete: this cluster is the plane, not the
-                # disposable tier ADR-0022 leaves fully managed. Deleting
-                # the managed resource orphans it rather than destroying
-                # it, so composite deletion is survivable. Rebuilding it
-                # is a boot plane and a deliberate delete.
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  initialNodeCount: 1
-                  removeDefaultNodePool: true
-                  deletionProtection: false
-                  ipAllocationPolicy:
-                    clusterSecondaryRangeName: pods
-                    servicesSecondaryRangeName: services
-                # A kubeconfig for this cluster, written by the provider
-                # on every reconcile and read by provider-helm's
-                # ProviderConfig. It carries the endpoint and the CA and
-                # no credential: the token comes from the identity block
-                # on that config. A v2 namespaced MR writes it into its
-                # own namespace, which is where the config looks.
-                writeConnectionSecretToRef:
-                  name: gke-kubeconfig
+                env: c
+                label: mgmt
+                retain: true
             patches:
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.cluster.releaseChannel
-                toFieldPath: spec.forProvider.releaseChannel.channel
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "gke-%s-c-mgmt"
-              - fromFieldPath: spec.code
-                toFieldPath: spec.writeConnectionSecretToRef.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "gke-%s-c-mgmt-kubeconfig"
-              - fromFieldPath: spec.code
-                toFieldPath: spec.forProvider.networkRef.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "vpc-%s-c-mgmt"
-              - policy:
-                  fromFieldPath: Required
-                type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.regionCode
-                  strategy: string
-                  string:
-                    fmt: "sb-%s-c-mgmt-%s"
-                toFieldPath: spec.forProvider.subnetworkRef.name
-              - fromFieldPath: spec.management.projectId
-                toFieldPath: spec.forProvider.project
+              - *plane-child-name
+              - *plane-child-code
+              - *plane-child-project
               - type: FromEnvironmentFieldPath
                 fromFieldPath: zone
-                toFieldPath: spec.forProvider.location
+                toFieldPath: spec.zone
               - fromFieldPath: spec.zone
-                toFieldPath: spec.forProvider.location
-              # Workload Identity, so the platform's own service account
-              # is assumed by a pod rather than held as a key.
-              - fromFieldPath: spec.management.projectId
-                toFieldPath: spec.forProvider.workloadIdentityConfig.workloadPool
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s.svc.id.goog"
-              - type: ToCompositeFieldPath
-                fromFieldPath: status.atProvider.endpoint
-                toFieldPath: status.clusterEndpoint
-          - name: management-nodes
-            base:
-              apiVersion: container.gcp.m.upbound.io/v1beta1
-              kind: NodePool
-              metadata:
-                namespace: crossplane-system
-              spec:
-                # Withheld for the same reason as the cluster it belongs
-                # to. A pool orphaned on its own is recoverable; one
-                # destroyed with the composite is not.
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  # Named rather than left to late-initialisation. Where
-                  # the composition does not own networkConfig, upjet
-                  # observes the live pool and writes podRange and
-                  # podIpv4CidrBlock into the spec -- a description
-                  # while the pool exists, and a create parameter the
-                  # next time it has to be made, where asking for a pod
-                  # range without asking to create one is refused.
-                  networkConfig:
-                    podRange: pods
-                  nodeConfig:
-                    oauthScopes:
-                      - https://www.googleapis.com/auth/cloud-platform
-                    workloadMetadataConfig:
-                      mode: GKE_METADATA
-            patches:
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "np-%s-c-mgmt"
-              # By value, not clusterRef. The reference extractor reads a
-              # field the provider never fills for Cluster -- there is no
-              # forProvider.name, and atProvider.name stays empty -- so it
-              # resolves to nothing forever. The cluster's name is its
-              # external name, which this composition sets, so the value
-              # is as deterministic as the reference would have been.
-              - fromFieldPath: spec.code
-                toFieldPath: spec.forProvider.cluster
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "gke-%s-c-mgmt"
-              - fromFieldPath: spec.management.projectId
-                toFieldPath: spec.forProvider.project
-              # location is required on Cluster and optional on
-              # NodePool, so the same absent zone fails the first
-              # loudly and leaves the second holding a pool the
-              # provider can no longer observe.
-              - type: FromEnvironmentFieldPath
-                fromFieldPath: zone
-                toFieldPath: spec.forProvider.location
-              - fromFieldPath: spec.zone
-                toFieldPath: spec.forProvider.location
+                toFieldPath: spec.zone
+              - *plane-child-region-code-env
+              - *plane-child-region-code
+              # The whole block, which is the same shape on both kinds,
+              # and then machineType over the top of it: this XRD leaves
+              # cluster.machineType undefaulted so the top-level field
+              # can win, and the composed kind defaults it to a size
+              # that is not enough for a plane -- so a manifest stating
+              # only the top-level field would otherwise reach that
+              # default instead.
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.cluster
+                toFieldPath: spec.cluster
               - policy:
                   fromFieldPath: Required
                 fromFieldPath: spec.machineType
-                toFieldPath: spec.forProvider.nodeConfig.machineType
-              # After the one above, and deliberately not Required.
-              # Absent is meaningful here: a skipped patch leaves the
-              # top-level value standing, which is what makes this an
-              # addition rather than a move. A manifest stating neither
-              # still composes, and one stating both takes the more
-              # specific.
+                toFieldPath: spec.cluster.machineType
               - fromFieldPath: spec.cluster.machineType
-                toFieldPath: spec.forProvider.nodeConfig.machineType
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.cluster.nodeCount
-                toFieldPath: spec.forProvider.nodeCount
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.cluster.diskSize
-                toFieldPath: spec.forProvider.nodeConfig.diskSizeGb
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.cluster.diskType
-                toFieldPath: spec.forProvider.nodeConfig.diskType
-              # Composed rather than observed. Unset, the provider
-              # late-initialises whatever GKE defaulted to when the pool
-              # was made, so the spec reads as declared while nobody
-              # chose it -- and the next pool starts from whatever the
-              # defaults are then.
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.cluster.upgradeSettings.strategy
-                toFieldPath: spec.forProvider.upgradeSettings.strategy
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.cluster.upgradeSettings.maxSurge
-                toFieldPath: spec.forProvider.upgradeSettings.maxSurge
-              - policy:
-                  fromFieldPath: Required
-                fromFieldPath: spec.cluster.upgradeSettings.maxUnavailable
-                toFieldPath: spec.forProvider.upgradeSettings.maxUnavailable
-              # Immutable, so changing it replaces the pool and restarts
-              # everything on the cluster. Worth pairing with any other
-              # change that also replaces it -- machineType is the other
-              # one.
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.management.projectId
-                  strategy: string
-                  string:
-                    fmt: "sa-%s-c-nodes@%s.iam.gserviceaccount.com"
-                toFieldPath: spec.forProvider.nodeConfig.serviceAccount
+                toFieldPath: spec.cluster.machineType
+              - type: ToCompositeFieldPath
+                fromFieldPath: status.endpoint
+                toFieldPath: status.clusterEndpoint
           # ===================================================================
           # Crossplane on the management cluster, installed by the plane
           # that built the cluster. This is the first thing composed
@@ -1766,87 +1582,20 @@ spec:
               - fromFieldPath: spec.management.projectId
                 toFieldPath: spec.forProvider.project
               - *platform-member
-          # Named for the cluster, as the account is: an instance
-          # brings its own, and a composed resource's name is how
-          # Crossplane tells one from another. Changing this name is
-          # also the only way to make it build a resource under a new
-          # metadata.name -- the composite records the old one, and
-          # deleting the object just rebuilds it from that record.
-          - name: management-nodes-identity
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ServiceAccount
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  displayName: Queenswood cluster nodes
-                  description: Runs the management cluster's nodes
-            patches:
-              - &nodes-name
-                fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "sa-%s-c-nodes"
-              - &nodes-project
-                fromFieldPath: spec.management.projectId
-                toFieldPath: spec.forProvider.project
-              - *nodes-name
-          # One role rather than the four the older guidance lists.
-          # container.defaultNodeServiceAccount is narrower than they
-          # are -- monitoring.viewer alone grants project-wide read of
-          # every alert policy and dashboard, which a node has no use
-          # for -- and it carries autoscaling.sites.writeMetrics, which
-          # none of them do and horizontal autoscaling needs. Google
-          # maintains it, so a change in what a node requires arrives
-          # here rather than leaving a hand-written list stale.
-          - name: nodes-role-default-node-service-account
-            base:
-              apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
-              kind: ProjectIAMMember
-              metadata:
-                namespace: crossplane-system
-              spec:
-                managementPolicies:
-                  - Observe
-                  - Create
-                  - Update
-                  - LateInitialize
-                providerConfigRef:
-                  kind: ClusterProviderConfig
-                  name: default
-                forProvider:
-                  role: roles/container.defaultNodeServiceAccount
-            patches:
-              - fromFieldPath: spec.code
-                toFieldPath: metadata.name
-                transforms:
-                  - type: string
-                    string:
-                      type: Format
-                      fmt: "%s-nodes-default-node-service-account"
-              - *nodes-project
-              - type: CombineFromComposite
-                combine:
-                  variables:
-                    - fromFieldPath: spec.code
-                    - fromFieldPath: spec.management.projectId
-                  strategy: string
-                  string:
-                    fmt: "serviceAccount:sa-%s-c-nodes@%s.iam.gserviceaccount.com"
-                toFieldPath: spec.forProvider.member
-          - name: management-nodes-identity-user
+          # The right to attach the node identity to a node pool. The
+          # composed kind that makes that identity grants it nothing
+          # here, because an instance's project was created by the
+          # platform identity and an owner already holds this: the
+          # plane's project was created by the seed, so the binding is
+          # explicit and stays with the plane.
+          #
+          # The slot is named for the account, as the resource is: a
+          # composed resource's name is how Crossplane tells one from
+          # another, and changing the slot is the only way to build one
+          # under a new metadata.name -- the composite records the old
+          # one, and deleting the object just rebuilds it from that
+          # record.
+          - name: management-nodes-user
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
               kind: ServiceAccountIAMMember
@@ -1870,14 +1619,17 @@ spec:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-c-nodes-user"
+                      fmt: "sa-%s-c-mgmt-nodes-user"
+              # Resolved by name, across the composite that makes it:
+              # a reference finds any managed resource in the namespace,
+              # so neither composite has to know the other exists.
               - fromFieldPath: spec.code
                 toFieldPath: spec.forProvider.serviceAccountIdRef.name
                 transforms:
                   - type: string
                     string:
                       type: Format
-                      fmt: "sa-%s-c-nodes"
+                      fmt: "sa-%s-c-mgmt-nodes"
               - *platform-member
           - name: secrets-identity
             base:

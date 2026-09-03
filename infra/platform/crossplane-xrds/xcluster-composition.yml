@@ -28,11 +28,11 @@ spec:
           # its data, its DNS zone and its identities standing, so an
           # identity outlives the cluster it runs.
           #
-          # The label is in the name where the plane's node identity has
-          # only the environment letter: two nonprod instances in one
-          # installation would otherwise both claim sa-<code>-n-nodes,
-          # and Crossplane holds every instance's resources in one
-          # namespace whatever project each lands in.
+          # The label is in the name as well as the environment letter:
+          # two nonprod instances in one installation would otherwise
+          # both claim sa-<code>-n-nodes, and Crossplane holds every
+          # environment's resources in one namespace whatever project
+          # each lands in.
           # ===================================================================
           - name: nodes-identity
             base:
@@ -50,7 +50,7 @@ spec:
                   kind: ClusterProviderConfig
                   name: default
                 forProvider:
-                  displayName: Queenswood instance nodes
+                  displayName: Queenswood cluster nodes
                   description: Runs this environment's cluster nodes
             patches:
               - type: CombineFromComposite
@@ -89,10 +89,13 @@ spec:
           # here rather than leaving a hand-written list stale.
           #
           # Nothing grants the platform identity serviceAccountUser on
-          # this account, as the plane's composition has to for its own:
-          # the platform identity created this project, which makes it
-          # owner of it, and attaching a service account to a node pool
-          # is a right owner already holds.
+          # this account. For an instance the platform identity created
+          # the project, which makes it owner of it, and attaching a
+          # service account to a node pool is a right an owner already
+          # holds. A management plane's project was created by the seed
+          # instead, so its own composition grants the binding -- which
+          # is a fact about who created a project rather than about
+          # clusters, and so stays there.
           - name: nodes-role-default-node-service-account
             base:
               apiVersion: cloudplatform.gcp.m.upbound.io/v1beta1
@@ -139,12 +142,15 @@ spec:
           # starts: everything composed above it costs nothing standing
           # still.
           #
-          # Fully managed, Delete included, which is what ADR-0022
-          # leaves anything that rebuilds from its own declaration.
-          # Retiring an instance destroys the cluster and leaves the
-          # project, its data, the network and the identities, which is
-          # the line that makes state a word in a file rather than a
-          # teardown.
+          # Fully managed by default, Delete included, which is what
+          # ADR-0022 leaves anything that rebuilds from its own
+          # declaration. Retiring an instance destroys the cluster and
+          # leaves the project, its data, the network and the
+          # identities, which is the line that makes state a word in a
+          # file rather than a teardown.
+          #
+          # retain withholds it, for the caller whose cluster is the one
+          # Crossplane itself runs on.
           #
           # No nodeConfig here on purpose. It only ever configures the
           # default node pool, which removeDefaultNodePool deletes
@@ -227,6 +233,30 @@ spec:
                 writeConnectionSecretToRef:
                   name: instance-kubeconfig
             patches:
+              # Both cases are spelled, so retain: false is as explicit
+              # as leaving it out. map takes a string key, and the field
+              # is a boolean, so it is converted first.
+              - policy:
+                  fromFieldPath: Required
+                fromFieldPath: spec.retain
+                toFieldPath: spec.managementPolicies
+                transforms:
+                  - type: convert
+                    convert:
+                      toType: string
+                  - type: map
+                    map:
+                      "true":
+                        - Observe
+                        - Create
+                        - Update
+                        - LateInitialize
+                      "false":
+                        - Observe
+                        - Create
+                        - Update
+                        - Delete
+                        - LateInitialize
               # No kind prefix: a cluster is never listed beside other
               # kinds, and GKE prefixes every name it derives from one
               # with gke- already.
@@ -322,7 +352,7 @@ spec:
             {{- fail (printf "spec.cluster.%s is absent" $f) }}
             {{- end }}
             {{- end }}
-            {{- range $f := list "code" "env" "label" "state" "zone" "projectId" }}
+            {{- range $f := list "code" "env" "label" "state" "retain" "zone" "projectId" }}
             {{- if not (hasKey $xr.spec $f) }}
             {{- fail (printf "spec.%s is absent" $f) }}
             {{- end }}
@@ -344,7 +374,9 @@ spec:
                 - Observe
                 - Create
                 - Update
+                {{- if not $xr.spec.retain }}
                 - Delete
+                {{- end }}
                 - LateInitialize
               providerConfigRef:
                 kind: ClusterProviderConfig

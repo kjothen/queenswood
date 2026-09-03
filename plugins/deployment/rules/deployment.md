@@ -909,6 +909,46 @@ without them. Where a real value genuinely belongs, mark the line
 `cloud-id-ok`, which makes it deliberate rather than missed.
 See [cloud-identifiers](../../../docs/recipes/practices/cloud-identifiers.md).
 
+## A plane builds its successor and swaps onto it
+
+Replace the cluster a management plane runs on by having the plane
+compose its successor and swapping onto it, never by deleting the
+cluster the controller doing the work stands on. Give the successor a
+cluster name and a composition slot of their own -- a reused slot keeps
+the live object and ignores the new name, so the composite reports
+`Synced` while nothing happens -- and never take this path where the
+change keeps the cluster's name, since nothing can stand a second
+cluster up under one name: a ForceNew field on its own is a delete and
+an install. One riding along with a rename is free, since the successor
+is created rather than altered, and is the only way the plane's cluster
+acquires an immutable field it was built without. Install Crossplane and Argo onto the successor by hand,
+Crossplane first, with the release name, namespace, chart version and
+values the composed `Release`s carry and never without `-f`, since
+`extraObjects` holds the Application that pulls everything else. Read
+the release names from each object's `crossplane.io/external-name`
+rather than from its Kubernetes name.
+
+Record the slot list and the external names before and diff them after,
+writing both outside every repository since they are the estate's own
+identifiers, and prove the instances adopted as well as the plane
+before swapping:
+adoption is the whole procedure and nothing else reports whether it
+happened. Scale the old plane's Crossplane core down before its
+provider pods, and only once the successor holds the estate; never
+delete the old composite to stop it, since its access bindings carry
+`Delete`, including the one its Crossplane authenticates with. Keep the
+cluster it replaced until the successor is trusted -- while it stands,
+scaling it up and reverting the merge is the way back -- and never run
+`just plane-ctx` before the swap, which renames whatever it fetches to
+`MGMT_CTX`. No boot plane and no seed identity: everything a second
+cluster in the management project needs, the platform identity already
+holds inside the folder. Where no plane is running at all this is not
+the procedure, since nothing is left to build a successor -- install
+one, which adopts what survived.
+Commands: `just crossplane-slots`, `just crossplane-external-names`,
+`just crossplane-unready`, `just argo-apps-status`, `just plane-ctx`.
+See [plane-rebuild-cluster](../../../docs/recipes/infra/plane-rebuild-cluster.md).
+
 ## A restore is proven by a key count, and a destructive state is self-limiting
 
 Establish that data is actually lost or wrong before restoring:
