@@ -367,6 +367,17 @@ nothing renamed is a resource being built beside one that already
 exists, which is what this step is for. Stop there rather than after it
 finishes.
 
+Then the two planes field by field, which the slot lists cannot check:
+
+```bash
+just crossplane-drift "$QW_CODE-mgmt" "$NEXT"
+```
+
+Equal counts and no differing fields is adoption complete. A field only
+the plane in charge sets is one late-initialisation filled there and the
+composition does not state: the successor cannot learn it, and whatever
+the provider does with it absent is what it will do from now on.
+
 The instances are the half nobody thinks of. The successor reapplies
 each unit's composite from the manifests repository, so every instance's
 project, cluster, database, buckets, zone and secrets are adopted by
@@ -497,6 +508,16 @@ Kubernetes service account name has to land before the pods that name
 it. Persisting past that, the name is wrong and Workload Identity is
 bound to something nothing runs as.
 
+**A resource is `Ready` and never `Synced`, and the message names a
+parameter the request is missing.** `charset and collation cannot both
+be empty for update request`, on a Cloud SQL database that plainly
+exists. The creating plane had those fields in its spec through
+late-initialisation, so it never sent such a request; the successor
+adopted a resource whose observed state carries neither, computed a
+diff, and is refused for ever. The fix is in the composition — state the
+field, matching what the cloud already assigned — and the way to find
+the rest is `just crossplane-drift`.
+
 **A project reports `Error 409: Requested entity already exists`, and
 everything in that project waits behind it.** The manifest declaring it
 carries no `adopt`, so the successor composed a `Project` with no
@@ -530,6 +551,9 @@ successor before scaling anything again.
 - Merge an `adopt` for every project in the estate before swapping. One
   whose manifest lacks it cannot be adopted by any plane that did not
   create it.
+- Compare the two planes with `just crossplane-drift` before swapping. A
+  field only the creating plane sets is one late-initialisation filled
+  there, which an adopting plane has no way to learn.
 - Install Crossplane and Argo onto the successor with the release name,
   namespace, chart version and values the composed `Release`s carry, and
   never without `-f`: `extraObjects` holds the Application that pulls
@@ -568,8 +592,8 @@ successor before scaling anything again.
   the backups with it.
 
 Commands: `just crossplane-slots`, `just crossplane-external-names`,
-`just crossplane-unready`, `just argo-apps-status`, `just
-check-versions`, `just plane-ctx`.
+`just crossplane-drift`, `just crossplane-unready`, `just
+argo-apps-status`, `just check-versions`, `just plane-ctx`.
 
 ## Discussion
 
@@ -606,7 +630,11 @@ other name the composition derives from the code. A successor observes
 each of them and takes them over. The corollary is that a name which
 can be neither derived nor re-observed cannot be adopted — which is why
 `crossplane.io/external-name` is for a name Kubernetes cannot express
-rather than one that is merely tidier, and why the resources whose
+rather than one that is merely tidier. What a successor cannot take over
+at all is what late-initialisation taught the plane that created a
+resource: that lives in a spec rather than in the cloud, so a field the
+composition leaves to late-init exists on one plane and not the other,
+and only the composition closes the gap. It is also why the resources whose
 names come from another's status are composed by a guarded template
 rather than a patch.
 
