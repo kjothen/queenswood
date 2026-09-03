@@ -161,10 +161,11 @@ Prepare the domain first with [gcp-dns](gcp-dns.md), and come back when
 `just dns-carried <domain>` names a verification token.
 
 ```bash
-just queenswood-dns-manifest-snippet <domain>
+just queenswood-zone-manifest <domain>
 ```
 
-Paste it into `spec` in `<code>/installation.yml`, and merge.
+Commit it as `<code>/zone.yml`, at the top of the installation's
+directory beside the plane's manifest, and merge.
 
 ```bash
 just queenswood-zone-nameservers
@@ -248,6 +249,10 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   identity you name — during a bootstrap, the seed.
 - Pivot the composite off the throwaway plane before discarding it
   with `just boot-cluster-down`.
+- Render the zone with `just queenswood-zone-manifest` and commit it as
+  its own manifest, `<code>/zone.yml`, rather than as a block in the
+  plane's. The zone is the one thing an installation holds that a
+  rebuild must not rebuild, and a composite is a unit of replacement.
 - Close the seed identity once this is done, with `just
   seed-close`. Its organisation grants, and the
   impersonation that reaches them, otherwise stand for ever, and the
@@ -260,6 +265,9 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
 - Assume you can create a folder. Ids are required, and one may be
   handed to you instead.
 - Delete a project as a side effect of an edit.
+- Compose the public zone from the plane. Its nameservers change when it
+  is recreated, the registrar does not follow, and each fresh zone draws
+  from a finite per-domain pool.
 - Fix a default VPC in a composition. It cannot be undone there.
 - Render a manifest over one that already exists. The management
   project id is minted per call, so the second render replaces the

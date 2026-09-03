@@ -148,24 +148,25 @@ way. Then:
   [contract-install](../recipes/infra/contract-install.md) already says
   the environment is for.
 
-## `XPublicZone`, while the plane is being built
+## `XPublicZone`, before the plane is rebuilt
 
-[composite-catalogue](composite-catalogue.md) already argues for it —
-a public zone is the installation's and a public endpoint is an
-environment's, and their lifecycles are opposite. The plane composes
-the `ManagedZone` and its records in a go-templated `dns` step today.
+The kind exists, and is applied beside the plane rather than composed
+by it — its own manifest, `<code>/zone.yml`, the way `XSubsidiary` is.
+That is what a rebuild needs from it. A recreated zone gets new
+nameservers, the registrar does not follow, and each fresh zone draws
+from a finite per-domain pool — see
+[gcp-dns](../recipes/infra/gcp-dns.md) — so the zone is the one thing a
+from-scratch rebuild must *not* rebuild, and a zone the plane composed
+would be inside the blast radius of the composite being replaced.
 
-What a rebuild adds to that argument is the reason to do it **first**,
-not during. A recreated zone gets new nameservers, the registrar does
-not follow, and each fresh zone draws from a finite per-domain pool —
-see [gcp-dns](../recipes/infra/gcp-dns.md). So the zone is the one
-thing a from-scratch rebuild must *not* rebuild.
-
-Which means either the zone is extracted into `XPublicZone` before the
-plane is torn down, so it outlives the composite that used to hold it,
-or the rebuild adopts the existing zone rather than composing one. The
-first is the point of the split; the second is what happens by accident
-if nobody decides.
+The plane still composes a zone for an installation whose
+`installation.yml` carries a `dns` block, so an existing installation
+has a transfer to do first:
+[composite-catalogue](composite-catalogue.md) has the three merges and
+the order they go in. Do it before the rebuild, not during — the point
+of the split is that the zone outlives the composite that used to hold
+it, and a rebuild that adopts the existing zone instead is what happens
+by accident if nobody decides.
 
 ## What not to do
 
@@ -186,20 +187,22 @@ does.
 
 Against a rebuild, in the order the recipes already run:
 
-1. Make the changes above and merge them before the plane is built, so
+1. Move the zone onto `XPublicZone` first, while the plane that holds
+   it is still standing.
+2. Make the changes above and merge them before the plane is built, so
    `crossplane-xrds` carries them when the boot plane applies the
    composite.
-2. Build the plane from
+3. Build the plane from
    [management-plane-install](../recipes/infra/management-plane-install.md).
    The names are right from the first create.
-3. Render an instance and confirm nothing states a region field.
-4. Remove `regionCode` from `XManagementPlane`'s XRD, once no manifest
+4. Render an instance and confirm nothing states a region field.
+5. Remove `regionCode` from `XManagementPlane`'s XRD, once no manifest
    sets it — a field cannot leave the schema while a manifest still
    carries it, or Argo diffs for ever.
 
-Against a live plane, if it is ever done that way instead: 1, then the
-`XNetwork` move as two merges with `Delete` withheld first, then the
-cluster rename as a plane rebuild and pivot, then 4.
+Against a live plane, if it is ever done that way instead: 1 and 2,
+then the `XNetwork` move as two merges with `Delete` withheld first,
+then the cluster rename as a plane rebuild and pivot, then 5.
 
 ## References
 

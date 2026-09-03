@@ -1,0 +1,21 @@
+# The public zone this installation owns, and the records the
+# installation itself holds in it. Rendered by `just
+# queenswood-zone-manifest` from what the domain answers today, and
+# committed at the top of the installation's directory beside the
+# plane's manifest -- the Application that syncs it does not recurse.
+#
+# Its own manifest rather than a block in the plane's, so the zone
+# outlives a plane that is torn down and rebuilt. Every rrdata is
+# quoted twice: the inner pair is part of a TXT value and the outer
+# pair is YAML's, and one set answers as a different value.
+apiVersion: platform.repldriven.com/v1alpha1
+kind: XPublicZone
+metadata:
+  name: ${CODE}
+  namespace: crossplane-system
+spec:
+  code: "${CODE}"
+  projectId: "${PROJECT}"
+  domain: "${DOMAIN}"
+  records:
+${RECORDS}

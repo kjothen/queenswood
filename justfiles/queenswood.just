@@ -276,8 +276,8 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
       infra/platform/templates/installation.yml.tmpl
 
-# Print `domain`'s dns block, to paste into the installation manifest.
-queenswood-dns-manifest-snippet domain:
+# Print `domain`'s public zone manifest. `project` holds the zone, the management project where empty.
+queenswood-zone-manifest domain project="":
     #!/usr/bin/env zsh
     set -e
     if ! FACTS=$(just dns-carried "{{ domain }}"); then
@@ -289,25 +289,29 @@ queenswood-dns-manifest-snippet domain:
       echo "a zone cannot be composed for a domain nobody has proved" >&2
       exit 1
     fi
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      PROJECT=$(just _mgmt-project)
+    fi
     RECORDS=$(printf '%s' "$FACTS" | jq -r --arg q "'" --arg d '"' '
-      "      - type: TXT",
-      "        rrdatas:",
+      "    - type: TXT",
+      "      rrdatas:",
       ([.verification[]
-        | "          - " + $q + $d + "google-site-verification=" + . + $d + $q]
+        | "        - " + $q + $d + "google-site-verification=" + . + $d + $q]
        | join("\n")),
-      ([.spf[] | "          - " + $q + $d + . + $d + $q] | join("\n")),
-      "      - name: " + $d + "_dmarc" + $d,
-      "        type: TXT",
-      "        rrdatas:",
-      ([.dmarc[] | "          - " + $q + $d + . + $d + $q] | join("\n"))
+      ([.spf[] | "        - " + $q + $d + . + $d + $q] | join("\n")),
+      "    - name: " + $d + "_dmarc" + $d,
+      "      type: TXT",
+      "      rrdatas:",
+      ([.dmarc[] | "        - " + $q + $d + . + $d + $q] | join("\n"))
       | select(. != "")')
 
-    DOMAIN="{{ domain }}" RECORDS="$RECORDS" \
+    CODE="{{ CODE }}" DOMAIN="{{ domain }}" PROJECT="$PROJECT" RECORDS="$RECORDS" \
     python3 -c 'import os,sys,string; sys.stdout.write(string.Template(open(sys.argv[1]).read()).substitute(os.environ))' \
-      infra/platform/templates/dns.yml.tmpl
+      infra/platform/templates/zone.yml.tmpl
 
     echo >&2
-    echo ">>> paste this into spec in {{ CODE }}/installation.yml" >&2
+    echo ">>> commit this as {{ CODE }}/zone.yml" >&2
 
 # Print the nameservers Cloud DNS assigned `domain`'s zone, read from
 # the installation manifest where none is given.

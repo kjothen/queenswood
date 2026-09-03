@@ -144,6 +144,13 @@ boot-cluster-up:
     kubectl --context {{ BOOT_CTX }} apply \
       -f infra/platform/crossplane-xrds/xsubsidiary-composition.yml
 
+    kubectl --context {{ BOOT_CTX }} apply \
+      -f infra/platform/crossplane-xrds/xpubliczone-xrd.yml
+    kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
+      xrd/xpubliczones.platform.repldriven.com
+    kubectl --context {{ BOOT_CTX }} apply \
+      -f infra/platform/crossplane-xrds/xpubliczone-composition.yml
+
     echo
     echo ">>> plane ready. Next: just boot-mgmt-apply"
 

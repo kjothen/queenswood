@@ -1,0 +1,103 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xpubliczones.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XPublicZone
+    plural: xpubliczones
+  defaultCompositionRef:
+    name: xpubliczone.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            The public DNS zone an installation owns, and the records the
+            installation itself holds in it: ownership verification
+            tokens, and mail policy.
+
+            Its own kind rather than the management plane's, because a
+            composite is a unit of replacement and this is the one thing
+            in an installation that must never be replaced. A recreated
+            zone draws a new nameserver set, the registrar does not
+            follow, and each set drawn comes from a finite per-domain
+            pool -- so a zone composed by the plane is a zone whose
+            survival depends on the plane's deletion policy rather than
+            on it not being in the blast radius at all. See
+            docs/recipes/infra/gcp-dns.md.
+
+            Applied beside the plane rather than composed by it, the way
+            XSubsidiary is. The plane may be torn down and rebuilt --
+            renaming its cluster is exactly that -- and a zone reached
+            only through the plane's composite would go with it.
+
+            An environment writes its own names into this zone through
+            XPublicEndpoint, which names the zone rather than owning it.
+            The zone knows nothing of its tenants, which is what keeps
+            adding an environment out of here.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - projectId
+                - domain
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. See ADR-0023.
+                projectId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    Where the zone lives. The management project, which
+                    is the protected tier and outlives the cluster
+                    running on it.
+                domain:
+                  type: string
+                  description: |
+                    The apex, without a trailing dot. Names the zone as
+                    dz-<code>-c-<domain>, dots becoming hyphens; see
+                    docs/recipes/practices/cloud-naming.md.
+                records:
+                  type: array
+                  default: []
+                  description: |
+                    Records belonging to the installation rather than to
+                    any instance in it: ownership verification tokens,
+                    and mail policy. They answer from whichever
+                    nameservers the domain delegates to, so they exist
+                    here before the registrar points at this zone, not
+                    after.
+
+                    Empty composes a zone and no records, which is a
+                    delegation that has not been moved yet.
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - rrdatas
+                    properties:
+                      name:
+                        type: string
+                        default: ""
+                        description: |
+                          Relative to the domain. Empty is the apex,
+                          which is where both of the kinds above sit.
+                      type:
+                        type: string
+                      ttl:
+                        type: integer
+                        default: 300
+                      rrdatas:
+                        type: array
+                        items:
+                          type: string

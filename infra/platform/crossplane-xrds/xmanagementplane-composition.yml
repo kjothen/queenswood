@@ -2338,15 +2338,18 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: {{ printf "dns-record-%s" $slug }}
             spec:
-              # With Delete, unlike the zone: a record dropped from the
-              # manifest has to stop resolving, not merely stop being
-              # named.
+              # Without Delete, like the zone. These records move to
+              # XPublicZone, which composes them under the same names:
+              # withheld here, dropping the dns block orphans them for
+              # that composite to adopt rather than deleting them and
+              # leaving the apex unresolved until it does. XPublicZone
+              # carries Delete, where a record dropped from the manifest
+              # does have to stop resolving.
               managementPolicies:
                 - Observe
                 - Create
                 - Update
                 - LateInitialize
-                - Delete
               providerConfigRef:
                 kind: ClusterProviderConfig
                 name: default
