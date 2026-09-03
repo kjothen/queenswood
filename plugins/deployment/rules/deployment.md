@@ -542,9 +542,13 @@ Give every node pool its own service account with
 default compute service account being powerless — that is an org policy
 enforced elsewhere. Grant both halves of Workload Identity and pin the
 Kubernetes service account name. Grant `iam.serviceAccounts.actAs` on
-any service account something must attach to a resource, and
-bucket-metadata read alongside object access where the client is
-S3-compatible: `storage.objectAdmin` has no `storage.buckets.get`, and a
+any service account something must attach to a resource -- the default
+compute service account included where the thing creates clusters, since
+a cluster's initial node pool runs as it even when
+`removeDefaultNodePool` deletes that pool immediately, and an identity
+granted rights inside a project it did not create does not hold this
+already -- and bucket-metadata read alongside object access where the
+client is S3-compatible: `storage.objectAdmin` has no `storage.buckets.get`, and a
 HEAD-bucket is the first thing such a client sends. Audit an inheriting
 identity against every resource it must manage before the identity that
 created them is discarded. Prefer a project custom role over a

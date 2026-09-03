@@ -497,6 +497,13 @@ spec:
                 managementProjectId:
                   type: string
                   description: The management project, once it exists.
+                managementProjectNumber:
+                  type: string
+                  description: |
+                    The management project's number, which GCP assigns.
+                    Read back because the default compute service
+                    account's address carries it and nothing derives it
+                    from the id.
                 recoveryProjectId:
                   type: string
                   description: |

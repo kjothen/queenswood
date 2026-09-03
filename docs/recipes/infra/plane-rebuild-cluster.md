@@ -338,6 +338,16 @@ change reused the live cluster's composition slot, so Crossplane matched
 the existing object to it and kept its name. Give the slot a new name
 and merge again.
 
+**Nothing starts building, and the cluster reads `Synced: False` with
+no activity in the console.** Read `LastAsyncOperation` on the managed
+resource: a refused create reports there while the composite above goes
+on reading `Synced`. *The user does not have access to service account
+`<project-number>-compute@…`* is the one to expect from a plane that
+predates the binding for it — the composite grants the platform
+identity `actAs` on the default compute service account, because a
+cluster's initial node pool runs as it, and a plane whose project the
+seed created is not owner there. Merge that and the create is retried.
+
 **The successor is built and stays empty.** Expected until step 5. The
 `Release`s are `Observe` on whichever plane reconciles them, so nothing
 installs onto a cluster it is not on.
