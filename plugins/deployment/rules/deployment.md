@@ -919,7 +919,9 @@ the live object and ignores the new name, so the composite reports
 `Synced` while nothing happens -- and never take this path where the
 change keeps the cluster's name, since nothing can stand a second
 cluster up under one name: a ForceNew field on its own is a delete and
-an install. Install Crossplane and Argo onto the successor by hand,
+an install. One riding along with a rename is free, since the successor
+is created rather than altered, and is the only way the plane's cluster
+acquires an immutable field it was built without. Install Crossplane and Argo onto the successor by hand,
 Crossplane first, with the release name, namespace, chart version and
 values the composed `Release`s carry and never without `-f`, since
 `extraObjects` holds the Application that pulls everything else. Read
@@ -927,7 +929,9 @@ the release names from each object's `crossplane.io/external-name`
 rather than from its Kubernetes name.
 
 Record the slot list and the external names before and diff them after,
-and prove the instances adopted as well as the plane before swapping:
+writing both outside every repository since they are the estate's own
+identifiers, and prove the instances adopted as well as the plane
+before swapping:
 adoption is the whole procedure and nothing else reports whether it
 happened. Scale the old plane's Crossplane core down before its
 provider pods, and only once the successor holds the estate; never

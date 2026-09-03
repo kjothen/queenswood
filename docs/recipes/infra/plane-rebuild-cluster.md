@@ -57,11 +57,17 @@ load-bearing rather than tidy.
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
-just crossplane-slots > slots-before.txt
-just crossplane-external-names > names-before.txt
+WORK=$(mktemp -d)
+just crossplane-slots > "$WORK/slots-before.txt"
+just crossplane-external-names > "$WORK/names-before.txt"
 just crossplane-unready
 just argo-apps-status
 ```
+
+Outside the repository, and outside the installations repository too.
+Both files are the estate's own identifiers — folder ids, project ids,
+every principal — which belong in neither, and the hook that catches
+them reports after the fact.
 
 Every slot with its management policies, every resource whose cloud
 identifier is not its Kubernetes name, and a plane with nothing
@@ -82,6 +88,11 @@ it — a ForceNew field such as `zone`, `region`, `datapathProvider` or
 `inTransitEncryptionConfig`, applied on its own — cannot be done this
 way at all: nothing can stand a second cluster up beside the first, so
 that is a delete and an install rather than a swap.
+
+A ForceNew field riding along with a rename is free, though, and it is
+worth looking for one. The successor is created rather than altered, so
+it takes every immutable field the composition sets — which is the only
+way the plane's cluster acquires one it was built without.
 
 **The composition slot's**, because a composed resource is identified by
 it. Reuse the slot the live cluster sits in and Crossplane matches the
@@ -157,7 +168,7 @@ ARGO=argo-$QW_CODE-c-mgmt
 for REL in "$CP" "$ARGO"; do
   kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
     get "release.helm.m.crossplane.io/$REL" \
-    -o jsonpath='{.spec.forProvider.values}' > "$REL.values.json"
+    -o jsonpath='{.spec.forProvider.values}' > "$WORK/$REL.values.json"
   kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
     get "release.helm.m.crossplane.io/$REL" \
     -o jsonpath='{.spec.forProvider.chart.version}{"\n"}'
@@ -179,7 +190,7 @@ helm repo add crossplane-stable https://charts.crossplane.io/stable
 helm repo update crossplane-stable
 helm --kube-context "$NEXT" upgrade --install crossplane \
   crossplane-stable/crossplane --version <version> \
-  -n crossplane-system --create-namespace -f "$CP.values.json"
+  -n crossplane-system --create-namespace -f "$WORK/$CP.values.json"
 ```
 
 Then Argo:
@@ -189,7 +200,7 @@ helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
 helm --kube-context "$NEXT" upgrade --install argocd argo/argo-cd \
   --version <version> -n argocd --create-namespace \
-  -f "$ARGO.values.json"
+  -f "$WORK/$ARGO.values.json"
 ```
 
 Never without `-f`. The values file carries `extraObjects`, and the
@@ -228,10 +239,10 @@ where it stops.
 **As the installation's platform viewer.**
 
 ```bash
-just crossplane-slots "$NEXT" > slots-after.txt
-just crossplane-external-names "$NEXT" > names-after.txt
-diff slots-before.txt slots-after.txt
-diff names-before.txt names-after.txt
+just crossplane-slots "$NEXT" > "$WORK/slots-after.txt"
+just crossplane-external-names "$NEXT" > "$WORK/names-after.txt"
+diff "$WORK/slots-before.txt" "$WORK/slots-after.txt"
+diff "$WORK/names-before.txt" "$WORK/names-after.txt"
 ```
 
 Every slot from step 1 present with the same policies, and the only
