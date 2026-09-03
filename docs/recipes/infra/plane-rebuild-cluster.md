@@ -137,8 +137,24 @@ By hand rather than with `just plane-ctx`, which renames whatever it
 fetches to `MGMT_CTX` — and `MGMT_CTX` still has to reach the plane in
 charge until step 8.
 
+Ask the plane which cluster it built rather than deriving the name. The
+one it is running on left its slot in step 3, so it is not here — every
+`Cluster` listed is one the plane composes, and the successor is the one
+in the management project:
+
 ```bash
-NEXT_CLUSTER=<the name the composition now derives>
+COLS='NAME:.metadata.name,PROJECT:.spec.forProvider.project'
+COLS="$COLS,READY:.status.conditions[?(@.type==\"Ready\")].status"
+
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
+  get cluster.container.gcp.m.upbound.io -o custom-columns="$COLS"
+```
+
+For this composition that is `<code>-c-mgmt`, the general form being
+`<code>-<env>-<label>` with the plane's two fixed at `c` and `mgmt`.
+
+```bash
+NEXT_CLUSTER=<the name that listed>
 PROJECT=$(just _mgmt-project)
 ZONE=$(gcloud container clusters list --project="$PROJECT" \
          --filter="name=$NEXT_CLUSTER" --format='value(location)')
