@@ -33,9 +33,10 @@ capabilities, each held by nobody until somebody joins for a task.
 - A domain, with access to edit its records at the registrar.
 - A recovery email and phone for the admin account. It gets no mailbox,
   so it cannot receive its own password reset.
-- Steps 1 to 6 — a private browser window, with no Google account signed
+- Steps 1 to 5 — a private browser window, with no Google account signed
   in to it.
-- Step 7 — an ordinary browser window.
+- Step 6 — a terminal, signed in as the admin account.
+- Step 7 — an ordinary browser window, as a user on your own domain.
 - No Google Cloud access and no group membership. This recipe creates
   every identity it uses.
 
@@ -92,6 +93,13 @@ appears on every screen and the console sorts by scope.
   — linking projects, budgets and payment. Break-glass: join for the
   task, then leave. One person also holds this directly, because a
   billing account has no recovery path outside its own policy."*
+- **`grp-gcp-project-admin@`** — Empty. *"Creates projects directly at
+  the organisation, outside every folder. Break-glass: join for the
+  task, then leave. Billing them is separate."*
+- **`grp-gcp-dns-admin@`** — Empty. *"Administers the organisation's own
+  DNS — the ownership tokens, the mail policy, and the delegations
+  naming which installation answers on which name. Break-glass: join for
+  the task, then leave."*
 - **`grp-gcp-security-reviewer@`** — Populated. *"Reads IAM policy across
   the organisation and changes nothing. Populated: auditing who holds
   what must never require the power to change it."*
@@ -107,21 +115,29 @@ privileged, and a super admin can do it without being in the group.
 
 ### 6. Bind them
 
+**As the admin account**, and the only step in this recipe that is not
+a directory act. It holds Organization Administrator directly from step
+4, which is what makes this binding possible and step 8 what removes
+the need for it.
+
 ```bash
+gcloud auth login "admin@$QW_DOMAIN"
 gcloud config unset project
 just gcp-groups-bind-org
 ```
 
 Each group against the roles that implement its capability, which are
 declared in [organisation-roles.json](/infra/access/organisation-roles.json)
-and printed readably by `just gcp-roles org`. `grp-gcp-billing-admin@`
-reports as bound below the organisation, which step 7 does.
+and printed readably by `just gcp-roles org`. Two report as bound below
+the organisation rather than here: `grp-gcp-billing-admin@`, which step
+7 binds on the billing account, and `grp-gcp-dns-admin@`, which
+[apex-install](apex-install.md) binds on the apex project.
 
 ### 7. Create the billing account
 
-In the ordinary browser window, signed in as a user on your own domain
-rather than as the super admin — one made under **Directory**, then
-**Users**, if you have none — so that user administers the account.
+**As a user on your own domain**, not the super admin — one made under
+**Directory**, then **Users**, if you have none — so that user
+administers the account. In the ordinary browser window.
 
 Take the free trial if offered; some payment methods are asked for a
 small refundable prepayment first.
@@ -227,7 +243,8 @@ answers as though the group were absent rather than saying so.
 - Script the creation of a group. Every Cloud Identity write attributes
   quota to a project, and at foundation time none exists.
 - Leave anybody standing in `grp-gcp-org-admin@`,
-  `grp-gcp-folder-admin@` or `grp-gcp-billing-admin@`.
+  `grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
+  `grp-gcp-project-admin@` or `grp-gcp-dns-admin@`.
 
 **MAY:**
 

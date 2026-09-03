@@ -35,9 +35,10 @@ composition, not here.
 
 ### Prerequisites
 
-- An organisation, a management project, and a plane running in it. The
-  domain is registered and verified for Cloud Identity, and serves
-  whatever the registrar has always served — a parked page, or nothing.
+- An organisation. The domain is registered and verified for Cloud
+  Identity, and serves whatever the registrar has always served — a
+  parked page, or nothing. Step 2 additionally needs the installation's
+  plane, since the identity it grants to is composed by it.
 - An account at the registrar that can edit DNS and change nameservers,
   for steps 4 and 7.
 - The operator account for the installation — the one the organisation
@@ -56,6 +57,12 @@ it. Everything here comes before the zone, and the zone before the
 delegation — a delegation to a zone that does not answer is an outage,
 and the token proving ownership has to answer from the new zone before
 the move, or the move takes ownership away with it.
+
+Step 1 is done once for a domain, and step 2 once per installation. The
+apex zone the tokens live in is
+[apex-install](apex-install.md)'s; each installation composes zones for
+its own names below it, and it is those creates that step 2's grant
+unblocks.
 
 Unsigning is the long pole and the one that hurts. Read step 4 before
 choosing where to put it: it wants to be early, and there is one case
@@ -230,8 +237,10 @@ composed one.
   account in its own right.
 - Add the property as a Domain property, not a URL prefix.
 - Add the automation identity — `just plane-identity` prints its
-  address — as an **Owner** of the property. Full and Restricted confer
-  no ownership.
+  address — as an **Owner** of the property, once per installation.
+  Full and Restricted confer no ownership, and a Domain property covers
+  every name below it, so one grant covers every zone that installation
+  composes.
 - Add the DNS TXT verification method explicitly where the domain was
   auto-verified through its provider.
 - Inventory with `just dns-records`, every record type and the
@@ -274,8 +283,10 @@ composed one.
   why the directory work has no API.
 - [cloud-naming](../practices/cloud-naming.md) — the `dz-` prefix and the
   environment letter.
-- [crossplane-design](crossplane-design.md) — what composes the zone
-  and its records.
+- [apex-install](apex-install.md) — the zone the tokens go in, which no
+  installation composes.
+- [crossplane-design](crossplane-design.md) — what composes the zones
+  below it, and their records.
 - [management-plane-install](management-plane-install.md) — the manifest
   the domain is named in.
 - [gcp-dns-delegation](gcp-dns-delegation.md) — moving the

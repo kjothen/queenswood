@@ -42,17 +42,28 @@ outside the installation boundary.
 
 Fill carries the same distinction as the system diagram. Solid boxes are
 things that exist; cross-hatch is a boundary rather than a participant,
-so the folder, each project and both clusters are drawn as regions. A
-dashed outline marks something nothing in this repository creates: the
-private manifests repository, and the Google OAuth client, which no API
-can make with a chosen redirect URI.
+so the organisation, the folder, each project and both clusters are
+drawn as regions.
+
+A dashed outline on a solid box marks a participant this repository does
+not create and keep: the apex DNS zone, the Google OAuth client and the
+GitHub App, none of which has an API that makes one to order; the
+external providers, which are somebody else's; the person holding a
+break-glass capability; and the boot plane, raised by hand and discarded
+once the durable one exists.
 
 The vertical split is lifetime, not topology. The durable tier across
 the top is never torn down — the management project reconciles the
-installation, the recovery project holds backups and the key they are
-encrypted under, and the DNS zone is expensive enough to recreate that
-it lives apart from anything disposable. The instance project below it
-is rebuilt whenever an instance is.
+installation, and the recovery project holds backups and the key they
+are encrypted under. The instance project below it is rebuilt whenever
+an instance is.
+
+The DNS project sits outside the folder entirely, because a domain has
+one delegation and so exactly one zone may be authoritative for it: an
+installation owning that zone could neither be rebuilt nor joined by a
+second one. Each environment holds its own zone in the management
+project instead, delegated to from the apex — see
+[ADR-0028](../adr/0028-the-apex-belongs-to-no-installation.md).
 
 ## Regenerating the SVGs
 

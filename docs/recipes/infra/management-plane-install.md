@@ -155,24 +155,40 @@ the entry the composite made for them.
 
 Come back when the `installation` Application reports `Synced`.
 
-### 9. Compose the zone
+### 9. Claim the installation's domain
 
-Prepare the domain first with [gcp-dns](gcp-dns.md), and come back when
-`just dns-carried <domain>` names a verification token.
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
+
+The plane composes no zone. The apex belongs to no installation and is
+established once for the organisation — see
+[ADR-0028](../../adr/0028-the-apex-belongs-to-no-installation.md) — and
+each environment's own zone arrives with the instance that answers on
+it. What is settled here is the name this installation may use, and the
+one grant that lets it create zones under that name.
+
+Follow [gcp-dns](gcp-dns.md) step 2 for the grant: the zone is created
+by a service account rather than by you, and a service account is never
+a verified owner by default.
 
 ```bash
-just queenswood-zone-manifest <domain>
+just plane-identity
 ```
 
-Commit it as `<code>/zone.yml`, at the top of the installation's
-directory beside the plane's manifest, and merge.
+That address goes in as an Owner on the Search Console Domain property
+for the highest name this installation controls — the apex where the
+apex is ours, the delegated subdomain where a parent handed one over. A
+Domain property covers everything below it, so this is done once and
+covers every zone the installation will ever compose.
 
-```bash
-just queenswood-zone-nameservers
+Then state the name in `environment.yml`:
+
+```yaml
+dns:
+  domain: "<the installation's domain>"
 ```
 
-Four names, which nothing is delegated to yet. Move the delegation with
-[gcp-dns-delegation](gcp-dns-delegation.md).
+and merge. Nothing resolves yet, and nothing is meant to.
 
 ### 10. Check it can take an instance
 
@@ -182,7 +198,8 @@ just crossplane-unready
 
 A header line with nothing under it. The installation now carries
 everything an instance derives from it: the folder, the billing
-account, Argo's identity, the recovery project and the zone.
+account, Argo's identity, the recovery project and the name its
+environments answer under.
 
 ## Failures
 
@@ -249,10 +266,10 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
   identity you name — during a bootstrap, the seed.
 - Pivot the composite off the throwaway plane before discarding it
   with `just boot-cluster-down`.
-- Render the zone with `just queenswood-zone-manifest` and commit it as
-  its own manifest, `<code>/zone.yml`, rather than as a block in the
-  plane's. The zone is the one thing an installation holds that a
-  rebuild must not rebuild, and a composite is a unit of replacement.
+- Add the platform identity as an Owner on the Search Console Domain
+  property for the highest name this installation controls, with `just
+  plane-identity` printing the address. Cloud DNS refuses a zone create
+  by an identity that does not own the name.
 - Close the seed identity once this is done, with `just
   seed-close`. Its organisation grants, and the
   impersonation that reaches them, otherwise stand for ever, and the
@@ -265,9 +282,9 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
 - Assume you can create a folder. Ids are required, and one may be
   handed to you instead.
 - Delete a project as a side effect of an edit.
-- Compose the public zone from the plane. Its nameservers change when it
-  is recreated, the registrar does not follow, and each fresh zone draws
-  from a finite per-domain pool.
+- Compose the apex from the plane, or from any installation. It is what
+  a registrar points at, its nameservers change when it is recreated,
+  and each fresh zone draws from a finite per-domain pool.
 - Fix a default VPC in a composition. It cannot be undone there.
 - Render a manifest over one that already exists. The management
   project id is minted per call, so the second render replaces the

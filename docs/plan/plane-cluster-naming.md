@@ -148,25 +148,17 @@ way. Then:
   [contract-install](../recipes/infra/contract-install.md) already says
   the environment is for.
 
-## `XPublicZone`, before the plane is rebuilt
+## The zone is already gone by then
 
-The kind exists, and is applied beside the plane rather than composed
-by it — its own manifest, `<code>/zone.yml`, the way `XSubsidiary` is.
-That is what a rebuild needs from it. A recreated zone gets new
-nameservers, the registrar does not follow, and each fresh zone draws
-from a finite per-domain pool — see
-[gcp-dns](../recipes/infra/gcp-dns.md) — so the zone is the one thing a
-from-scratch rebuild must *not* rebuild, and a zone the plane composed
-would be inside the blast radius of the composite being replaced.
+[ADR-0028](../adr/0028-the-apex-belongs-to-no-installation.md) takes
+the apex out of the installation entirely: it belongs to no
+installation, lives in a project at the organisation, and is declared
+in git rather than composed by anything. So `XManagementPlane` composes
+no zone, and a plane rebuilt after that move has no zone to preserve.
 
-The plane still composes a zone for an installation whose
-`installation.yml` carries a `dns` block, so an existing installation
-has a transfer to do first:
-[composite-catalogue](composite-catalogue.md) has the three merges and
-the order they go in. Do it before the rebuild, not during — the point
-of the split is that the zone outlives the composite that used to hold
-it, and a rebuild that adopts the existing zone instead is what happens
-by accident if nobody decides.
+The move is [apex-dns-migration](apex-dns-migration.md) and it is not
+this plan's to sequence. It only has to happen first, which the
+ordering below states.
 
 ## What not to do
 
@@ -187,8 +179,8 @@ does.
 
 Against a rebuild, in the order the recipes already run:
 
-1. Move the zone onto `XPublicZone` first, while the plane that holds
-   it is still standing.
+1. Move the apex off the plane first, while the plane holding it is
+   still standing — [apex-dns-migration](apex-dns-migration.md).
 2. Make the changes above and merge them before the plane is built, so
    `crossplane-xrds` carries them when the boot plane applies the
    composite.
@@ -216,7 +208,7 @@ then the cluster rename as a plane rebuild and pivot, then 5.
   — building the plane, and the pivot a rename would repeat.
 - [ADR-0024](../adr/0024-instances-are-their-own-composites.md) — what
   the plane composes, and what Argo installs.
-- [composite-catalogue](composite-catalogue.md) — `XPublicZone`, and
-  the rest of what hollowing out the plane leaves.
-- [gcp-dns](../recipes/infra/gcp-dns.md) — why a zone is the one thing
-  a rebuild must not rebuild.
+- [composite-catalogue](composite-catalogue.md) — the rest of what
+  hollowing out the plane leaves.
+- [apex-dns-migration](apex-dns-migration.md) — moving the apex out
+  of the installation, which happens before any of this.

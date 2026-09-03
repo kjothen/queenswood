@@ -19,8 +19,8 @@ and said nothing was built. Five kinds now are. Four came out of
 
 The fifth came out of the plane:
 
-- `XPublicZone` — the public zone an installation owns, and the records
-  the installation itself holds in it.
+- `XPublicZone` — a public zone one installation is authoritative for,
+  and whatever records it holds in that zone directly.
 
 All five are in `platform`, beside `XManagementPlane` and
 `XManagedUnit`. `platform` means not this product rather than not this
@@ -83,49 +83,30 @@ the four identities, and the DNS zone.
 
 ## `XPublicZone`
 
-The other half of the split
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md) implies
-and #557 only did one side of. A public zone is the installation's and
-a public endpoint is an environment's, and their lifecycles are
-opposite: an endpoint rebuilds from its own declaration, while a
-recreated zone gets new nameservers the registrar does not follow and
-draws from a finite per-domain pool.
+Built, and reshaped by
+[ADR-0028](../adr/0028-the-apex-belongs-to-no-installation.md) before
+it was ever used. The kind is not what this plan first sketched: it
+holds a zone one installation is authoritative for, one per name an
+environment answers on, rather than the installation's apex zone.
 
-The estate already shows the line. Zone-level records — the apex and
-`_dmarc` TXT — belong to the plane; an environment's A and validation
-records belong to its endpoint.
+The argument that split it survives with a different reason under it.
+An endpoint rebuilds from its own declaration; a zone does not, because
+its nameservers change when it is rebuilt and something outside the
+installation names them. So the two still belong to different kinds —
+not because a zone must never be replaced, which a delegated one may
+be, but because replacing one costs an edit the installation cannot
+make itself.
 
-The endpoint names the zone rather than owning it, and goes on doing
-so: two composites cannot read each other's status, and a zone that
-enumerated its tenants would make adding an environment a change to the
-plane.
+The endpoint goes on naming the zone rather than owning it: two
+composites cannot read each other's status, and a zone that enumerated
+its tenants would make adding an environment a change to the plane.
 
-Applied beside the plane rather than composed by it, the way
-`XSubsidiary` is. Composed, the zone would still be inside the blast
-radius of a composite that is torn down and rebuilt — surviving on its
-deletion policy rather than on not being there, which is the weaker of
-the two guarantees and the one an edit undoes. So it is its own
-manifest, `<code>/zone.yml`, rendered by `just
-queenswood-zone-manifest` and committed at the top of the
-installation's directory beside the plane's.
-
-What is left is the transfer for an installation that already has a
-zone. The plane composes the same zone and the same records under the
-same names, so the two cannot both be live: the plane releases and
-`XPublicZone` adopts, in that order, and never in one merge. Neither
-side of the plane's `dns` step carries `Delete`, which is what makes a
-release an orphaning rather than an outage.
-
-1. `dns` leaves `installation.yml`. The plane drops the zone and the
-   record objects, and both go on answering in GCP.
-2. `zone.yml` is committed. `XPublicZone` composes the same names and
-   adopts what is standing there.
-3. The `dns` step and its XRD field leave `XManagementPlane`, once no
-   manifest sets it — a field cannot leave the schema while a manifest
-   still carries it, or Argo diffs for ever.
-
-A plane built from nothing skips all three: `zone.yml` exists from the
-start and `installation.yml` never carries a `dns` block.
+What the plane keeps is nothing. The apex belongs to no installation
+and is declared outside every control plane, so `XManagementPlane`'s
+`dns` step and its XRD field go, and the estate's one zone moves out of
+the installation holding it. That move is
+[apex-dns-migration](apex-dns-migration.md), which is where the
+ordering lives.
 
 ## `XEgress`
 
@@ -212,11 +193,11 @@ and are proven on a live instance; `XPublicZone` and `XEgress` both add
 kinds, and one of them touches DNS, where a mistake is measured in
 registrar propagation rather than in reconciles.
 
-That order inverts for a plane that is rebuilt rather than migrated.
-The zone is the one thing a rebuild must not rebuild, so either
-`XPublicZone` is extracted before the plane comes down, or the rebuild
-adopts the zone that is already there —
-[plane-cluster-naming](plane-cluster-naming.md) has the argument.
+The estate's zone leaves the plane before any of this, for its own
+reasons rather than the plane's — see
+[apex-dns-migration](apex-dns-migration.md). Once it has, a plane
+rebuild has no zone to preserve, which is one fewer thing
+[plane-cluster-naming](plane-cluster-naming.md) has to sequence around.
 
 Within the plane, the `ProjectService` loop first: it is the only one
 of the three that transfers no ownership at all, because a loop can

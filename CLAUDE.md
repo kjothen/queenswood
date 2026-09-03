@@ -247,6 +247,13 @@ topic.
   URI Google refuses only after the user has left, and why the realm's
   placeholder pair reaches it by two different routes. See
   [google-sign-in.md](docs/recipes/infra/google-sign-in.md).
+- **The apex, and the names below it** — why the zone a registrar
+  points at belongs to no installation, lives in a project at the
+  organisation, and is declared in git rather than composed; and why
+  every serving name is a delegation to a zone one installation holds.
+  See
+  [ADR-0028](docs/adr/0028-the-apex-belongs-to-no-installation.md) and
+  [apex-install](docs/recipes/infra/apex-install.md).
 - **Cloud DNS** — the manual half: proving domain ownership before a
   public zone may be created, and what has to survive a registrar move.
   See [gcp-dns.md](docs/recipes/infra/gcp-dns.md).

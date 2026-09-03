@@ -43,8 +43,10 @@ account` block nothing.
 
 ### 2. Create the seed project and the seed identity
 
-**As an org billing admin.** Ours is `grp-gcp-billing-admin@` — join
-for this step, then leave.
+**As an org project admin and billing admin.** Ours are
+`grp-gcp-project-admin@` and `grp-gcp-billing-admin@` — join both for
+this step, then leave. The seed project is created at the organisation
+and linked to an account, which are two capabilities.
 
 ```bash
 just seed-create

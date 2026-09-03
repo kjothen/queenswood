@@ -22,8 +22,9 @@ You want to add a Queenswood instance to an installation.
   to keep backups.
 - The plane's Argo identity and recovery project carrying
   `platform.repldriven.com/component`.
-- The domain verified and delegated, once for the installation — see
-  [gcp-dns](gcp-dns.md).
+- The installation's domain stated in `environment.yml`, and its
+  platform identity a verified owner of it — see
+  [gcp-dns](gcp-dns.md) step 2.
 - Write access to the private manifests repository, and a merge.
 - Headroom on the plane.
 - The capability each step names. Ours is a Google group; yours may differ.
@@ -37,7 +38,37 @@ export QW_ENV=n QW_LABEL=dev
 export QW_INSTALLATIONS_REPO=../installations
 ```
 
-### 1. Render the instance unit
+### 1. Compose this environment's zone, and get it delegated
+
+**As the installation's platform viewer.** Ours is
+`grp-gcp-<code>-platform-viewer@`, populated rather than joined.
+
+An environment answers on its own name, in a zone of its own, which
+something above delegates to. That zone exists before the instance
+does — see
+[ADR-0028](../../adr/0028-the-apex-belongs-to-no-installation.md).
+
+```bash
+just queenswood-zone-manifest $QW_ENV $QW_LABEL
+```
+
+The domain defaults to the label under the installation's. Commit it as
+`<code>/<label>.zone.yml`, at the top of the installation's directory,
+and merge. Then, once it has reconciled:
+
+```bash
+just queenswood-zone-nameservers $QW_ENV $QW_LABEL
+```
+
+Four names. Hand them to whoever holds the zone above — for our own
+apex that is an NS record in `apex.yml` and `just dns-apex-apply`; for
+a domain somebody else delegates, it is a request to them.
+
+Confirm the name resolves before going on. Everything below assumes it
+does, and the one that fails silently if it does not is the
+certificate.
+
+### 2. Render the instance unit
 
 **As the installation's platform viewer.** Ours is
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
@@ -55,7 +86,7 @@ QW_SPEC=full just queenswood-instance-manifest
 > project id GCP has consumed, and the recipe refuses rather than
 > minting a second.
 
-### 2. Read what it wrote
+### 3. Read what it wrote
 
 In the `QW_INSTALLATIONS_REPO`, check the domain: it must differ from
 every other instance's, or both compose a record for the same name.
@@ -63,7 +94,7 @@ every other instance's, or both compose a record for the same name.
 If you rendered with `QW_SPEC=full`, change any setting that should
 differ for this instance.
 
-### 3. Merge the instance, and wait for it
+### 4. Merge the instance, and wait for it
 
 > [!WARNING]
 > Commit and merge `<label>.unit.yml` and
@@ -88,7 +119,7 @@ Everything on the plane still building, this instance's resources
 among them. A header line with nothing under it is the finished
 answer.
 
-### 4. Create the OAuth client
+### 5. Create the OAuth client
 
 **As the installation's platform admin.** Ours is
 `grp-gcp-<code>-platform-admin@` — join for this step, then leave.
@@ -100,7 +131,7 @@ redirect URI. The redirect URI is
 `https://keycloak.<domain>/realms/<realm>/broker/<alias>/endpoint`,
 alias included, and the client is this environment's alone.
 
-### 5. Write the secrets
+### 6. Write the secrets
 
 **As the instance's own secrets admin**, not the installation's. Ours
 is `grp-gcp-<code>-<env>-secrets-admin@` — join for this step, then
@@ -114,17 +145,17 @@ just queenswood-recovery-backup-key
 
 Each names the entry it wrote and the version it added.
 
-### 6. Merge the Applications
+### 7. Merge the Applications
 
 **As the installation's platform viewer again.**
 
-Put the client id from step 4 into the unit's `values.yml` as
+Put the client id from step 5 into the unit's `values.yml` as
 `keycloak.googleClientId`, then commit and merge every remaining file
 in the unit.
 
 This is what installs the bank.
 
-### 7. Check it serves
+### 8. Check it serves
 
 ```bash
 just argo-apps-status
@@ -134,6 +165,14 @@ Every Application for the instance `Synced` and `Healthy`, and the
 console answering at `https://console.<domain>`.
 
 ## Failures
+
+**An instance reporting healthy that nothing can reach over HTTPS.**
+Its certificate is still pending, because the validation record a
+`DNSAuthorization` emits has to resolve publicly before the certificate
+issues, and it cannot until this environment's name is delegated to the
+zone holding it. Everything else composes and reports green, so this
+reads as a certificate fault rather than a missing NS record. Step 1 is
+what prevents it, and confirming the name resolves is what proves it.
 
 **A container that appears not to exist.** The write was attempted from
 the installation's `secretsAdmin`, which binds on the management
@@ -199,8 +238,11 @@ because pods with no requests read as uncommitted to the scheduler.
   before writing any secret version.
 - Put the unit declaration at the top of the installation's directory,
   never inside the unit's folder.
-- State `ingress.domain` distinct from every other instance's, with
-  `zone.name` and `zone.project` naming the installation's zone.
+- Compose this environment's zone with `just queenswood-zone-manifest`
+  and get it delegated before deploying the instance. State
+  `ingress.domain` distinct from every other instance's, with
+  `zone.name` and `zone.project` naming that zone rather than a shared
+  one.
 - Let an instance take its region from the installation's
   `environment.yml`. Setting `region`, `regionCode` or `zone` on the
   instance overrides it for that one, which is what putting a single
@@ -293,18 +335,21 @@ Cloud SQL will not create one already stopped, so the first reconcile of a new
 instance has to build what later reconciles may stop.
 
 **What the installation supplies.** The folder, the platform identity, the
-recovery project and the public zone belong to the installation, and the
-instance reaches them by naming them rather than by referring to the plane's
-composite — the zone explicitly, because two composites have to spell one name
-and only one of them makes it. What the instance owns is its project and
-everything in it, which is why `down` stops an environment rather than
-emptying one.
+recovery project and the name this installation answers under belong to the
+installation, and the instance reaches them by naming them rather than by
+referring to the plane's composite — its zone explicitly, because two
+composites have to spell one name and only one of them makes it. What the
+instance owns is its project and everything in it, which is why `down` stops
+an environment rather than emptying one.
 
-Two of them may be absent. Where the plane composed no recovery project, this
+The recovery project may be absent. Where the plane composed none, this
 instance finds none, composes neither a backups bucket nor a backup key entry,
-and `just queenswood-recovery-backup-key` refuses. The domain needs no act
-here at all: a Search Console Domain property covers every subdomain, so an
-instance under one is neither verified nor delegated again.
+and `just queenswood-recovery-backup-key` refuses.
+
+The domain is not. Verification is done once for the installation, but the
+delegation is per environment: this name is its own, in a zone of its own, and
+something above has to point at it. That is step 1, and the only step whose
+outcome is not this installation's to produce.
 
 No step needs a cluster admin either. That capability is what `kubectl`
 against the new cluster takes, and that is debugging rather than any part of
@@ -315,7 +360,7 @@ standing an instance up.
 - [management-plane-install](management-plane-install.md) — building
   the plane this runs on, and the manifest it reads.
 - [google-sign-in](google-sign-in.md) — the console acts and the Admin
-  API call behind step 4.
+  API call behind step 5.
 - [external-secrets](external-secrets.md) — the declared container and
   the written version, and what each entry holds.
 - [argocd-apps](argocd-apps.md) — what a parent Application may hold,
