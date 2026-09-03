@@ -161,26 +161,48 @@ same version, same values, same release name, same namespace. All five
 come off the plane in charge, which composes the objects describing
 them.
 
-```bash
-CP=crossplane-$QW_CODE-c-mgmt
-ARGO=argo-$QW_CODE-c-mgmt
+List them rather than spell them. An object's name is
+per-installation, a release's is not, and the two do not follow one
+pattern:
 
-for REL in "$CP" "$ARGO"; do
+```bash
+REL='release.helm.m.crossplane.io'
+COLS='OBJECT:.metadata.name'
+COLS="$COLS,RELEASE:.metadata.annotations.crossplane\.io/external-name"
+COLS="$COLS,CHART:.spec.forProvider.chart.name"
+COLS="$COLS,VERSION:.spec.forProvider.chart.version"
+COLS="$COLS,NS:.spec.forProvider.namespace"
+
+kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
+  get "$REL" -o custom-columns="$COLS"
+```
+
+Five columns, which is everything the two installs need. Then the
+objects by the chart they carry rather than by a name template, and the
+values off each one:
+
+```bash
+CP_SEL='{.items[?(@.spec.forProvider.chart.name=="crossplane")].metadata.name}'
+ARGO_SEL='{.items[?(@.spec.forProvider.chart.name=="argo-cd")].metadata.name}'
+
+CP=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
+  get "$REL" -o jsonpath="$CP_SEL")
+ARGO=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
+  get "$REL" -o jsonpath="$ARGO_SEL")
+
+for R in "$CP" "$ARGO"; do
   kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
-    get "release.helm.m.crossplane.io/$REL" \
-    -o jsonpath='{.spec.forProvider.values}' > "$WORK/$REL.values.json"
-  kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
-    get "release.helm.m.crossplane.io/$REL" \
-    -o jsonpath='{.spec.forProvider.chart.version}{"\n"}'
+    get "$REL/$R" -o jsonpath='{.spec.forProvider.values}' \
+    > "$WORK/$R.values.json"
 done
 ```
 
 Spell the kind `release.helm.m.crossplane.io`: the short name resolves
 to provider-helm's cluster-scoped `Release` and reports the object as
-not found. Read the release names from each object's
-`crossplane.io/external-name` rather than assuming — they are
-`crossplane` and `argocd`, not the Kubernetes names above, because a
-release names one release inside one cluster.
+not found. The release name is the `RELEASE` column, never the object's
+own name — an object is named for the installation, because the plane
+holds one per installation, and a release names one release inside one
+cluster, so it is `crossplane` and `argocd`.
 
 Crossplane first, because Argo's own bootstrap installs resources of
 kinds Crossplane owns:
