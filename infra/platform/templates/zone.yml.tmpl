@@ -1,21 +1,20 @@
-# The public zone this installation owns, and the records the
-# installation itself holds in it. Rendered by `just
-# queenswood-zone-manifest` from what the domain answers today, and
-# committed at the top of the installation's directory beside the
-# plane's manifest -- the Application that syncs it does not recurse.
+# The public DNS zone one environment answers in, and the only thing
+# this installation composes for that name. Rendered by `just
+# queenswood-zone-manifest` and committed at the top of the
+# installation's directory beside the unit it serves -- the Application
+# that syncs it does not recurse.
 #
-# Its own manifest rather than a block in the plane's, so the zone
-# outlives a plane that is torn down and rebuilt. Every rrdata is
-# quoted twice: the inner pair is part of a TXT value and the outer
-# pair is YAML's, and one set answers as a different value.
+# It holds no records. The endpoint composes them once the instance is
+# deployed, and the name resolves once something above delegates to
+# this zone's nameservers. See ADR-0028.
 apiVersion: platform.repldriven.com/v1alpha1
 kind: XPublicZone
 metadata:
-  name: ${CODE}
+  name: ${CODE}-${ENV}-${LABEL}
   namespace: crossplane-system
 spec:
   code: "${CODE}"
+  env: "${ENV}"
+  label: "${LABEL}"
   projectId: "${PROJECT}"
   domain: "${DOMAIN}"
-  records:
-${RECORDS}

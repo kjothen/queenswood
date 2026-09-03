@@ -1,0 +1,15 @@
+# The apex: the zone a registrar points at, the ownership tokens that
+# let it exist, and the mail policy and delegations it carries. It
+# belongs to no installation, so it lives here at the root rather than
+# under one, and nothing reconciles it -- `just dns-apex-diff` reports
+# drift and `just dns-apex-apply` closes it. See ADR-0028.
+#
+# The zone itself is created once, by a verified person, with `just
+# dns-apex-zone-create`. Every rrdata is quoted twice: the inner pair
+# is part of a TXT value and the outer pair is YAML's, and one set
+# answers as a different value.
+domain: "${DOMAIN}"
+projectId: "${PROJECT}"
+zone: "${ZONE}"
+records:
+${RECORDS}

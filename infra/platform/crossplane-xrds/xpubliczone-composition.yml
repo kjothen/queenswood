@@ -9,10 +9,10 @@ spec:
   mode: Pipeline
   pipeline:
     # =======================================================================
-    # The zone and the installation's own records in it. Templated
-    # rather than patched because the number of records varies with the
-    # caller, and because each one's name is built from part of another
-    # field.
+    # The zone, and any records the installation holds in it directly.
+    # Templated rather than patched because the number of records varies
+    # with the caller and is usually none, and because each one's name
+    # is built from part of another field.
     # =======================================================================
     - step: zone
       functionRef:
@@ -27,7 +27,9 @@ spec:
             {{- $code := $xr.spec.code }}
             {{- $project := $xr.spec.projectId }}
             {{- $domain := $xr.spec.domain }}
-            {{- $zone := printf "dz-%s-c-%s" $code ($domain | replace "." "-") }}
+            {{- $env := $xr.spec.env }}
+            {{- $label := $xr.spec.label }}
+            {{- $zone := printf "dz-%s-%s-%s" $code $env $label }}
             ---
             apiVersion: dns.gcp.m.upbound.io/v1beta1
             kind: ManagedZone
@@ -37,10 +39,11 @@ spec:
               annotations:
                 gotemplating.fn.crossplane.io/composition-resource-name: dns-zone
             spec:
-              # Without Delete. A rebuilt zone draws a new nameserver set
-              # that the registrar does not follow, and each set drawn
-              # comes from a finite per-domain pool -- so losing this one
-              # is not something a reconcile puts back.
+              # Without Delete. A rebuilt zone draws a new nameserver
+              # set, which the NS record delegating this name still
+              # names the old of -- so a rebuild does not return what
+              # was here until somebody edits a zone this installation
+              # cannot write.
               managementPolicies:
                 - Observe
                 - Create
@@ -53,7 +56,7 @@ spec:
                 project: {{ $project | quote }}
                 dnsName: {{ printf "%s." $domain | quote }}
                 visibility: public
-                description: {{ printf "Public DNS for installation %s" $code | quote }}
+                description: {{ printf "%s (%s)" $domain $code | quote }}
             {{- range $record := dig "records" list $xr.spec }}
             {{- $rname := dig "name" "" $record }}
             {{- $fqdn := $domain }}
@@ -68,7 +71,7 @@ spec:
                    lowercase alphanumerics and hyphens, starting and
                    ending alphanumeric. */}}
             {{- $slug := printf "%s-%s"
-                  (or (trimAll "-" (regexReplaceAll "[^a-z0-9]+" ($rname | lower) "-")) "apex")
+                  (or (trimAll "-" (regexReplaceAll "[^a-z0-9]+" ($rname | lower) "-")) "root")
                   ($record.type | lower) }}
             ---
             apiVersion: dns.gcp.m.upbound.io/v1beta1

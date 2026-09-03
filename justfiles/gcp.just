@@ -140,7 +140,7 @@ _gcp-groups-bind scope:
           .capabilities[]
           | select(.scope == $scope)
           | .key as $key
-          | if (.roles | length) == 0
+          | if (.roles | length) == 0 or (has("boundElsewhere"))
             then "\($key)\t"
             else .roles[] | "\($key)\t\(.role)"
             end' "{{ ROLES_FILE }}"); then
@@ -157,6 +157,8 @@ _gcp-groups-bind scope:
       case "$1" in
         orgAdmin)         printf '%s' "{{ ORG_ADMIN }}" ;;
         folderAdmin)      printf '%s' "{{ FOLDER_ADMIN }}" ;;
+        projectAdmin)     printf '%s' "{{ PROJECT_ADMIN }}" ;;
+        dnsAdmin)         printf '%s' "{{ DNS_ADMIN }}" ;;
         billingAdmin)     printf '%s' "{{ ORG_BILLING_ADMIN_GROUP }}" ;;
         securityReviewer) printf '%s' "{{ SECURITY_REVIEWER }}" ;;
         platformViewer)   printf '%s' "{{ PLATFORM_VIEWER }}" ;;
@@ -177,7 +179,16 @@ _gcp-groups-bind scope:
       MEMBER=$(just _gcp-member "$NAME" "$DOMAIN")
 
       if [[ -z "$ROLE" ]]; then
-        echo ">>> $MEMBER is bound below the organisation, not here"
+        # Where, not merely not-here. A capability that names no
+        # destination reads as one somebody forgot to bind.
+        WHERE=$(jq -r --arg k "$KEY" '.capabilities[]
+                  | select(.key == $k) | .boundElsewhere // ""' \
+                  "{{ ROLES_FILE }}" | sed 's/\. .*//')
+        if [[ -n "$WHERE" ]]; then
+          echo ">>> $MEMBER: $WHERE"
+        else
+          echo ">>> $MEMBER is bound below the organisation, not here"
+        fi
         continue
       fi
 
@@ -201,15 +212,6 @@ _gcp-groups-bind scope:
     if [[ "$MISSING" -ne 0 ]]; then
       exit 1
     fi
-
-    POPULATED=$(jq -r --arg scope "{{ scope }}" '
-      [ .capabilities[]
-        | select(.scope == $scope and .membership == "populated")
-        | .key ] | join(", ")' "{{ ROLES_FILE }}")
-
-    echo
-    echo ">>> bound. Only $POPULATED carries anyone: the rest are"
-    echo ">>> break-glass, joined for a task and left."
 
 # Enforce ORG_CONSTRAINTS as `sa`, which holds policyAdmin.
 gcp-org-enforce-constraints sa:
