@@ -33,28 +33,22 @@ what is left to do, not how to do it.
 
 ## Hollowing out the plane
 
-The plane composes 45 resources in 2,684 lines and repeats two of the
-kinds above verbatim. It was left alone deliberately while the instance
-was the proving ground; the instance is now proof.
+The plane composes 45 managed resources and two of the composites
+above in 2,303 lines. It was left alone deliberately while the instance
+was the proving ground; the instance was the proof.
 
-- **`XNetwork`, 113 lines.** The plane's `Network` and `Subnetwork`
-  bases are byte-identical to the instance's, which is what settled the
-  kind's shape in the first place. `env: c` and `label: mgmt` render
-  `vpc-<code>-c-mgmt` and `sb-<code>-c-mgmt-<regionCode>`, exactly what
-  it composes today, so this is an adopt with no rename. It also
-  composes the proxy subnet the plane has never had, so the plane's
-  `network` block gains a `proxyCidr` beside its existing three.
-- **`XCluster`, 228 lines.** The plane's cluster and pool already
-  withhold `Delete`, so the step the instance needed first is not
-  needed here — but that is not what makes this one hard. `XCluster`
-  names a cluster `<code>-<env>-<label>` where the plane's carries a
-  `gke-` prefix, and names the node identity and the pool differently
-  too, so the move renames three live resources rather than adopting
-  them. Against a live plane that is a rebuild and a pivot; against one
-  built from nothing it is free, and the names come out right the first
-  time. See [plane-cluster-naming](plane-cluster-naming.md), which also
-  settles the one thing `XCluster` does not cover and the plane must go
-  on doing itself.
+- **`XNetwork` and `XCluster`, 250 lines.** Both are composed by the
+  plane now, with `env: c` and `label: mgmt`. The network is an adopt
+  with no rename — the names those two fields render are the ones the
+  plane built by hand — plus the proxy subnet it has never had, which
+  is what the `network` block's `proxyCidr` is for. The cluster is a
+  rename of three live resources, so the merge composes them under
+  their new names beside the live ones and the plane swaps onto the
+  cluster it built.
+  `XCluster` gained a `retain` field for the one thing that differs: an
+  instance's cluster carries `Delete` and the plane's withholds it. See
+  [plane-cluster-naming](plane-cluster-naming.md), which carries the
+  ordering and the one binding the plane must go on granting itself.
 - **The `ProjectService` loop, 367 lines across ten.** Two of the ten
   do not follow their own names — `cloudresourcemanager` and
   `cloudbilling` — so the plane's list is names beside APIs where the
@@ -62,24 +56,20 @@ was the proving ground; the instance is now proof.
   is the caller whose project the enablement is counted against, which
   is why the instance needed neither.
 
-That is roughly 700 lines, and none of it needs a new kind.
+What is left is that loop, and it needs no new kind.
 
-It does need one thing outside the composition, and nothing links the
-two today. `XManagementPlane` currently composes managed resources and
-no other composite, which is why `boot-cluster-up` applies one XRD
-— its own — onto the boot cluster. Composing `XNetwork` and `XCluster`
-from the plane makes those kinds a prerequisite of bootstrapping, so
-that recipe has to apply their XRDs and Compositions too, and
-`boot-cluster-up` narrows its providers on the same rule. Without
-it, `boot-mgmt-apply` fails with `no matches for kind`, which stops
-the whole pipeline rather than one resource — and only on the next
-bootstrap, which is rare enough that it will not be the person who made
-the change. See
+Composing another composite is a prerequisite of bootstrapping rather
+than a change to the composition alone: `boot-cluster-up` applies the
+XRD and Composition of every kind the manifest reaches, directly or
+through another composite, because `boot-mgmt-apply` otherwise fails
+with `no matches for kind` — which stops the whole pipeline rather than
+one resource, and only on the next bootstrap, which is rare enough that
+it will not be the person who made the change. See
 [management-plane-install](../recipes/infra/management-plane-install.md).
 
 What the plane must keep is what only it has: the folder and its
 bindings, the management project, Crossplane and Argo as `Release`s,
-the four identities, and the DNS zone.
+and the four identities.
 
 ## `XPublicZone`
 

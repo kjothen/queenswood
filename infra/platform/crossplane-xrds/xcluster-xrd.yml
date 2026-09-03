@@ -90,6 +90,24 @@ spec:
                     down is the pool at zero. The cluster stays, because
                     rebuilding one loses nothing and stopping one is not
                     a thing GKE offers. See ADR-0022.
+                retain:
+                  type: boolean
+                  default: false
+                  description: |
+                    Whether the cluster and its pool survive the
+                    composite that composed them. False is the
+                    disposable tier ADR-0022 leaves fully managed:
+                    retiring an environment destroys the cluster, and
+                    the project, its data and its identities stay.
+
+                    True withholds Delete, which is what a management
+                    plane needs. The cluster it names is the one the
+                    Crossplane performing the deletion runs on, so a
+                    deleted composite would take the ground out from
+                    under the controller halfway through; orphaning it
+                    instead makes composite deletion survivable and is
+                    what lets the next composite adopt what the last
+                    one built.
                 cluster:
                   type: object
                   default: {}

@@ -52,29 +52,32 @@ Nothing outside the plane refers to the cluster by name except
 `MGMT_CTX` and the `plane-ctx` recipe that builds it, both of which
 spell `gke-<code>-c-mgmt` by hand.
 
-## Why this waits for a rebuild
+## Why this needs a rebuild, and what a rebuild is
 
 Every part of it is a rename of a live resource, and a rename is a
-delete and a create:
+delete and a create. The two halves differ in what that costs:
 
-- `gke-qw01-c-mgmt` is the cluster Crossplane and Argo run on. Renaming
-  it rebuilds the plane and needs the composite pivoted onto the new
-  cluster — step 5 of
-  [management-plane-install](../recipes/infra/management-plane-install.md),
-  performed again.
-- Moving `Network` and `Subnetwork` from `XManagementPlane` into a
-  composed `XNetwork` is the transfer in
-  [crossplane-live](../recipes/infra/crossplane-live.md): withhold
-  `Delete` in its own merge that reaches the plane first, then move,
-  and expect a window.
+- Moving `Network` and `Subnetwork` into a composed `XNetwork` renames
+  nothing. Both leave their slots and are composed again under the same
+  names inside the new kind, and neither has ever carried `Delete`, so
+  the GCP objects are adopted rather than replaced.
+- `gke-qw01-c-mgmt` is the cluster Crossplane and Argo run on, and a new
+  name means a new cluster. The plane cannot delete and recompose the
+  one it is standing on, so what happens instead is that the merge has
+  the plane build its successor, the successor adopts the estate, and
+  the cluster it replaced is deleted afterwards. That is
+  [plane-rebuild-cluster](../recipes/infra/plane-rebuild-cluster.md),
+  and it needs no boot plane and no seed identity: nothing here is
+  outside the folder the platform identity already holds rights in.
 
-Against a plane being built from nothing, none of that applies. The
-names are chosen once, the composites are composed from the start, and
-there is no transfer.
+Nothing is down for any of it. The plane is not serving anybody, the one
+instance keeps running whether or not anything is reconciling it, and
+until the last step there is a way back.
 
 ## Does `XCluster` fit the plane
 
-Checked field by field. It does, with one addition.
+Checked field by field. It does, with one thing the plane keeps and
+one field the kind gains.
 
 **The `Cluster` is the same or better.** Both compositions patch the
 same six fields — `location`, `networkRef.name`, `project`,
@@ -113,6 +116,19 @@ Keep it in `XManagementPlane` rather than adding a flag to `XCluster`.
 The binding is a fact about who created the project, not about
 clusters.
 
+**The one thing that does need a field.** `XCluster` carries `Delete`
+on the cluster and the pool, which is what ADR-0022 leaves the
+disposable tier and what makes retiring an instance destroy its
+cluster. The plane's withholds it: the cluster it names is the one the
+Crossplane performing the deletion runs on, so orphaning it is what
+makes composite deletion survivable, and what lets each composite adopt
+what the last one built.
+
+That is a property of the resource's own lifecycle rather than of who
+created a project, so it is a field — `retain`, false by default, which
+composes exactly what an instance composes today, and true on the
+plane.
+
 **Names that move**, beyond the cluster itself:
 
 ```
@@ -150,6 +166,9 @@ node identity           see the composition       sa-<code>-c-mgmt-nodes
 Check the node pool's name against `XCluster`'s before assuming it
 matches: the plane's is `np-<code>-c-mgmt` and an instance's is
 `np-<code>-<env>-<label>-primary`.
+
+It composes the XR with `retain: true`, and with no `state`: the plane
+has none, so the pool takes the kind's default of `up`.
 
 **`MGMT_CTX`** is `<code>-mgmt` and the context is renamed from
 whatever `plane-ctx` fetches, which builds `gke-<code>-c-mgmt` by hand.
@@ -216,23 +235,29 @@ delete, and none of it touches the cluster.
 
 **Then the rebuild.**
 
-4. Make the changes under *What to change* and merge them before the
-   plane is built, so `crossplane-xrds` carries them when the boot
-   plane applies the composite. `boot-cluster-up` also has to apply the
-   `XNetwork` and `XCluster` XRDs and compositions, or `boot-mgmt-apply`
-   fails with `no matches for kind` — see
+4. Make the changes under *What to change* and merge them. The plane
+   reads this repository from git, so the merge is what starts the
+   rebuild: `XNetwork` adopts the VPC and the subnet, the successor
+   cluster is composed under its new name, and the cluster the plane is
+   running on leaves its slot and keeps running with nothing
+   reconciling it.
+
+   `boot-cluster-up` also has to apply the `XNetwork` and `XCluster`
+   XRDs and compositions — see
    [composite-catalogue](composite-catalogue.md), and note that the
    apex work hit exactly this by merging a manifest before its kind.
-5. Build the plane from
-   [management-plane-install](../recipes/infra/management-plane-install.md).
-   The names are right from the first create, and there is no transfer.
+   Nothing in this ordering runs it, but the next installation does.
+5. Swap onto the cluster the merge built, with
+   [plane-rebuild-cluster](../recipes/infra/plane-rebuild-cluster.md).
+   The names are right from the first create, and the estate is adopted
+   rather than rebuilt.
 6. Render an instance and confirm nothing states a region field.
 7. Remove `regionCode` from `XManagementPlane`'s XRD, once no manifest
    sets it.
 
-Against a live plane, if it is ever done that way instead: 1 to 4, then
-the `XNetwork` move as two merges with `Delete` withheld first, then the
-cluster rename as a plane rebuild and pivot, then 7.
+Where a plane is being installed from nothing instead, none of this is a
+rebuild: the names are chosen once and there is no successor and no
+swap.
 
 ## References
 
@@ -250,3 +275,5 @@ cluster rename as a plane rebuild and pivot, then 7.
   hollowing out the plane leaves.
 - [apex-dns-migration](apex-dns-migration.md) — moving the apex out
   of the installation, which happens before any of this.
+- [plane-rebuild-cluster](../recipes/infra/plane-rebuild-cluster.md) —
+  the swap step 5 is, written for any plane rather than this one.

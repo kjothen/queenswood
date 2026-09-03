@@ -133,6 +133,11 @@ topic.
   cluster rebuild: why a ForceNew field reports `Synced` and does
   nothing, the order, and what it leaves standing. See
   [instance-rebuild-cluster](docs/recipes/infra/instance-rebuild-cluster.md).
+- **Replacing the plane's own cluster** — the plane builds its
+  successor and swaps onto it, why a reused slot makes the rename a
+  no-op, and what has to be installed by hand for the composite to
+  observe. See
+  [plane-rebuild-cluster](docs/recipes/infra/plane-rebuild-cluster.md).
 - **Recovering FoundationDB** — the scenario matrix, restore mode
   against destination state, RPO per scenario, why scale-to-zero is not
   a recovery scenario, and the CIS and DORA controls each open item

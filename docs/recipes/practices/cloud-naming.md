@@ -108,10 +108,10 @@ What that settles, and how each was checked rather than assumed:
   `sa-qw01-boot` sits outside the folder entirely. An identity belonging
   to one cluster takes the environment, because every cluster wants the
   same job done and the name has to say whose:
-  `sa-qw01-c-nodes` for the management cluster's nodes and
-  `sa-qw01-c-secrets` for the operator reading secrets on it. An
-  instance's carries its label too — `sa-qw01-n-test-nodes` — for the
-  reason API enablement does: two nonprod instances would both claim
+  `sa-qw01-c-secrets` for the operator reading secrets on the
+  management cluster. A node identity carries the label as well —
+  `sa-qw01-c-mgmt-nodes`, `sa-qw01-n-test-nodes` — for the reason API
+  enablement does: two nonprod instances would both claim
   `sa-qw01-n-nodes`, and while their projects would keep them apart in
   GCP, the composed resources naming them all sit in one namespace on
   the management cluster.
@@ -275,15 +275,16 @@ The installation itself:
 - platform identity —
   `sa-qw01-platform@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
 - node identity —
-  `sa-qw01-c-nodes@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
+  `sa-qw01-c-mgmt-nodes@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
 - secrets identity —
   `sa-qw01-c-secrets@prj-qw01-c-mgmt-xxxxxx.iam.gserviceaccount.com`
 
 The worked example is what a new installation is built to. `qw01` was
 built before the cluster prefix was dropped and before the pool took
-`primary`, and keeps `gke-qw01-c-mgmt` and `np-qw01-c-mgmt`: renaming
-either destroys and rebuilds the cluster, which is not worth doing to a
-working one.
+`primary`, so it holds `gke-qw01-c-mgmt` and `np-qw01-c-mgmt` until its
+plane is next rebuilt: renaming either destroys and rebuilds the
+cluster, so it happens with a rebuild rather than instead of one. See
+[plane-cluster-naming](../../plan/plane-cluster-naming.md).
 
 One environment inside it, `n-test`, built to the rule rather than
 before it:

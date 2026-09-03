@@ -119,7 +119,7 @@ boot-cluster-up:
         source: Secret
         secretRef:
           namespace: crossplane-system
-          name: gke-{{ CODE }}-c-mgmt-kubeconfig
+          name: {{ CODE }}-c-mgmt-kubeconfig
           key: kubeconfig
       identity:
         type: GoogleApplicationCredentials
@@ -130,26 +130,24 @@ boot-cluster-up:
           key: creds
     YAML
 
-    kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xmanagementplane-xrd.yml
-    kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
-      xrd/xmanagementplanes.platform.repldriven.com
-    kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xmanagementplane-composition.yml
-
-    kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xsubsidiary-xrd.yml
-    kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
-      xrd/xsubsidiaries.platform.repldriven.com
-    kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xsubsidiary-composition.yml
-
-    kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xpubliczone-xrd.yml
-    kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
-      xrd/xpubliczones.platform.repldriven.com
-    kubectl --context {{ BOOT_CTX }} apply \
-      -f infra/platform/crossplane-xrds/xpubliczone-composition.yml
+    # Every kind the manifest composes, directly or through another
+    # composite: a composition naming a kind whose XRD is absent fails
+    # the whole composite with "no matches for kind".
+    for KIND in xmanagementplane xsubsidiary xpubliczone xnetwork xcluster; do
+      XRD=infra/platform/crossplane-xrds/$KIND-xrd.yml
+      if ! NAME=$(awk '/^metadata:/ {f = 1; next} f && /^  name:/ {print $2; exit}' "$XRD"); then
+        exit 1
+      fi
+      if [[ -z "$NAME" ]]; then
+        echo "no metadata.name in $XRD" >&2
+        exit 1
+      fi
+      kubectl --context {{ BOOT_CTX }} apply -f "$XRD"
+      kubectl --context {{ BOOT_CTX }} wait --for=condition=established --timeout=120s \
+        "xrd/$NAME"
+      kubectl --context {{ BOOT_CTX }} apply \
+        -f infra/platform/crossplane-xrds/$KIND-composition.yml
+    done
 
     echo
     echo ">>> plane ready. Next: just boot-mgmt-apply"

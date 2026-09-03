@@ -50,9 +50,11 @@ A local kind cluster running Crossplane and the GCP providers,
 authenticating from ADC that impersonates the seed identity. No key
 exists, and step 7 ends the impersonation.
 
-It ends by applying `xmanagementplane-xrd.yml` and its Composition from
-this repository, so the boot cluster serves the one kind step 3
-applies.
+It ends by applying, from this repository, the XRD and Composition of
+every kind the manifest reaches — `XManagementPlane` and the composites
+it composes in turn — so the boot cluster serves all of them before
+step 3 applies anything. A kind whose XRD is absent fails the whole
+composite with `no matches for kind`.
 
 ### 2. Render the manifest into the installations repository
 
@@ -250,8 +252,8 @@ the caller lacks — see [gcp-iam](gcp-iam.md).
 
 - Build the plane before expecting a merge to install anything — a
   control plane running another toolchain cannot apply this kind.
-  `just boot-cluster-up` raises the throwaway one and loads the
-  kind onto it.
+  `just boot-cluster-up` raises the throwaway one and loads every
+  kind the manifest reaches onto it.
 - Join a break-glass group for the step that names it and leave again.
   Each step says which capability it takes.
 - Impersonate with `just seed-impersonate` rather than holding
