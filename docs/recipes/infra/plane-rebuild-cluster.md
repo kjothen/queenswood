@@ -206,12 +206,24 @@ CP=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
 ARGO=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
   get "$REL" -o jsonpath="$ARGO_SEL")
 
+VER='{.spec.forProvider.chart.version}'
+
 for R in "$CP" "$ARGO"; do
   kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
     get "$REL/$R" -o jsonpath='{.spec.forProvider.values}' \
     > "$WORK/$R.values.json"
 done
+
+CP_VER=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
+  get "$REL/$CP" -o jsonpath="$VER")
+ARGO_VER=$(kubectl --context "$QW_CODE-mgmt" -n crossplane-system \
+  get "$REL/$ARGO" -o jsonpath="$VER")
 ```
+
+The version comes off the object rather than out of a file or a doc,
+even though `just check-versions` is what keeps the boot chart and the
+composition agreeing on it. The composite will compare what is installed
+against this object, so this object is what to install.
 
 Spell the kind `release.helm.m.crossplane.io`: the short name resolves
 to provider-helm's cluster-scoped `Release` and reports the object as
@@ -227,7 +239,7 @@ kinds Crossplane owns:
 helm repo add crossplane-stable https://charts.crossplane.io/stable
 helm repo update crossplane-stable
 helm --kube-context "$NEXT" upgrade --install crossplane \
-  crossplane-stable/crossplane --version <version> \
+  crossplane-stable/crossplane --version "$CP_VER" \
   -n crossplane-system --create-namespace -f "$WORK/$CP.values.json"
 ```
 
@@ -237,7 +249,7 @@ Then Argo:
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo update argo
 helm --kube-context "$NEXT" upgrade --install argocd argo/argo-cd \
-  --version <version> -n argocd --create-namespace \
+  --version "$ARGO_VER" -n argocd --create-namespace \
   -f "$WORK/$ARGO.values.json"
 ```
 
