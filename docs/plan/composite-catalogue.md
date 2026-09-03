@@ -165,6 +165,41 @@ The custom role beside them is unrelated: it is a viewer capability
 granted through the access step rather than anything to do with
 deployment.
 
+## Retiring an environment
+
+Nothing covers finishing one. `instance-deploy` builds an environment
+and [fdb-recovery](../recipes/infra/fdb-recovery.md) stops one, and
+between them the estate can raise an instance and hold it at zero — but
+there is no recipe for ending one, and the pieces are exactly those that
+resist being reconciled away.
+
+Deleting the `XQueenswoodInstance` deletes what it composes, subject to
+each resource's `managementPolicies` — so the disposable tier goes and
+the protected tier is orphaned rather than removed. What is left needs
+doing by hand, in an order nothing states:
+
+- the NS record in `apex.yml`, which is above the installation and
+  removed by a person;
+- the environment's zone, which withholds `Delete` for the reason
+  [ADR-0028](../adr/0028-the-apex-belongs-to-no-installation.md) gives
+  and so survives its composite;
+- the instance's project, retired by lifting its lien, which
+  [ADR-0022](../adr/0022-cloud-foundation-and-environment-lifecycle.md)
+  says is deliberate and never a reconcile;
+- whatever the recovery project holds for it, which outlives the
+  instance on purpose and is the one thing a retirement must not take
+  with it.
+
+The order matters in one place. The delegation goes before the zone, or
+the name resolves to nameservers answering nothing — which is worse than
+not resolving, because a client gets `SERVFAIL` rather than `NXDOMAIN`
+and the cause reads as an outage rather than an absence.
+
+That the pieces resist automation is the design working rather than a
+gap in it. The gap is that a person retiring an environment has to
+derive all of this from four documents, at the moment they are least
+likely to be careful.
+
 ## Smaller things
 
 - **Rename `instance-gke` back to `instance-cluster`**, for consistency
@@ -187,6 +222,11 @@ deployment.
   outstanding.
 
 ## Ordering
+
+Retiring an environment is not on this list's critical path and does
+not wait for any of it — it is a recipe rather than a kind, and the
+sooner it exists the less likely it is to be written during a
+retirement.
 
 The plane before the new kinds. Hollowing it out uses kinds that exist
 and are proven on a live instance; `XPublicZone` and `XEgress` both add
