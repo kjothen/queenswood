@@ -460,6 +460,16 @@ first install of Argo on a cluster has this problem, which is why
 [argocd-upgrades](argocd-upgrades.md) says an upgrade must always carry
 the file.
 
+**The successor's API server stops answering during wave 1, and GKE
+reports the cluster `RECONCILING`.** `TLS handshake timeout`, then
+`context deadline exceeded`, from every read. Expected, and it clears
+itself: the provider packages register thousands of CRDs in a couple of
+minutes, the API object count jumps, and GKE resizes the control plane
+to match. Nothing in the estate is at risk while it happens, because the
+plane in charge is a different cluster — which is the case for reading
+`gcloud container clusters describe` rather than concluding anything from
+a `kubectl` that cannot connect.
+
 **Argo comes up on the successor with no Applications.** The values file
 was omitted or rebuilt by hand, so `extraObjects` went with it and the
 `management-plane` Application was never created.
