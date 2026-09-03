@@ -1,0 +1,20 @@
+# The public DNS zone one environment answers in, and the only thing
+# this installation composes for that name. Rendered by `just
+# queenswood-zone-manifest` and committed at the top of the
+# installation's directory beside the unit it serves -- the Application
+# that syncs it does not recurse.
+#
+# It holds no records. The endpoint composes them once the instance is
+# deployed, and the name resolves once something above delegates to
+# this zone's nameservers. See ADR-0028.
+apiVersion: platform.repldriven.com/v1alpha1
+kind: XPublicZone
+metadata:
+  name: ${CODE}-${ENV}-${LABEL}
+  namespace: crossplane-system
+spec:
+  code: "${CODE}"
+  env: "${ENV}"
+  label: "${LABEL}"
+  projectId: "${PROJECT}"
+  domain: "${DOMAIN}"

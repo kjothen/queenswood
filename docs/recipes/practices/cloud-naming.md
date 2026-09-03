@@ -92,6 +92,16 @@ What that settles, and how each was checked rather than assumed:
 - **Seed project** — `prj-b-seed-<suffix>`. No code: it holds the
   identity that creates installations, so it exists before any folder
   and one serves the whole organisation.
+- **Apex DNS project** — `prj-c-dns-<suffix>`. No code either, and for
+  the same reason: it holds the zone a registrar points at, which
+  belongs to no installation and outlives all of them. `c` because it
+  is common to the organisation rather than to an environment.
+- **Apex DNS zone** — `dz-c-<domain>`, the domain with its dots as
+  hyphens, and the one zone that does carry it. No code, for the same
+  reason as the project holding it. The rule below excludes the domain
+  from a zone's name because an environment supplies a label to use
+  instead; here there is none, and two apex zones differ in nothing
+  else.
 - **Service account** — no environment where the identity is one per
   installation, following the guide, which names an identity for its job
   rather than its tier: `sa-qw01-platform` runs the whole installation,
@@ -166,10 +176,13 @@ Network:
 - **Cloud Router** — `cr-qw01-c-mgmt-euw2`
 - **Cloud NAT** — `nat-qw01-c-mgmt-euw2`
 - **static address** — `addr-qw01-c-<label>`
-- **DNS zone** — `dz-qw01-c-<domain>`, the domain with its dots as
-  hyphens. Always `c`: one public zone serves the installation and
-  every instance composes its records into it, so there is no
-  environment for the name to carry.
+- **DNS zone** — `dz-qw01-<env>-<label>`, and not the domain, the apex
+  zone above being the exception. One name
+  is one zone, an environment answers on its own name, and a zone is
+  renamed only by rebuilding it — so a name spelled from the domain
+  would move every time the domain did. The domain is stated in the
+  spec instead. See
+  [ADR-0028](../../adr/0028-the-apex-belongs-to-no-installation.md).
 - **DNS record set** — `rs-qw01-<env>-<label>-<name>-<type>`, where the
   name is what it publishes and `host` stands for the domain itself. It
   carries the instance rather than the zone, because the zone holds the

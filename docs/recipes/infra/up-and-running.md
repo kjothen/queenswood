@@ -21,8 +21,9 @@ You want to run Queenswood on Google Cloud.
 
 Start at step 1 if you need to create a new organisation.
 
-Start at step 2 if your organisation exists already and they can give
-you a folder, or somewhere to make one.
+Start at step 3 if your organisation exists already and they can give
+you a folder, or somewhere to make one — including the name you answer
+under, which is theirs rather than yours to create.
 
 ### 1. New organisation
 
@@ -36,34 +37,46 @@ Done once for an organisation rather than once per installation: the
 seed project is reused where one exists, and its organisation-scoped
 rights are opened for a bootstrap and closed after it.
 
-### 2. The contract
+### 2. The apex
+
+[apex-install](apex-install.md). A project at the organisation holding
+the one zone a registrar points at, its ownership tokens and mail
+policy, and the delegation moved onto it. Declared in `apex.yml` and
+reconciled by nothing, because it belongs to no installation and is the
+one zone that cannot be rebuilt.
+
+Done once for an organisation, and skipped entirely where somebody
+else's apex delegates a subdomain to you. It takes only organisation
+capabilities, so nothing about an installation has to exist first.
+
+### 3. The contract
 
 [contract-install](contract-install.md). `environment.yml`, committed,
 naming the installation's folder, its manifests repository, its billing
 account, the region it runs in, and a principal for each capability.
 
-### 3. The boundary
+### 4. The boundary
 
 [boundary-install](boundary-install.md). `subsidiary.yml`, committed,
 declaring the installation's folder and the capabilities bound inside
 it, composed where the folder is ours and adopted where an organisation
 hands one over.
 
-### 4. The management plane
+### 5. The management plane
 
 [management-plane-install](management-plane-install.md). The management
 project, a cluster running Crossplane and Argo that reconciles the
 installation from git, Argo's credential for the manifests repository, the
-recovery project, and the public zone with its delegation. A throwaway control
-plane raises the project and the cluster, the composite pivots onto the
-cluster it built, and the throwaway one is discarded.
+recovery project, and the name this installation answers under. A throwaway
+control plane raises the project and the cluster, the composite pivots onto
+the cluster it built, and the throwaway one is discarded.
 
-### 5. An instance
+### 6. An instance
 
-[instance-deploy](instance-deploy.md). The instance's unit: its
-project, network, cluster, database and DNS records for one
-environment, and then the bank on top of it, answering at
-`https://console.<domain>`.
+[instance-deploy](instance-deploy.md). The instance's own DNS zone and
+the delegation to it, then the unit: its project, network, cluster,
+database and records for one environment, and then the bank on top of
+it, answering at `https://console.<domain>`.
 
 ## Rules
 
@@ -73,9 +86,10 @@ environment, and then the bank on top of it, answering at
 
 **MAY:**
 
-- Start at step 2 where the organisation is established.
-- Stop after step 4, which is an installation with no instance on it.
-- Run step 1 once for an organisation, and steps 2 to 5 once per
+- Start at step 3 where the organisation is established and its apex
+  already delegates a name to you.
+- Stop after step 5, which is an installation with no instance on it.
+- Run steps 1 and 2 once for an organisation, and steps 3 to 6 once per
   installation.
 
 ## Discussion
@@ -91,13 +105,18 @@ a shell. Everything from step 3 is a file in a repository. That is the
 first seam: where the work stops being performed and starts being
 recorded.
 
-Step 3 is the second. A folder is what an installation is, so an
-organisation handing one over hands over the whole thing, and step 3
+Step 4 is the second. A folder is what an installation is, so an
+organisation handing one over hands over the whole thing, and step 4
 declares the same folder either way. That is what makes the two entries
-two starting points rather than a branch: nothing after step 2 is done
+two starting points rather than a branch: nothing after step 3 is done
 differently depending on where you came in.
 
-Both entries converge on capabilities. Every step from 3 onwards asks
+The apex is the same shape one level up. Step 2 builds one where the
+domain is ours; an organisation that already has one delegates a name
+to us instead, and every step below reads a delegated name identically
+whether the zone above it is ours or theirs.
+
+Both entries converge on capabilities. Every step from 4 onwards asks
 for a capability rather than for whoever answers it, so an established
 organisation can answer the same ones its own way, and the boundary,
 the plane and the instance cannot tell which entry produced them.
@@ -106,11 +125,13 @@ the plane and the instance cannot tell which entry produced them.
 
 - [organisation-foundation](organisation-foundation.md) and
   [organisation-bootstrap](organisation-bootstrap.md) — step 1.
-- [contract-install](contract-install.md) — step 2, and what to ask an
+- [apex-install](apex-install.md) — step 2, and what an organisation
+  whose apex is somebody else's does instead.
+- [contract-install](contract-install.md) — step 3, and what to ask an
   organisation for.
-- [boundary-install](boundary-install.md) — step 3.
-- [management-plane-install](management-plane-install.md) — step 4.
-- [instance-deploy](instance-deploy.md) — step 5.
+- [boundary-install](boundary-install.md) — step 4.
+- [management-plane-install](management-plane-install.md) — step 5.
+- [instance-deploy](instance-deploy.md) — step 6.
 - [ADR-0022](../../adr/0022-cloud-foundation-and-environment-lifecycle.md)
   — the folder as the boundary an installation occupies.
 - [ADR-0023](../../adr/0023-installation-naming-and-access.md) — the

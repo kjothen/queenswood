@@ -52,6 +52,27 @@ _environment-value key:
     fi
     printf '%s\n' "$VALUE"
 
+# Print the domain the installation answers under, from its environment.
+[private]
+_environment-domain:
+    #!/usr/bin/env zsh
+    set -e
+    FILE={{ INSTALLATIONS_REPO }}/{{ CODE }}/environment.yml
+    if [[ ! -f "$FILE" ]]; then
+      echo "no environment at $FILE" >&2
+      echo "the contract is committed before anything reads it -- see" >&2
+      echo "docs/recipes/infra/contract-install.md" >&2
+      exit 1
+    fi
+    VALUE=$(python3 -c 'import sys,yaml; d=yaml.safe_load(open(sys.argv[1])) or {}; print(((d.get("data") or {}).get("dns") or {}).get("domain") or "")' "$FILE")
+    if [[ -z "$VALUE" ]]; then
+      echo "no dns.domain in $FILE" >&2
+      echo "an installation states the name it answers under before an" >&2
+      echo "environment can take a subdomain of it -- see ADR-0028" >&2
+      exit 1
+    fi
+    printf '%s\n' "$VALUE"
+
 # Validate an instance's env and label, and print <code>-<env>-<label>.
 [private]
 _queenswood-instance env label:
@@ -76,7 +97,7 @@ _queenswood-instance env label:
 
 # Render the installation's environment, beside its manifest. Takes the
 # folder's parent to compose one, or a folder id to adopt one instead.
-queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" billing="":
+queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" billing="" domain="":
     #!/usr/bin/env zsh
     set -e
     ROOT={{ INSTALLATIONS_REPO }}/{{ CODE }}
@@ -164,6 +185,26 @@ queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" bill
       exit 1
     fi
 
+    # Comment and key together, so an installation with no domain gets
+    # neither rather than a paragraph about an absent field.
+    DNS_BLOCK=""
+    if [[ -n "{{ domain }}" ]]; then
+      DNS_BLOCK=$(printf '%s\n' \
+        '  # The name this installation answers under. Each environment' \
+        '  # answers on a subdomain of it, delegated to a zone this' \
+        '  # installation composes -- so this is what we were given,' \
+        '  # never the apex above it, which belongs to no installation' \
+        '  # at all. See ADR-0028.' \
+        '  #' \
+        '  # Add a zone: {name, project} beside it only where a parent' \
+        '  # runs Cloud DNS and hands over a zone rather than a' \
+        '  # delegation. Without one this installation composes its own' \
+        '  # zones, which is the ordinary case and the only one that' \
+        '  # works whatever the parent runs.' \
+        '  dns:' \
+        "    domain: \"{{ domain }}\"")
+    fi
+
     # Resolved here, not in the template, which takes whole member
     # strings: a user or a principalSet:// has no domain to append.
     PLATFORM_VIEWER=$(just _gcp-member "{{ PLATFORM_VIEWER }}" "$DOMAIN")
@@ -174,7 +215,7 @@ queenswood-environment-manifest parent=PARENT name="" folder="" recovery="" bill
     CODE="{{ CODE }}" BILLING="$BILLING" \
     MANIFEST_REPO_URL="{{ MANIFEST_REPO_URL }}" \
     REGION="{{ REGION }}" REGION_CODE="{{ REGION_CODE }}" ZONE="{{ ZONE }}" \
-    DOMAIN="$DOMAIN" FOLDER_BLOCK="$FOLDER_BLOCK" \
+    DOMAIN="$DOMAIN" FOLDER_BLOCK="$FOLDER_BLOCK" DNS_BLOCK="$DNS_BLOCK" \
     PLATFORM_VIEWER="$PLATFORM_VIEWER" \
     PLATFORM_ADMIN="$PLATFORM_ADMIN" \
     CLUSTER_ADMIN="$CLUSTER_ADMIN" \
@@ -276,60 +317,41 @@ queenswood-installation-manifest parent=PARENT name="" folder="" mgmt="" billing
     python3 -c 'import os,sys,string; d=string.Template(open(sys.argv[1]).read()).substitute(os.environ); sys.stdout.write("\n".join(l for l in d.split("\n") if l.strip()) + "\n")' \
       infra/platform/templates/installation.yml.tmpl
 
-# Print `domain`'s dns block, to paste into the installation manifest.
-queenswood-dns-manifest-snippet domain:
+# Write an environment's zone manifest. `domain` defaults to <label> under the installation's.
+queenswood-zone-manifest env label domain="" project="":
     #!/usr/bin/env zsh
     set -e
-    if ! FACTS=$(just dns-carried "{{ domain }}"); then
+    FILE={{ INSTALLATIONS_REPO }}/{{ CODE }}/{{ label }}.zone.yml
+    if [[ -e "$FILE" ]]; then
+      echo "$FILE already exists; edit it" >&2
       exit 1
     fi
-    COUNT=$(printf '%s' "$FACTS" | jq '.verification | length')
-    if [[ "$COUNT" -eq 0 ]]; then
-      echo "{{ domain }} carries no verification token" >&2
-      echo "a zone cannot be composed for a domain nobody has proved" >&2
-      exit 1
-    fi
-    RECORDS=$(printf '%s' "$FACTS" | jq -r --arg q "'" --arg d '"' '
-      "      - type: TXT",
-      "        rrdatas:",
-      ([.verification[]
-        | "          - " + $q + $d + "google-site-verification=" + . + $d + $q]
-       | join("\n")),
-      ([.spf[] | "          - " + $q + $d + . + $d + $q] | join("\n")),
-      "      - name: " + $d + "_dmarc" + $d,
-      "        type: TXT",
-      "        rrdatas:",
-      ([.dmarc[] | "          - " + $q + $d + . + $d + $q] | join("\n"))
-      | select(. != "")')
 
-    DOMAIN="{{ domain }}" RECORDS="$RECORDS" \
-    python3 -c 'import os,sys,string; sys.stdout.write(string.Template(open(sys.argv[1]).read()).substitute(os.environ))' \
-      infra/platform/templates/dns.yml.tmpl
-
-    echo >&2
-    echo ">>> paste this into spec in {{ CODE }}/installation.yml" >&2
-
-# Print the nameservers Cloud DNS assigned `domain`'s zone, read from
-# the installation manifest where none is given.
-queenswood-zone-nameservers domain="":
-    #!/usr/bin/env zsh
-    set -e
     DOMAIN="{{ domain }}"
     if [[ -z "$DOMAIN" ]]; then
-      INSTALLATION={{ INSTALLATIONS_REPO }}/{{ CODE }}/installation.yml
-      if [[ ! -f "$INSTALLATION" ]]; then
-        echo "no manifest at $INSTALLATION" >&2
+      if ! APEX=$(just _environment-domain); then
         exit 1
       fi
-      DNS_BLOCK=$(grep -A1 '^  dns:' "$INSTALLATION" || true)
-      DOMAIN=$(printf '%s\n' "$DNS_BLOCK" \
-                 | sed -n 's/^ *domain: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p')
+      DOMAIN="{{ label }}.$APEX"
     fi
-    if [[ -z "$DOMAIN" ]]; then
-      echo "no dns.domain for {{ CODE }}; merge it, then re-run" >&2
-      exit 1
+    PROJECT="{{ project }}"
+    if [[ -z "$PROJECT" ]]; then
+      PROJECT=$(just _mgmt-project)
     fi
-    ZONE="dz-{{ CODE }}-c-${DOMAIN//./-}"
+
+    CODE="{{ CODE }}" ENV="{{ env }}" LABEL="{{ label }}" \
+    DOMAIN="$DOMAIN" PROJECT="$PROJECT" \
+    python3 -c 'import os,sys,string; sys.stdout.write(string.Template(open(sys.argv[1]).read()).substitute(os.environ))' \
+      infra/platform/templates/zone.yml.tmpl > "$FILE"
+
+    echo ">>> wrote $FILE for $DOMAIN"
+    echo ">>> read it, commit and merge, then: just queenswood-zone-nameservers {{ env }} {{ label }}"
+
+# Print the four nameservers assigned to an environment's zone, to delegate to.
+queenswood-zone-nameservers env label:
+    #!/usr/bin/env zsh
+    set -e
+    ZONE="dz-{{ CODE }}-{{ env }}-{{ label }}"
     if ! OUT=$(kubectl --context {{ MGMT_CTX }} -n crossplane-system \
                  get managedzone "$ZONE" \
                  -o jsonpath='{.status.atProvider.nameServers}' 2>&1); then
@@ -342,6 +364,9 @@ queenswood-zone-nameservers domain="":
       exit 1
     fi
     printf '%s\n' "$OUT" | tr -d '[]"' | tr ',' '\n'
+
+    echo >&2
+    echo ">>> add these to apex.yml as an NS record, then: just dns-apex-apply" >&2
 
 # Render the whole unit for the instance `env`-`label`, from the
 # `spec` set of templates.
@@ -402,21 +427,17 @@ queenswood-instance-manifest env=ENV label=LABEL project="" domain="" spec=SPEC:
       exit 1
     fi
 
-    INSTALLATION="$ROOT/installation.yml"
-    DNS_BLOCK=$(grep -A1 '^  dns:' "$INSTALLATION" || true)
-    APEX=$(printf '%s\n' "$DNS_BLOCK" \
-             | sed -n 's/^ *domain: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p')
-    if [[ -z "$APEX" ]]; then
-      echo "no dns.domain in $INSTALLATION" >&2
-      echo "an instance answers on a subdomain of the installation's" >&2
-      exit 1
-    fi
-
     DOMAIN="{{ domain }}"
     if [[ -z "$DOMAIN" ]]; then
+      if ! APEX=$(just _environment-domain); then
+        exit 1
+      fi
       DOMAIN="{{ label }}.$APEX"
     fi
-    ZONE_NAME="dz-{{ CODE }}-c-${APEX//./-}"
+    # This environment's own zone, not the installation's: the name is
+    # delegated to it, and its records are composed into it. See
+    # ADR-0028.
+    ZONE_NAME="dz-{{ CODE }}-{{ env }}-{{ label }}"
 
     if ! MGMT=$(just _mgmt-project); then
       exit 1

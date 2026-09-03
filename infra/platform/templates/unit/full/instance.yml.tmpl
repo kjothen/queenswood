@@ -49,9 +49,10 @@ spec:
       client:
         namespace: queenswood
         serviceAccount: queenswood-cloudsql-proxy
-  # The zone is the installation's, in the management project, so it is
-  # named rather than derived. The domain must differ from every other
-  # instance's: both would compose a record for the one name.
+  # This environment's own zone, composed by XPublicZone in the
+  # management project and delegated to from above. Named rather than
+  # derived, because two composites have to spell one name and only one
+  # of them makes it. See ADR-0028.
   ingress:
     domain: "${DOMAIN}"
     zone:

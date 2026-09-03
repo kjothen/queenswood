@@ -498,7 +498,7 @@ existing one reused rather than created, and revoke the super admin's local
 credentials and its direct organisation binding together once the group
 carries the role — either one left standing still reaches super admin. Never
 leave anybody standing in a break-glass group — `grp-gcp-org-admin@`,
-`grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`,
+`grp-gcp-folder-admin@`, `grp-gcp-billing-admin@`, `grp-gcp-dns-admin@`,
 `grp-gcp-<code>-platform-admin@`, `grp-gcp-<code>-cluster-admin@`,
 `grp-gcp-<code>-secrets-admin@`.
 
@@ -625,6 +625,41 @@ rebuilt environment as evidence the rebuild failed — it is the likelier
 cause and the wrong conclusion.
 See [google-sign-in](../../../docs/recipes/infra/google-sign-in.md).
 
+## The apex belongs to no installation, and names below it are delegated
+
+Create the apex project outside every folder -- `prj-c-dns-<suffix>`,
+beside the seed's and carrying no code -- with `just
+dns-apex-project-create`, as a person holding `projectAdmin` and
+`billingAdmin`. It binds `dnsAdmin` on the project as it goes: nothing
+composes an access mapping for a project outside every folder, so the
+apex is otherwise one nobody may read or write. Create the zone as a
+verified person rather than as any service account, with `just
+dns-apex-zone-create`, which refuses a second and stops where it cannot
+tell an absence from a denial. Declare its contents in `apex.yml` at
+the root of the manifests repository and change them by merging that
+file and running `just dns-apex-apply`, reading `just dns-apex-diff`
+before assuming the zone matches it. Delegate a name before deploying
+the instance that answers on it, or its certificate never validates
+while the instance goes on reporting healthy.
+
+Never compose the apex from any control plane, or grant an installation
+rights in its project: it publishes its nameservers upward and holds
+nothing there. Never create and delete apex zones to try variations,
+since each create draws from a finite per-domain pool and the draw is
+not returned, and never delete the old zone until the registrar answers
+from the new one. Every serving name is a delegation to a zone one
+installation composes, named `dz-<code>-<env>-<label>` with the domain
+in the spec rather than in the name; the installation states the name
+delegated to it in `environment.yml` and never the apex above. Skip all
+of it where an organisation hands over a folder and a subdomain --
+their apex is theirs, and an installation reads the same either way --
+and point the apex at a front door rather than at an environment's
+address once one exists, since it is the same record.
+Commands: `just dns-apex-project-create`, `just
+dns-apex-zone-create`, `just dns-apex-diff`, `just dns-apex-apply`.
+See [apex-install](../../../docs/recipes/infra/apex-install.md) and
+[ADR-0028](../../../docs/adr/0028-the-apex-belongs-to-no-installation.md).
+
 ## A public zone needs proven ownership, and the registrar is touched once
 
 Verify the domain before a public zone is created, as the operator
@@ -677,31 +712,30 @@ See [gcp-dns-delegation](../../../docs/recipes/infra/gcp-dns-delegation.md).
 
 ## A parent Application holds only kinds that already exist
 
-Keep concrete resources out of a parent Application: anything whose
-kind a child installs belongs in a child of its own. Sync waves do not
-resolve a missing kind, and `SkipDryRunOnMissingResource` skips the dry
-run and nothing else. Set `ServerSideApply=true` for charts with large
-CRDs, `prune: false` where pruning would delete something a missing
-file should not delete, and retry budgets that outlast an operator
-install — a merged fix does not reach an Application whose retries are
-already exhausted. When a sync is failing, read
-`.operation.sync.revisions` rather than `status.sync.revisions`: the
-first is what is being retried, the second only what would be synced
-next. Read `retryCount` before calling a stuck sync a retry loop, since
-unset means the operation is not failing at all. Merge the fix before
-cancelling anything, or the fresh sync hangs the same way; then remove
-`.operation` to cancel a queued sync, with a JSON patch, and terminate
-one already in flight by setting `status.operationState.phase` to
-`Terminating` — terminate before removing `.operation`, never after,
-since operation processing is driven by that field and removing it
-first leaves the state sitting `Terminating` for good. Strip
-`argocd.argoproj.io/tracking-id` from a resource handed from one
-Application to another. Merge a change before expecting Argo to apply
-it, and confirm it landed: Argo reads the revision an Application
-names, never a working tree. Never rely on Helm's `lookup` to keep a
-value a chart generated once — Argo renders with `helm template`, where
-it returns nothing, so the branch that mints a fresh one wins on every
-sync.
+Keep concrete resources out of a parent Application: anything whose kind a
+child installs belongs in a child of its own. Sync waves do not resolve a
+missing kind, and `SkipDryRunOnMissingResource` skips the dry run and nothing
+else. Set `ServerSideApply=true` for charts with large CRDs, `prune: false`
+where pruning would delete something a missing file should not delete, and
+retry budgets that outlast an operator install — a merged fix does not reach
+an Application whose retries are already exhausted. When a sync is failing,
+read `.operation.sync.revisions` rather than `status.sync.revisions`: the
+first is what is being retried, the second only what would be synced next.
+Read `retryCount` before calling a stuck sync a retry loop, since unset means
+the operation is not failing at all. Merge the fix before cancelling anything,
+or the fresh sync hangs the same way; then remove `.operation` to cancel a
+queued sync, with a JSON patch, and terminate one already in flight by setting
+`status.operationState.phase` to `Terminating` — terminate before removing
+`.operation`, never after, since operation processing is driven by that field
+and removing it first leaves the state sitting `Terminating` for good. Both
+are plain patches: the Application CRD declares no status subresource, and
+`--subresource=status` reports the object as not found. Strip
+`argocd.argoproj.io/tracking-id` from a resource handed from one Application
+to another. Merge a change before expecting Argo to apply it, and confirm it
+landed: Argo reads the revision an Application names, never a working tree.
+Never rely on Helm's `lookup` to keep a value a chart generated once — Argo
+renders with `helm template`, where it returns nothing, so the branch that
+mints a fresh one wins on every sync.
 Commands: `just argo-apps-sync-policy`, `just argo-apps-operation`,
 `just argo-apps-status`.
 See [argocd-apps](../../../docs/recipes/infra/argocd-apps.md).

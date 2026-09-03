@@ -1,0 +1,114 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xpubliczone.gcp
+spec:
+  compositeTypeRef:
+    apiVersion: platform.repldriven.com/v1alpha1
+    kind: XPublicZone
+  mode: Pipeline
+  pipeline:
+    # =======================================================================
+    # The zone, and any records the installation holds in it directly.
+    # Templated rather than patched because the number of records varies
+    # with the caller and is usually none, and because each one's name
+    # is built from part of another field.
+    # =======================================================================
+    - step: zone
+      functionRef:
+        name: function-go-templating
+      input:
+        apiVersion: gotemplating.fn.crossplane.io/v1beta1
+        kind: GoTemplate
+        source: Inline
+        inline:
+          template: |
+            {{- $xr := .observed.composite.resource }}
+            {{- $code := $xr.spec.code }}
+            {{- $project := $xr.spec.projectId }}
+            {{- $domain := $xr.spec.domain }}
+            {{- $env := $xr.spec.env }}
+            {{- $label := $xr.spec.label }}
+            {{- $zone := printf "dz-%s-%s-%s" $code $env $label }}
+            ---
+            apiVersion: dns.gcp.m.upbound.io/v1beta1
+            kind: ManagedZone
+            metadata:
+              name: {{ $zone }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: dns-zone
+            spec:
+              # Without Delete. A rebuilt zone draws a new nameserver
+              # set, which the NS record delegating this name still
+              # names the old of -- so a rebuild does not return what
+              # was here until somebody edits a zone this installation
+              # cannot write.
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project | quote }}
+                dnsName: {{ printf "%s." $domain | quote }}
+                visibility: public
+                description: {{ printf "%s (%s)" $domain $code | quote }}
+            {{- range $record := dig "records" list $xr.spec }}
+            {{- $rname := dig "name" "" $record }}
+            {{- $fqdn := $domain }}
+            {{- if $rname }}{{ $fqdn = printf "%s.%s" $rname $domain }}{{ end }}
+            {{- /* Named for what the record is, not for where it sits in
+                   the list: one removed from the middle would otherwise
+                   renumber the rest, and Crossplane would delete and
+                   recreate live records. */}}
+            {{- /* A name legal in DNS is not necessarily legal as a
+                   Kubernetes name: the service records worth carrying
+                   are underscore-prefixed, and RFC 1123 permits only
+                   lowercase alphanumerics and hyphens, starting and
+                   ending alphanumeric. */}}
+            {{- $slug := printf "%s-%s"
+                  (or (trimAll "-" (regexReplaceAll "[^a-z0-9]+" ($rname | lower) "-")) "root")
+                  ($record.type | lower) }}
+            ---
+            apiVersion: dns.gcp.m.upbound.io/v1beta1
+            kind: RecordSet
+            metadata:
+              name: {{ printf "%s-%s" $zone $slug }}
+              namespace: crossplane-system
+              annotations:
+                gotemplating.fn.crossplane.io/composition-resource-name: {{ printf "dns-record-%s" $slug }}
+            spec:
+              # With Delete, unlike the zone: a record dropped from the
+              # manifest has to stop resolving, not merely stop being
+              # named.
+              managementPolicies:
+                - Observe
+                - Create
+                - Update
+                - LateInitialize
+                - Delete
+              providerConfigRef:
+                kind: ClusterProviderConfig
+                name: default
+              forProvider:
+                project: {{ $project | quote }}
+                managedZoneRef:
+                  name: {{ $zone | quote }}
+                name: {{ printf "%s." $fqdn | quote }}
+                type: {{ $record.type | quote }}
+                ttl: {{ dig "ttl" 300 $record }}
+                rrdatas:
+            {{- /* toJson, not quote: a TXT rrdata carries the quotes
+                   Cloud DNS expects as part of its value, and quote
+                   would nest them unescaped. */}}
+            {{- range $d := $record.rrdatas }}
+                  - {{ $d | toJson }}
+            {{- end }}
+            {{- end }}
+    - step: auto-ready
+      functionRef:
+        name: function-auto-ready

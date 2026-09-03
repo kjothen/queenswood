@@ -4,7 +4,7 @@
 
 [ADR-0025](../adr/0025-building-blocks-and-what-cannot-be-one.md)
 recorded a direction and a boundary for a catalogue of building blocks
-and said nothing was built. Four kinds now are, all extracted from
+and said nothing was built. Five kinds now are. Four came out of
 `XQueenswoodInstance`, which went from 2,985 lines to about 1,520:
 
 - `XPostgres` — a Cloud SQL server, the databases named on it, and the
@@ -17,7 +17,12 @@ and said nothing was built. Four kinds now are, all extracted from
 - `XCluster` — a GKE cluster, the pool that runs on it, and the
   identity that pool runs as.
 
-All four are in `platform`, beside `XManagementPlane` and
+The fifth came out of the plane:
+
+- `XPublicZone` — a public zone one installation is authoritative for,
+  and whatever records it holds in that zone directly.
+
+All five are in `platform`, beside `XManagementPlane` and
 `XManagedUnit`. `platform` means not this product rather than not this
 cloud: every one of them composes GCP resources and nothing else.
 
@@ -35,11 +40,21 @@ was the proving ground; the instance is now proof.
 - **`XNetwork`, 113 lines.** The plane's `Network` and `Subnetwork`
   bases are byte-identical to the instance's, which is what settled the
   kind's shape in the first place. `env: c` and `label: mgmt` render
-  `vpc-<code>-c-mgmt` and `sb-<code>-c-mgmt-<region>`, exactly what it
-  composes today, so this is an adopt with no rename.
+  `vpc-<code>-c-mgmt` and `sb-<code>-c-mgmt-<regionCode>`, exactly what
+  it composes today, so this is an adopt with no rename. It also
+  composes the proxy subnet the plane has never had, so the plane's
+  `network` block gains a `proxyCidr` beside its existing three.
 - **`XCluster`, 228 lines.** The plane's cluster and pool already
   withhold `Delete`, so the step the instance needed first is not
-  needed here.
+  needed here — but that is not what makes this one hard. `XCluster`
+  names a cluster `<code>-<env>-<label>` where the plane's carries a
+  `gke-` prefix, and names the node identity and the pool differently
+  too, so the move renames three live resources rather than adopting
+  them. Against a live plane that is a rebuild and a pivot; against one
+  built from nothing it is free, and the names come out right the first
+  time. See [plane-cluster-naming](plane-cluster-naming.md), which also
+  settles the one thing `XCluster` does not cover and the plane must go
+  on doing itself.
 - **The `ProjectService` loop, 367 lines across ten.** Two of the ten
   do not follow their own names — `cloudresourcemanager` and
   `cloudbilling` — so the plane's list is names beside APIs where the
@@ -68,22 +83,30 @@ the four identities, and the DNS zone.
 
 ## `XPublicZone`
 
-The other half of the split
-[ADR-0024](../adr/0024-instances-are-their-own-composites.md) implies
-and #557 only did one side of. A public zone is the installation's and
-a public endpoint is an environment's, and their lifecycles are
-opposite: an endpoint rebuilds from its own declaration, while a
-recreated zone gets new nameservers the registrar does not follow and
-draws from a finite per-domain pool.
+Built, and reshaped by
+[ADR-0028](../adr/0028-the-apex-belongs-to-no-installation.md) before
+it was ever used. The kind is not what this plan first sketched: it
+holds a zone one installation is authoritative for, one per name an
+environment answers on, rather than the installation's apex zone.
 
-The estate already shows the line. Zone-level records — the apex and
-`_dmarc` TXT — carry `Delete` and belong to the plane; an environment's
-A and validation records belong to its endpoint and do not.
+The argument that split it survives with a different reason under it.
+An endpoint rebuilds from its own declaration; a zone does not, because
+its nameservers change when it is rebuilt and something outside the
+installation names them. So the two still belong to different kinds —
+not because a zone must never be replaced, which a delegated one may
+be, but because replacing one costs an edit the installation cannot
+make itself.
 
-The endpoint names the zone rather than owning it, and should go on
-doing so after this exists: two composites cannot read each other's
-status, and a zone that enumerated its tenants would make adding an
-environment a change to the plane.
+The endpoint goes on naming the zone rather than owning it: two
+composites cannot read each other's status, and a zone that enumerated
+its tenants would make adding an environment a change to the plane.
+
+What the plane keeps is nothing. The apex belongs to no installation
+and is declared outside every control plane, so `XManagementPlane`'s
+`dns` step and its XRD field go, and the estate's one zone moves out of
+the installation holding it. That move is
+[apex-dns-migration](apex-dns-migration.md), which is where the
+ordering lives.
 
 ## `XEgress`
 
@@ -169,6 +192,12 @@ The plane before the new kinds. Hollowing it out uses kinds that exist
 and are proven on a live instance; `XPublicZone` and `XEgress` both add
 kinds, and one of them touches DNS, where a mistake is measured in
 registrar propagation rather than in reconciles.
+
+The estate's zone leaves the plane before any of this, for its own
+reasons rather than the plane's — see
+[apex-dns-migration](apex-dns-migration.md). Once it has, a plane
+rebuild has no zone to preserve, which is one fewer thing
+[plane-cluster-naming](plane-cluster-naming.md) has to sequence around.
 
 Within the plane, the `ProjectService` loop first: it is the only one
 of the three that transfers no ownership at all, because a loop can

@@ -1,0 +1,111 @@
+apiVersion: apiextensions.crossplane.io/v2
+kind: CompositeResourceDefinition
+metadata:
+  name: xpubliczones.platform.repldriven.com
+spec:
+  scope: Namespaced
+  group: platform.repldriven.com
+  names:
+    kind: XPublicZone
+    plural: xpubliczones
+  defaultCompositionRef:
+    name: xpubliczone.gcp
+  versions:
+    - name: v1alpha1
+      served: true
+      referenceable: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            A public DNS zone one installation is authoritative for, and
+            whatever records that installation holds in it directly.
+
+            One name is one zone. An installation composes one of these
+            per name it answers on, and something above it delegates
+            that name here with an NS record -- our own apex zone, or
+            whatever zone a parent organisation delegates from. Which
+            of those is invisible from here, and that is what makes an
+            installation portable between them. See ADR-0028.
+
+            Not the apex. The apex is the zone a registrar points at,
+            it belongs to no installation, and it is declared and
+            applied outside any control plane precisely so that nothing
+            holds standing authority over the one zone that cannot be
+            rebuilt.
+
+            An environment writes its own names in through
+            XPublicEndpoint, which names the zone rather than owning
+            it. The zone knows nothing of its tenants, which is what
+            keeps adding an environment out of here.
+          properties:
+            spec:
+              type: object
+              required:
+                - code
+                - env
+                - label
+                - projectId
+                - domain
+              properties:
+                code:
+                  type: string
+                  pattern: '^[a-z0-9]{4}$'
+                  description: |
+                    The installation's four-character code. See ADR-0023.
+                env:
+                  type: string
+                  pattern: '^[a-z]$'
+                  description: |
+                    One letter, the environment's tier.
+                label:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{0,10}[a-z0-9]$'
+                  description: |
+                    What this environment is called inside its tier. The
+                    zone is named dz-<code>-<env>-<label>, so the domain
+                    is stated below rather than spelled into the name --
+                    a zone is renamed by rebuilding it, and the name
+                    would then move every time the domain did.
+                projectId:
+                  type: string
+                  pattern: '^[a-z][a-z0-9-]{4,28}[a-z0-9]$'
+                  description: |
+                    Where the zone lives. The installation's management
+                    project, which outlives the instances answering
+                    below it.
+                domain:
+                  type: string
+                  description: |
+                    The name this zone is authoritative for, without a
+                    trailing dot, and the root of everything in it. An
+                    instance's endpoint composes its subdomains here.
+                records:
+                  type: array
+                  default: []
+                  description: |
+                    Records this installation holds directly, as opposed
+                    to those an environment's endpoint composes. Empty
+                    for an ordinary instance zone, which an endpoint
+                    fills and which holds nothing before it does.
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - rrdatas
+                    properties:
+                      name:
+                        type: string
+                        default: ""
+                        description: |
+                          Relative to the domain. Empty is the domain
+                          itself.
+                      type:
+                        type: string
+                      ttl:
+                        type: integer
+                        default: 300
+                      rrdatas:
+                        type: array
+                        items:
+                          type: string

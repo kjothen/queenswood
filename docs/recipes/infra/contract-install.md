@@ -74,12 +74,22 @@ nothing else — not a break-glass group, and not the billing group.
 `grp-gcp-<code>-platform-viewer@`, populated rather than joined.
 
 ```bash
-just queenswood-environment-manifest <parent-or-blank> "" <folder-id>
+just queenswood-environment-manifest <parent-or-blank> "" <folder-id> \
+  "" "" <domain>
 ```
 
 Under `data`: the access mapping naming the principals above, the
-folder, the billing account, the manifests repository, and the region
-the installation runs in, said three ways.
+folder, the billing account, the manifests repository, the region the
+installation runs in, said three ways, and the domain this installation
+answers under.
+
+That domain is what an organisation delegates to us, never the apex
+above it — our own apex where the domain is ours, and a subdomain of
+somebody else's where it is not. Each environment then answers on a
+name below it, in a zone this installation composes. Leave it out and
+the installation answers on no name, which is what one stands up as
+before a domain is delegated to it. See
+[ADR-0028](../../adr/0028-the-apex-belongs-to-no-installation.md).
 
 > [!WARNING]
 > Re-render as often as you like until it is committed. Once it is, that
@@ -104,6 +114,9 @@ correct.
 - State the region here, as `region`, `regionCode` and `zone`. The
   plane and every instance read them, nothing defaults them, and a
   manifest that restates one is a second place for it to be wrong.
+- State the domain here too, as `dns.domain`, and only the name
+  delegated to this installation. An environment's own name is derived
+  from it, so a unit restates neither.
 - Name them for the installation's code, which is chosen here and never
   changed.
 - Create each without an owner or a manager, Restricted before Only
