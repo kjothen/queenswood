@@ -479,58 +479,6 @@ spec:
                         interop endpoint under a region name of its own
                         -- which the backup agent signs over, so it is
                         not free to change later.
-                dns:
-                  type: object
-                  description: |
-                    The installation's public zone, and the records the
-                    installation itself owns in it. Absent composes no
-                    zone, which is a valid state: a plane is built
-                    before anything is reachable, and a domain is
-                    delegated to it later.
-
-                    An instance composes its own names into this zone
-                    rather than holding a zone of its own -- the zone
-                    outlives every instance, and a rebuilt one draws a
-                    new nameserver set the registrar does not follow.
-                    See docs/recipes/infra/gcp-dns.md.
-                  properties:
-                    domain:
-                      type: string
-                      description: |
-                        The apex, without a trailing dot. Names the
-                        zone as dz-<code>-c-<domain>, dots becoming
-                        hyphens; see docs/recipes/practices/cloud-naming.md.
-                    records:
-                      type: array
-                      description: |
-                        Records belonging to the installation rather
-                        than to any instance in it: ownership
-                        verification tokens, and mail policy. They
-                        answer from whichever nameservers the domain
-                        delegates to, so they exist here before the
-                        registrar points at this zone, not after.
-                      items:
-                        type: object
-                        required:
-                          - type
-                          - rrdatas
-                        properties:
-                          name:
-                            type: string
-                            default: ""
-                            description: |
-                              Relative to the domain. Empty is the
-                              apex, which is where both of the kinds
-                              above sit.
-                          type:
-                            type: string
-                          ttl:
-                            type: integer
-                            default: 300
-                          rrdatas:
-                            type: array
-                            items:
-                              type: string
             status:
               type: object
               properties:
