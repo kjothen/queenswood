@@ -292,9 +292,14 @@ name comparison belongs here.
   increasingly require periodic re-KYC, sanctions
   re-screening, and re-verification on material change
   (address, name). No flow exists.
-- **Party merging.** Duplicate records for the same physical
-  person can't be merged. Operationally a gap once any
-  deduplication need arises.
+- **A merged record is pointed at, not folded in.** A
+  duplicate can be wound down and pointed at the record it
+  duplicates, but nothing moves across: verification
+  results, identifiers and personal details stay on the
+  duplicate. A tenant reading the duplicate is directed to
+  the surviving record, and one reading the survivor sees
+  only what was recorded there. There is no way to undo a
+  merge.
 - **PII at rest.** Personal data is stored unencrypted at
   the field level. Production would want tokenised storage
   or per-field encryption, depending on the regulator's

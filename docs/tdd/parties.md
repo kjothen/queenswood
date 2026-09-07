@@ -559,11 +559,14 @@ Both costs are accepted.
   encryption. Production would want either tokenised
   storage or per-field encryption, depending on the
   regulator's view.
-- **No party-merging.** Two records for the same physical
-  person (often arising from address corrections, name
-  changes, or duplicate creation) can't be merged today.
-  Operationally a real gap once any deduplication need
-  arises.
+- **Merging is a tombstone plus a pointer, not a rewrite.**
+  `merge-party` flips a suspended duplicate to
+  `:party-status-merged` and sets `merged-into-party-id` at
+  the survivor, and stops there. IDVs, national identifiers
+  and person identification stay keyed to the merged-away
+  party-id, so a reader wanting the whole picture follows
+  the pointer rather than reading the survivor alone. There
+  is no unmerge, and no re-parenting of the linked records.
 
 ## References
 
