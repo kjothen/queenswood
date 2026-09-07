@@ -168,6 +168,9 @@ enum PartyAction {
   PARTY_ACTION_UNKNOWN = 0;
   PARTY_ACTION_CREATE = 1;
   PARTY_ACTION_MERGE = 2;
+  PARTY_ACTION_SUSPEND = 3;
+  PARTY_ACTION_RESUME = 4;
+  PARTY_ACTION_CLOSE = 5;
 }
 
 message PartyCapabilityFilter {

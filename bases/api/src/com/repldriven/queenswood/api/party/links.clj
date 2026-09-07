@@ -2,7 +2,8 @@
   "OpenAPI 3 `links` objects for party responses.")
 
 (def from-party
-  "Links available on a `CreatePartyResponse`."
+  "Links available on any response whose body is a `Party`
+  (create, suspend, resume, close)."
   {"GetParty" {:operationId "RetrieveParty"
                :parameters {"party-id" "$response.body#/party-id"}}})
 

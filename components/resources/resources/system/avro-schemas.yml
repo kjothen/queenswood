@@ -11,6 +11,9 @@ cash-account-status-changed: schemas/cash-accounts/account-status-changed.avsc.j
 party: schemas/party/party.avsc.json
 create-party: schemas/party/create-party.avsc.json
 merge-party: schemas/party/merge-party.avsc.json
+suspend-party: schemas/party/suspend-party.avsc.json
+resume-party: schemas/party/resume-party.avsc.json
+close-party: schemas/party/close-party.avsc.json
 party-status-changed: schemas/party/party-status-changed.avsc.json
 
 bank: schemas/banks/bank.avsc.json

@@ -20,7 +20,13 @@
   {"create-party" (fn [config data]
                     (->response config (core/new-party config data)))
    "merge-party" (fn [config data]
-                   (->response config (core/merge-party config data)))})
+                   (->response config (core/merge-party config data)))
+   "suspend-party" (fn [config data]
+                     (->response config (core/suspend-party config data)))
+   "resume-party" (fn [config data]
+                    (->response config (core/resume-party config data)))
+   "close-party" (fn [config data]
+                   (->response config (core/close-party config data)))})
 
 (defn- dispatch
   [config message]

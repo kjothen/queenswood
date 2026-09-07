@@ -19,6 +19,30 @@
                    "party"
                    (assoc body :bank-id bank-id))))
 
+(defn- send-lifecycle
+  [request command]
+  (let [{:keys [auth parameters]} request
+        {:keys [bank-id]} auth
+        {:keys [path]} parameters
+        {:keys [party-id]} path]
+    (commands/send (dispatcher request)
+                   request
+                   command
+                   "party"
+                   {:bank-id bank-id :party-id party-id})))
+
+(defn suspend-party
+  [request]
+  (send-lifecycle request "suspend-party"))
+
+(defn resume-party
+  [request]
+  (send-lifecycle request "resume-party"))
+
+(defn close-party
+  [request]
+  (send-lifecycle request "close-party"))
+
 (defn merge-party
   [request]
   (let [{:keys [auth parameters]} request

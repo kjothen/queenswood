@@ -8,3 +8,18 @@
   kind:
     party:
       action: !keyword party-action-merge
+- effect: !keyword effect-allow
+  reason: "Allow suspending parties"
+  kind:
+    party:
+      action: !keyword party-action-suspend
+- effect: !keyword effect-allow
+  reason: "Allow resuming parties"
+  kind:
+    party:
+      action: !keyword party-action-resume
+- effect: !keyword effect-allow
+  reason: "Allow closing parties"
+  kind:
+    party:
+      action: !keyword party-action-close

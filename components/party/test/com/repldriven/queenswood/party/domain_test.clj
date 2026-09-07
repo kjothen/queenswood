@@ -1,8 +1,9 @@
 (ns com.repldriven.queenswood.party.domain-test
-  "Pure-function tests for merge-party's source-state guards. No FDB,
-  no processor — this pins the lifecycle-transition convention
-  (docs/recipes/code/lifecycle-transitions.md): reject before any
-  capability check when either party isn't in a valid source state."
+  "Pure-function tests for the suspend/resume/close/merge source-state
+  guards. No FDB, no processor — this pins the lifecycle-transition
+  convention (docs/recipes/code/lifecycle-transitions.md): reject
+  before any capability check when a party isn't in a valid source
+  state."
   (:require
     [com.repldriven.queenswood.party.domain :as SUT]
 
@@ -27,6 +28,102 @@
                          {:effect :effect-allow
                           :kind {:party {:action action}}})
                        actions)})
+
+(def ^:private allow-suspend [(policy-allowing :party-action-suspend)])
+(def ^:private allow-resume [(policy-allowing :party-action-resume)])
+(def ^:private allow-close [(policy-allowing :party-action-close)])
+
+(deftest suspend-party-source-state-guard-test
+  (testing
+    "suspending a party not in :party-status-active is rejected,
+           regardless of policy"
+    (doseq [status [:party-status-pending
+                    :party-status-suspended
+                    :party-status-closed
+                    :party-status-rejected
+                    :party-status-merged]]
+      (let [result (SUT/suspend-party (party "pty.subject" status)
+                                      allow-suspend)]
+        (is (error/rejection? result))
+        (is (= :party/invalid-status (error/kind result)))
+        (is (= status (:status (error/payload result))))))))
+
+(deftest suspend-party-capability-denied-test
+  (testing "no allow capability for party-action-suspend denies the suspend"
+    (let [result (SUT/suspend-party (party "pty.subject" :party-status-active)
+                                    [])]
+      (is (error/unauthorized? result)))))
+
+(deftest suspend-party-happy-test
+  (testing "an active party flips to suspended"
+    (let [result (SUT/suspend-party (party "pty.subject" :party-status-active)
+                                    allow-suspend)]
+      (is (= :party-status-suspended (:status result)))
+      (is (int? (:updated-at result))))))
+
+(deftest resume-party-source-state-guard-test
+  (testing
+    "resuming a party not in :party-status-suspended is rejected,
+           regardless of policy — close is terminal, not resumable"
+    (doseq [status [:party-status-pending
+                    :party-status-active
+                    :party-status-closed
+                    :party-status-rejected
+                    :party-status-merged]]
+      (let [result (SUT/resume-party (party "pty.subject" status) allow-resume)]
+        (is (error/rejection? result))
+        (is (= :party/invalid-status (error/kind result)))
+        (is (= status (:status (error/payload result))))))))
+
+(deftest resume-party-capability-denied-test
+  (testing "no allow capability for party-action-resume denies the resume"
+    (let [result (SUT/resume-party (party "pty.subject" :party-status-suspended)
+                                   [])]
+      (is (error/unauthorized? result)))))
+
+(deftest resume-party-happy-test
+  (testing "a suspended party flips back to active"
+    (let [result (SUT/resume-party (party "pty.subject" :party-status-suspended)
+                                   allow-resume)]
+      (is (= :party-status-active (:status result)))
+      (is (int? (:updated-at result))))))
+
+(deftest close-party-source-state-guard-test
+  (testing
+    "closing a party not in :party-status-active or
+           :party-status-suspended is rejected, regardless of policy"
+    (doseq [status [:party-status-pending
+                    :party-status-closed
+                    :party-status-rejected
+                    :party-status-merged]]
+      (let [result
+            (SUT/close-party (party "pty.subject" status) false allow-close)]
+        (is (error/rejection? result))
+        (is (= :party/invalid-status (error/kind result)))
+        (is (= status (:status (error/payload result))))))))
+
+(deftest close-party-capability-denied-test
+  (testing "no allow capability for party-action-close denies the close"
+    (let [result
+          (SUT/close-party (party "pty.subject" :party-status-active) false [])]
+      (is (error/unauthorized? result)))))
+
+(deftest close-party-open-accounts-rejected-test
+  (testing "a party with any non-closed cash account is rejected"
+    (let [result (SUT/close-party (party "pty.subject" :party-status-active)
+                                  true
+                                  allow-close)]
+      (is (error/rejection? result))
+      (is (= :party/open-accounts (error/kind result)))
+      (is (= "pty.subject" (:party-id (error/payload result)))))))
+
+(deftest close-party-happy-test
+  (testing "an active or suspended party with no open accounts closes"
+    (doseq [status [:party-status-active :party-status-suspended]]
+      (let [result
+            (SUT/close-party (party "pty.subject" status) false allow-close)]
+        (is (= :party-status-closed (:status result)))
+        (is (int? (:updated-at result)))))))
 
 (def ^:private survivor (party "pty.survivor" :party-status-active))
 (def ^:private merged-away (party "pty.merged" :party-status-suspended))

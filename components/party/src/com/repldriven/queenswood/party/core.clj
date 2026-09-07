@@ -50,15 +50,17 @@
          :party-id party-id
          :status-after status})))))
 
+(defn- get-policies
+  [txn bank-id opts]
+  (or (:policies opts)
+      (policy/get-effective-policies txn {:bank-id bank-id})))
+
 (defn new-party
   ([txn data]
    (new-party txn data {}))
   ([txn data opts]
    (let-nom>
-     [policies (or (:policies opts)
-                   (policy/get-effective-policies
-                    txn
-                    {:bank-id (:bank-id data)}))
+     [policies (get-policies txn (:bank-id data) opts)
       _ (policy/check-capability policies
                                  :party
                                  {:action :party-action-create
@@ -95,6 +97,39 @@
                                 :status-before (:status party)
                                 :status-after (:status updated)}))))))))
 
+(defn- transition
+  "Read the party, apply the domain fn `f` to it with the effective
+  policies, and save the result with its status transition. The shape
+  shared by the direct single-phase lifecycle flips."
+  [txn data opts f]
+  (store/transact
+   txn
+   (fn [txn]
+     (let [{:keys [bank-id party-id]} data]
+       (let-nom>
+         [policies (get-policies txn bank-id opts)
+          party (q/get-party txn bank-id party-id)
+          updated (f party policies)
+          result (store/save-party txn
+                                   updated
+                                   {:bank-id bank-id
+                                    :party-id party-id
+                                    :status-before (:status party)
+                                    :status-after (:status updated)})]
+         result)))))
+
+(defn suspend-party
+  ([txn data]
+   (suspend-party txn data {}))
+  ([txn data opts]
+   (transition txn data opts domain/suspend-party)))
+
+(defn resume-party
+  ([txn data]
+   (resume-party txn data {}))
+  ([txn data opts]
+   (transition txn data opts domain/resume-party)))
+
 (defn- has-open-accounts?
   [txn bank-id party-id]
   (let-nom> [accounts
@@ -103,6 +138,27 @@
      (some (fn [account]
              (not= :cash-account-status-closed (:account-status account)))
            accounts))))
+
+(defn close-party
+  ([txn data]
+   (close-party txn data {}))
+  ([txn data opts]
+   (store/transact
+    txn
+    (fn [txn]
+      (let [{:keys [bank-id party-id]} data]
+        (let-nom>
+          [policies (get-policies txn bank-id opts)
+           party (q/get-party txn bank-id party-id)
+           open-accounts? (has-open-accounts? txn bank-id party-id)
+           updated (domain/close-party party open-accounts? policies)
+           result (store/save-party txn
+                                    updated
+                                    {:bank-id bank-id
+                                     :party-id party-id
+                                     :status-before (:status party)
+                                     :status-after (:status updated)})]
+          result))))))
 
 (defn merge-party
   ([txn data]
@@ -113,8 +169,7 @@
     (fn [txn]
       (let [{:keys [bank-id party-id into-party-id]} data]
         (let-nom>
-          [policies (or (:policies opts)
-                        (policy/get-effective-policies txn {:bank-id bank-id}))
+          [policies (get-policies txn bank-id opts)
            survivor (q/get-party txn bank-id into-party-id)
            merged-away (q/get-party txn bank-id party-id)
            open-accounts? (has-open-accounts? txn bank-id party-id)
