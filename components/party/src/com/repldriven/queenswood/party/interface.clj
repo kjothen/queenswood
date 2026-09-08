@@ -1,14 +1,19 @@
 (ns com.repldriven.queenswood.party.interface
   "Party write side: create parties (people, organisations, internal
   entities) and their linked data (person identification, national
-  identifier). Person parties start pending and transition to active
-  when an IDV result reaches this brick as an `idv-status-changed`
-  event; `seed-active-party` is an admin/test shortcut that bypasses
-  it.
+  identifier), and drive their lifecycle — suspend, resume, close,
+  merge. Person parties start pending and transition to active when an
+  IDV result reaches this brick as an `idv-status-changed` event;
+  `seed-active-party` is an admin/test shortcut that bypasses it.
+
+  Suspend and resume are the reversible pause; close is terminal. They
+  are a separate axis from the pending → active → rejected path IDV
+  drives.
 
   Reads live in `bank-party-query`; this brick reuses them inside its
   own transactions. `bank-api` requires the query brick, not this one —
-  party creation reaches the processor as a command over the bus."
+  party creation and lifecycle transitions reach the processor as
+  commands over the bus."
   (:require
     [com.repldriven.queenswood.party.system]
 
@@ -38,6 +43,56 @@
    (new-party txn data {}))
   ([txn data opts]
    (let-nom> [pb (core/new-party txn data opts)]
+     (schema/pb->Party pb))))
+
+(defn suspend-party
+  "Suspend an active party. Direct, single-phase flip, no reactive
+  leg. Capability is checked against effective policies before the
+  write. Returns the suspended party or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id` and `:party-id`.
+  - opts (optional): map; `:policies` overrides policy resolution
+    for the capability check."
+  ([txn data]
+   (suspend-party txn data {}))
+  ([txn data opts]
+   (let-nom> [pb (core/suspend-party txn data opts)]
+     (schema/pb->Party pb))))
+
+(defn resume-party
+  "Resume a suspended party, returning it to active. The inverse of
+  `suspend-party`, and not a way back from `:party-status-closed` —
+  close is terminal. Direct, single-phase flip, no reactive leg.
+  Returns the active party or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id` and `:party-id`.
+  - opts (optional): map; `:policies` overrides policy resolution
+    for the capability check."
+  ([txn data]
+   (resume-party txn data {}))
+  ([txn data opts]
+   (let-nom> [pb (core/resume-party txn data opts)]
+     (schema/pb->Party pb))))
+
+(defn close-party
+  "Close an active or suspended party. Terminal — there is no
+  transition out of `:party-status-closed`. Refused while the party
+  still holds a cash account that is not closed. Direct, single-phase
+  flip, no reactive leg. Returns the closed party or an anomaly.
+
+  Args:
+  - txn: FDB transaction or db handle.
+  - data: map with `:bank-id` and `:party-id`.
+  - opts (optional): map; `:policies` overrides policy resolution
+    for the capability check."
+  ([txn data]
+   (close-party txn data {}))
+  ([txn data opts]
+   (let-nom> [pb (core/close-party txn data opts)]
      (schema/pb->Party pb))))
 
 (defn merge-party

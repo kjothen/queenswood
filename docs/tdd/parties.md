@@ -250,6 +250,43 @@ bookkeeping (internal) and the customer's non-person
 counterparties (organization) don't need IDV before they can
 appear in transactions.
 
+### Lifecycle transitions
+
+Beyond the IDV-driven pending → active path, a party has
+three tenant-driven transitions. Each is direct and
+single-phase: a command over the bus, one FDB transaction,
+no reactive second leg off the changelog.
+
+- `suspend-party` — `:party-status-active` →
+  `:party-status-suspended`
+- `resume-party` — `:party-status-suspended` →
+  `:party-status-active`
+- `close-party` — `:party-status-active` or
+  `:party-status-suspended` → `:party-status-closed`
+
+`domain.clj` guards each transition's source state as the
+first binding of its `let-nom>`, ahead of the capability
+check, and rejects `:party/invalid-status` (HTTP 409)
+carrying the offending status and the set the transition
+accepts. See
+[lifecycle-transitions](../recipes/code/lifecycle-transitions.md).
+
+Closing also reads the party's cash accounts through
+`bank-cash-account-query` and rejects `:party/open-accounts`
+while any of them is not closed — the same check
+`merge-party` makes of the party being merged away.
+
+Closed is terminal, so the resume guard admits
+`:party-status-suspended` only and is not a way back from
+closure. Suspension and closure are a separate axis from the
+pending → active → rejected path IDV drives: a pending or
+rejected party is neither suspendable nor closeable.
+
+Each transition carries its own capability —
+`:party-action-suspend`, `:party-action-resume`,
+`:party-action-close` — checked against the effective
+policies inside the same transaction as the write.
+
 ### The activation flow
 
 The pending → active transition for a person party
@@ -500,11 +537,6 @@ Both costs are accepted.
   triggering re-verification). Compliance regimes
   increasingly require this; today the model assumes one-
   shot KYC.
-- **No party suspension or closure.** Active is essentially
-  terminal. A party flagged for fraud or sanctions has no
-  status path away from active via the current API. The
-  status enum admits more values; the lifecycle code
-  doesn't drive them.
 - **Party and User are not linked.** A platform `User`
   (`user`, an OIDC identity) and `Membership`
   (`membership`, User→Bank) now exist and are
@@ -527,11 +559,14 @@ Both costs are accepted.
   encryption. Production would want either tokenised
   storage or per-field encryption, depending on the
   regulator's view.
-- **No party-merging.** Two records for the same physical
-  person (often arising from address corrections, name
-  changes, or duplicate creation) can't be merged today.
-  Operationally a real gap once any deduplication need
-  arises.
+- **Merging is a tombstone plus a pointer, not a rewrite.**
+  `merge-party` flips a suspended duplicate to
+  `:party-status-merged` and sets `merged-into-party-id` at
+  the survivor, and stops there. IDVs, national identifiers
+  and person identification stay keyed to the merged-away
+  party-id, so a reader wanting the whole picture follows
+  the pointer rather than reading the survivor alone. There
+  is no unmerge, and no re-parenting of the linked records.
 
 ## References
 

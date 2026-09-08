@@ -47,6 +47,58 @@
   [action policies]
   (policy/check-capability policies :party {:action action}))
 
+(defn suspend-party
+  [party policies]
+  (let-nom>
+    [_ (when-not (= :party-status-active (:status party))
+         (error/reject :party/invalid-status
+                       {:message "Party is not in a suspendable state"
+                        :party-id (:party-id party)
+                        :status (:status party)
+                        :allowed #{:party-status-active}}))
+     _ (check-capability :party-action-suspend policies)]
+    (assoc party
+           :status :party-status-suspended
+           :updated-at (utility/now))))
+
+(defn resume-party
+  [party policies]
+  (let-nom>
+    [_ (when-not (= :party-status-suspended (:status party))
+         (error/reject :party/invalid-status
+                       {:message "Party is not in a resumable state"
+                        :party-id (:party-id party)
+                        :status (:status party)
+                        :allowed #{:party-status-suspended}}))
+     _ (check-capability :party-action-resume policies)]
+    (assoc party
+           :status :party-status-active
+           :updated-at (utility/now))))
+
+(defn close-party
+  "Close an active or suspended party. `has-open-accounts?` is the
+  party's non-closed cash-account check, resolved by the caller via
+  `cash-account-query/find-accounts-by-party` — closing is refused
+  while the party still holds an account that is not closed."
+  [party has-open-accounts? policies]
+  (let-nom>
+    [_ (when-not (contains? #{:party-status-active :party-status-suspended}
+                            (:status party))
+         (error/reject :party/invalid-status
+                       {:message "Party is not in a closeable state"
+                        :party-id (:party-id party)
+                        :status (:status party)
+                        :allowed #{:party-status-active
+                                   :party-status-suspended}}))
+     _ (check-capability :party-action-close policies)
+     _ (when has-open-accounts?
+         (error/reject :party/open-accounts
+                       {:message "Party has open cash accounts"
+                        :party-id (:party-id party)}))]
+    (assoc party
+           :status :party-status-closed
+           :updated-at (utility/now))))
+
 (defn merge-party
   "Merge `merged-away` into `survivor`: a tombstone-plus-pointer, not a
   rewrite. The survivor must be active and the merged-away party must

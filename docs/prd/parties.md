@@ -138,6 +138,29 @@ case. The platform doesn't impose a timeout — the IDV
 record stays pending until the provider's notification
 arrives.
 
+### Party lifecycle
+
+Once a party is active, the tenant uses the banking API to
+move it through the rest of its lifecycle.
+
+- **Suspension** pauses an active party — one under
+  investigation, or temporarily out of use. It is
+  reversible.
+- **Resumption** returns a suspended party to active.
+- **Closure** winds up an active or suspended party. It is
+  final: a closed party cannot be reopened.
+
+Closing is refused while the party still holds a cash
+account that is not itself closed, so the tenant closes the
+accounts first and the party after.
+
+These changes sit on a separate track from identity
+verification. A party still awaiting verification, or one
+verification rejected, cannot be suspended or closed. Each
+call returns the party with its new status, and a request
+against a party in the wrong state is refused, naming the
+statuses the change accepts.
+
 ### Identifiers
 
 A party can carry zero or more national identifiers — one
@@ -269,13 +292,14 @@ name comparison belongs here.
   increasingly require periodic re-KYC, sanctions
   re-screening, and re-verification on material change
   (address, name). No flow exists.
-- **Party suspension and closure.** Active is essentially
-  terminal. A flagged party can't be moved to a
-  non-transacting state through the banking API. Real
-  banking needs at least a suspended state.
-- **Party merging.** Duplicate records for the same physical
-  person can't be merged. Operationally a gap once any
-  deduplication need arises.
+- **A merged record is pointed at, not folded in.** A
+  duplicate can be wound down and pointed at the record it
+  duplicates, but nothing moves across: verification
+  results, identifiers and personal details stay on the
+  duplicate. A tenant reading the duplicate is directed to
+  the surviving record, and one reading the survivor sees
+  only what was recorded there. There is no way to undo a
+  merge.
 - **PII at rest.** Personal data is stored unencrypted at
   the field level. Production would want tokenised storage
   or per-field encryption, depending on the regulator's

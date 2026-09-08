@@ -118,6 +118,12 @@
 
 (def MergePartyResponse [:ref "Party"])
 
+(def SuspendPartyResponse [:ref "Party"])
+
+(def ResumePartyResponse [:ref "Party"])
+
+(def ClosePartyResponse [:ref "Party"])
+
 (def PartyList
   [:map {:json-schema/example examples/PartyList}
    [:parties [:vector [:ref "Party"]]]
@@ -127,8 +133,8 @@
      [:prev {:optional true} string?]]]])
 
 (def registry
-  (components-registry [#'PartyId #'PartyType #'PartyStatus #'IdentifierType
-                        #'Party #'PartyDetail #'PartyEmbedQuery
-                        #'NationalIdentifier #'Address #'CreatePartyRequest
-                        #'CreatePartyResponse #'PartyList #'MergePartyRequest
-                        #'MergePartyResponse]))
+  (components-registry
+   [#'PartyId #'PartyType #'PartyStatus #'IdentifierType #'Party #'PartyDetail
+    #'PartyEmbedQuery #'NationalIdentifier #'Address #'CreatePartyRequest
+    #'CreatePartyResponse #'PartyList #'MergePartyRequest #'MergePartyResponse
+    #'SuspendPartyResponse #'ResumePartyResponse #'ClosePartyResponse]))

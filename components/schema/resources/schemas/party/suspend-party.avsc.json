@@ -1,0 +1,9 @@
+{
+  "type": "record",
+  "name": "SuspendParty",
+  "namespace": "com.repldriven.mono.party",
+  "fields": [
+    {"name": "bank_id", "type": "string"},
+    {"name": "party_id", "type": "string"}
+  ]
+}
